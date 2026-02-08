@@ -648,57 +648,36 @@ async def settings_post(
 
     # 2) Credentials
     if credentials_base64:
-        # Robust check: remove all whitespace/newlines first
+        # Strictly enforce Base64 (remove all whitespace/newlines)
         clean_cred = "".join(credentials_base64.split())
-        is_valid = False
-        
-        # Scenario A: It's raw JSON
-        try:
-            json.loads(credentials_base64.strip())
-            # Convert to clean base64 for internal consistency
-            credentials_base64 = base64.b64encode(credentials_base64.strip().encode()).decode()
-            is_valid = True
-        except Exception:
-            pass
+        # Fix padding if missing
+        missing_padding = len(clean_cred) % 4
+        if missing_padding:
+            clean_cred += '=' * (4 - missing_padding)
             
-        # Scenario B: It's Base64 encoded JSON
-        if not is_valid:
-            try:
-                decoded = base64.b64decode(clean_cred).decode("utf-8")
-                json.loads(decoded)
-                credentials_base64 = clean_cred # Use the cleaned version
-                is_valid = True
-            except Exception:
-                pass
-        
-        if not is_valid:
-            errors.append("Credentials: Must be valid JSON or a Base64 encoded JSON string. Please ensure you copied the entire file content.")
+        try:
+            decoded = base64.b64decode(clean_cred).decode("utf-8")
+            json.loads(decoded) # must be valid JSON inside
+            credentials_base64 = clean_cred
+        except Exception:
+            errors.append("Credentials: Must be a valid Base64 encoded JSON string. Please ensure you are copying the entire token/credential string provided by our generator.")
 
     # 3) Token
     if token_base64:
+        # Strictly enforce Base64 (remove all whitespace/newlines)
         clean_tok = "".join(token_base64.split())
-        is_valid = False
-        
-        # Scenario A: Raw JSON
-        try:
-            json.loads(token_base64.strip())
-            token_base64 = base64.b64encode(token_base64.strip().encode()).decode()
-            is_valid = True
-        except Exception:
-            pass
+        # Fix padding if missing
+        missing_padding = len(clean_tok) % 4
+        if missing_padding:
+            clean_tok += '=' * (4 - missing_padding)
             
-        # Scenario B: Base64 JSON
-        if not is_valid:
-            try:
-                decoded = base64.b64decode(clean_tok).decode("utf-8")
-                json.loads(decoded)
-                token_base64 = clean_tok
-                is_valid = True
-            except Exception:
-                pass
-        
-        if not is_valid:
-             errors.append("Token: Must be valid JSON or a Base64 encoded JSON string. This is usually the content of your token.json.")
+        try:
+            decoded = base64.b64decode(clean_tok).decode("utf-8")
+            json.loads(decoded) # must be valid JSON inside
+            token_base64 = clean_tok
+        except Exception:
+             errors.append("Token: Must be a valid Base64 encoded JSON string. Ensure you are using the output from the tool.")
+
 
 
     # 4) Templates
