@@ -567,7 +567,9 @@ async def api_presign_complete(request: Request):
     return JSONResponse({"ok": True, "key": key})
 
 @app.post("/api/test_send")
+@limiter.limit("5/minute")
 async def api_test_send(request: Request):
+
     payload = await request.json()
     to_email = payload.get("to_email")
     if not to_email:
@@ -608,6 +610,26 @@ def user_dashboard(request: Request, user_id: str):
         return templates.TemplateResponse("premium/dashboard.html", ctx)
     except Exception:
         return templates.TemplateResponse("onboard.html", ctx)
+
+@app.get("/api/user/report")
+async def api_user_report(request: Request):
+    user = current_session_user(request)
+    if not user:
+        return JSONResponse({"error": "auth required"}, status_code=401)
+    
+    # Fetch last 50 processed recipients
+    recipients = list(db.recipients.find(
+        {"assigned_to": user["_id"], "status": {"$in": ["Sent", "Failed"]}}
+    ).sort("sent_at", -1).limit(50))
+    
+    for r in recipients:
+        r["_id"] = str(r["_id"])
+        r["assigned_to"] = str(r["assigned_to"])
+        if "sent_at" in r:
+            r["sent_at"] = r["sent_at"].isoformat()
+            
+    return JSONResponse(recipients)
+
 
 @app.get("/settings")
 def settings_get(request: Request):
@@ -762,7 +784,9 @@ async def settings_post(
     return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "user": user, "success": "Settings updated successfully!"})
 
 @app.post("/api/validate_credentials")
+@limiter.limit("5/minute")
 async def api_validate_credentials(request: Request):
+
     user = current_session_user(request)
     if not user:
         return JSONResponse({"error": "auth required"}, status_code=401)
@@ -787,7 +811,9 @@ async def api_validate_credentials(request: Request):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
 
 @app.post("/api/campaign/toggle")
+@limiter.limit("10/minute")
 async def api_campaign_toggle(request: Request):
+
     user = current_session_user(request)
     if not user:
         return JSONResponse({"error": "auth required"}, status_code=401)

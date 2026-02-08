@@ -114,6 +114,17 @@ def send_batch_for_user(self, user_id, batch_size=10):
 
     return {"sent": sent}
 
+@celery_app.task
+def reset_daily_limits():
+    """
+    Resets daily_sent to 0 for all users at the start of a new day.
+    """
+    LOG.info("Global daily limit reset started.")
+    res = USERS.update_many({}, {"$set": {"daily_sent": 0}})
+    LOG.info("Reset successful. Impacted %d users.", res.modified_count)
+    return {"reset_count": res.modified_count}
+
+
 def send_single_message_for_user(user_id, to_email, subject_override=None, body_override=None):
     """
     Send a single test message for the given user using that user's Gmail credentials.

@@ -100,4 +100,60 @@ document.addEventListener("DOMContentLoaded", () => {
             document.removeEventListener("presign:progress", onProgress);
         }
     }
+
+    // --- Report Loading ---
+    async function loadReport() {
+        const reportBody = document.getElementById("report-body");
+        if (!reportBody) return;
+
+        try {
+            const resp = await fetch("/api/user/report");
+            const data = await resp.json();
+
+            if (data.error) {
+                reportBody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-red-400 text-sm">${data.error}</td></tr>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                reportBody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-slate-500 italic text-sm">No outreach activity yet. Start your campaign to see results!</td></tr>`;
+                return;
+            }
+
+            reportBody.innerHTML = data.map(r => `
+                <tr class="hover:bg-white/2 transition-colors">
+                    <td class="py-4">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-medium text-white">${r.email}</span>
+                            <span class="text-[10px] text-slate-500">${r.role || 'Recruiter'}</span>
+                        </div>
+                    </td>
+                    <td class="py-4">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${r.status === 'Sent' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                }">
+                            ${r.status}
+                        </span>
+                    </td>
+                    <td class="py-4 text-xs text-slate-400">
+                        ${r.sent_at ? new Date(r.sent_at).toLocaleString() : '-'}
+                    </td>
+                    <td class="py-4 text-right">
+                        <span class="text-[10px] text-slate-500 italic max-w-xs truncate block ml-auto">
+                            ${r.last_error || 'Success'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+
+        } catch (err) {
+            console.error("Failed to load report", err);
+        }
+    }
+
+    loadReport();
+    // Refresh every 30 seconds if page is visible
+    setInterval(() => {
+        if (document.visibilityState === "visible") loadReport();
+    }, 30000);
 });
+

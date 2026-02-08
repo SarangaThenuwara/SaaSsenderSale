@@ -130,6 +130,37 @@
     </div>
 </div>
 
+
+<!-- Recent Activity Report -->
+<div class="card-glass p-8">
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="font-bold text-xl text-white">Recent Activity</h3>
+        <span class="text-[10px] text-slate-500 uppercase tracking-widest">Last 50 Processed</span>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="text-[10px] text-slate-500 uppercase tracking-wider border-b border-white/5">
+                <tr>
+                    <th class="pb-4 font-semibold">Recipient</th>
+                    <th class="pb-4 font-semibold">Status</th>
+                    <th class="pb-4 font-semibold">Processed At</th>
+                    <th class="pb-4 font-semibold text-right">Details</th>
+                </tr>
+            </thead>
+            <tbody id="report-body" class="divide-y divide-white/5">
+                <tr>
+                    <td colspan="4" class="py-12 text-center text-slate-500 italic text-sm">
+                        Loading outreach status...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+
+
 <script>
     document.getElementById('toggle-campaign')?.addEventListener('click', async () => {
         const btn = document.getElementById('toggle-campaign');
