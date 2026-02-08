@@ -1,0 +1,10 @@
+run = "bash start.sh"
+entrypoint = "app/main.py"
+
+[deployment]
+run = "bash start.sh"
+deploymentTarget = "autoscale"
+
+[[ports]]
+localPort = 8000
+externalPort = 80
