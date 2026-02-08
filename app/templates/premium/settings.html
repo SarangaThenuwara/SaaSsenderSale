@@ -177,13 +177,32 @@
                     <p class="text-xs text-slate-500">Variables: <code>{first_name}</code></p>
                 </div>
 
-                <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-300">Body Template (HTML Supported)</label>
-                    <textarea name="body_template" rows="8" class="input-glass px-4 py-3 text-sm"
-                        placeholder="<p>Hi {first_name},</p><p>I am interested in...</p>">{{ user.body_template or '<p>Hi {first_name},</p><p>I hope you are doing well.</p>' }}</textarea>
-                    <p class="text-xs text-slate-500">Variables: <code>{first_name}</code> (Required for
-                        personalization)</p>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-sm font-medium text-slate-300">Body Template (HTML Supported)</label>
+                        <button type="button" id="toggle-preview"
+                            class="text-[10px] uppercase tracking-widest text-primary-400 font-bold hover:text-white transition-colors">Show
+                            Preview</button>
+                    </div>
+                    <div class="relative">
+                        <textarea id="body-editor" name="body_template" rows="8"
+                            class="input-glass px-4 py-3 text-sm focus:ring-1 focus:ring-primary-500 transition-all"
+                            placeholder="<p>Hi {first_name},</p><p>I am interested in...</p>">{{ user.body_template or '<p>Hi {first_name},</p><p>I hope you are doing well.</p>' }}</textarea>
+                    </div>
+
+                    <div id="preview-container" class="hidden animate-fade-in">
+                        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 px-1">Email Preview (John)
+                        </p>
+                        <div class="rounded-xl bg-white p-6 shadow-2xl overflow-hidden min-h-[200px]">
+                            <div id="html-preview" class="prose prose-sm max-w-none text-slate-800">
+                                <!-- Preview rendered here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-slate-500">Variables: <code>{first_name}</code> (Case-insensitive)</p>
                 </div>
+
             </div>
         </div>
 
@@ -195,7 +214,36 @@
 </div>
 
 <script>
+    // --- Live Preview Logic ---
+    const bodyEditor = document.getElementById('body-editor');
+    const htmlPreview = document.getElementById('html-preview');
+    const previewContainer = document.getElementById('preview-container');
+    const togglePreviewBtn = document.getElementById('toggle-preview');
+
+    function updatePreview() {
+        if (!bodyEditor || !htmlPreview) return;
+        let content = bodyEditor.value;
+        // Replace variable for preview
+        content = content.replace(/{first_name}/gi, '<strong>John</strong>');
+        htmlPreview.innerHTML = content;
+    }
+
+    togglePreviewBtn?.addEventListener('click', () => {
+        const isHidden = previewContainer.classList.contains('hidden');
+        if (isHidden) {
+            previewContainer.classList.remove('hidden');
+            togglePreviewBtn.innerText = 'Hide Preview';
+            updatePreview();
+        } else {
+            previewContainer.classList.add('hidden');
+            togglePreviewBtn.innerText = 'Show Preview';
+        }
+    });
+
+    bodyEditor?.addEventListener('input', updatePreview);
+
     document.getElementById('test-connection')?.addEventListener('click', async () => {
+
         const btn = document.getElementById('test-connection');
         const originalText = btn.innerText;
         btn.innerText = 'Testing...';
