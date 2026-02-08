@@ -45,6 +45,25 @@
     "featureList": "OAuth2 Authentication, Smart Rate Limiting, Email Personalization, Privacy-First Architecture"
   }
   </script>
+
+  <!-- PWA & Icons -->
+  <link rel="icon" type="image/svg+xml" href="/static/img/icon.svg">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#3b82f6">
+  <link rel="apple-touch-icon" href="/static/img/icon.svg">
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js').then(reg => {
+          console.log('SW registered:', reg);
+        }).catch(err => {
+          console.log('SW registration failed:', err);
+        });
+      });
+    }
+  </script>
+
 </head>
 
 <body class="min-h-screen flex flex-col relative overflow-x-hidden">
@@ -64,9 +83,10 @@
           {% else %}
           <a href="/" class="flex items-center gap-3 group">
             {% endif %}
-            <div
-              class="h-9 w-9 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold shadow-lg shadow-primary-500/20 group-hover:scale-105 transition-transform">
-              S</div>
+            <img src="/static/img/icon.svg"
+              class="h-9 w-9 rounded-lg shadow-lg shadow-primary-500/20 group-hover:scale-105 transition-transform"
+              alt="SaaS Sender Logo">
+
             <span class="text-lg font-display font-semibold text-white tracking-wide">SaaS Sender</span>
           </a>
 

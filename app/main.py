@@ -855,8 +855,15 @@ def admin_dashboard(request: Request):
         u["pending_capacity"] = max(0, u.get("daily_limit", 240) - u.get("daily_sent", 0))
 
     pending_pool = db.recipients.count_documents({"status": "Pending"})
+    
+    # 24h Stats
+    day_ago = datetime.utcnow() - timedelta(days=1)
+    sent_24h = db.recipients.count_documents({"status": "Sent", "sent_at": {"$gte": day_ago}})
+    failed_24h = db.recipients.count_documents({"status": "Failed", "sent_at": {"$gte": day_ago}})
+
     active_users = [u for u in users if u.get("campaign_active") and u.get("credentials_valid")]
     total_capacity = sum(u.get("daily_limit", 240) for u in active_users)
+
 
     # Infrastructure Status
     b2_status = get_b2_status()
@@ -898,12 +905,15 @@ def admin_dashboard(request: Request):
         **template_ctx(request),
         "users": users,
         "pending_pool": pending_pool,
+        "sent_24h": sent_24h,
+        "failed_24h": failed_24h,
         "active_users_count": len(active_users),
         "total_capacity": total_capacity,
         "b2_status": b2_status,
         "mongo_status": mongo_status,
         "server_ips": server_ips,
         "payment_active": payment_active
+
     }
     return templates.TemplateResponse("premium/admin.html", ctx)
 
