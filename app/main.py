@@ -625,8 +625,9 @@ async def api_user_report(request: Request):
     for r in recipients:
         r["_id"] = str(r["_id"])
         r["assigned_to"] = str(r["assigned_to"])
-        if "sent_at" in r:
-            r["sent_at"] = r["sent_at"].isoformat()
+        for key, value in r.items():
+            if isinstance(value, datetime):
+                r[key] = value.isoformat()
             
     return JSONResponse(recipients)
 
@@ -1073,7 +1074,13 @@ def api_admin_list_users(request: Request):
     users = list(db.users.find({}, {"credentials_base64": 0, "token_base64": 0}))
     for u in users:
         u["_id"] = str(u["_id"])
+        # Handle datetime serialization
+        for key, value in u.items():
+            if isinstance(value, datetime):
+                u[key] = value.isoformat()
+                
     return JSONResponse(users)
+
 
 @app.post("/api/admin/users")
 async def api_admin_create_user(request: Request):
