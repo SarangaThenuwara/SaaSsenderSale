@@ -656,11 +656,20 @@ async def settings_post(
             clean_cred += '=' * (4 - missing_padding)
             
         try:
-            decoded = base64.b64decode(clean_cred).decode("utf-8")
+            # Try standard base64 first
+            try:
+                decoded_bytes = base64.b64decode(clean_cred)
+            except Exception:
+                # Fallback to urlsafe base64
+                decoded_bytes = base64.urlsafe_b64decode(clean_cred)
+            
+            decoded = decoded_bytes.decode("utf-8")
             json.loads(decoded) # must be valid JSON inside
             credentials_base64 = clean_cred
-        except Exception:
-            errors.append("Credentials: Must be a valid Base64 encoded JSON string. Please ensure you are copying the entire token/credential string provided by our generator.")
+        except Exception as e:
+            LOG.error("Admin credentials validation failed: %s", e)
+            errors.append("Credentials: Not a valid Base64 encoded JSON. Please copy the full string from the generator.")
+
 
     # 3) Token
     if token_base64:
@@ -672,11 +681,18 @@ async def settings_post(
             clean_tok += '=' * (4 - missing_padding)
             
         try:
-            decoded = base64.b64decode(clean_tok).decode("utf-8")
+            try:
+                decoded_bytes = base64.b64decode(clean_tok)
+            except Exception:
+                decoded_bytes = base64.urlsafe_b64decode(clean_tok)
+                
+            decoded = decoded_bytes.decode("utf-8")
             json.loads(decoded) # must be valid JSON inside
             token_base64 = clean_tok
-        except Exception:
-             errors.append("Token: Must be a valid Base64 encoded JSON string. Ensure you are using the output from the tool.")
+        except Exception as e:
+             LOG.error("Admin token validation failed: %s", e)
+             errors.append("Token: Not a valid Base64 encoded JSON. Ensure you are copying correctly.")
+
 
 
 

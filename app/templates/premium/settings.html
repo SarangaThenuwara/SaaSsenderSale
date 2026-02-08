@@ -138,22 +138,23 @@
 
             <div class="space-y-4">
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-300">Credentials (JSON or Base64)</label>
+                    <label class="block text-sm font-medium text-slate-300">Credentials (Base64)</label>
                     <textarea name="credentials_base64" rows="3" class="input-glass px-4 py-3 font-mono text-xs"
-                        placeholder="Paste the raw JSON or Base64 encoded string of your client_secret.json here">{{ user.credentials_base64 or '' }}</textarea>
-                    <p class="text-[10px] text-slate-500">You can paste the <strong>raw JSON content</strong> or the
-                        <strong>Base64 string</strong>. The system will handle the conversion for you.
+                        placeholder="Paste the Base64 encoded string provided by the generator">{{ user.credentials_base64 or '' }}</textarea>
+                    <p class="text-[10px] text-slate-500">Paste the <strong>Base64 string</strong> for your credentials.
+                        Do not paste raw JSON files.
                     </p>
                 </div>
 
+
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-300">Token (JSON or Base64)</label>
+                    <label class="block text-sm font-medium text-slate-300">Token (Base64)</label>
                     <textarea name="token_base64" rows="3" class="input-glass px-4 py-3 font-mono text-xs"
-                        placeholder="Paste the raw JSON or Base64 encoded string of your token.json here">{{ user.token_base64 or '' }}</textarea>
-                    <p class="text-[10px] text-slate-500">You can paste the <strong>raw JSON content</strong> or the
-                        <strong>Base64 string</strong>. This is the content of your <code>token.json</code>.
+                        placeholder="Paste the Base64 encoded string provided by the generator">{{ user.token_base64 or '' }}</textarea>
+                    <p class="text-[10px] text-slate-500">Paste the <strong>Base64 string</strong> for your token.
                     </p>
                 </div>
+
             </div>
         </div>
 
