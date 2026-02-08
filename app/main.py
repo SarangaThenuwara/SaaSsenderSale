@@ -14,7 +14,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from .db import db
-from .config import SECRET_KEY, APP_ENV, ADMIN_USERNAME, ADMIN_PASSWORD, YOUTUBE_GUIDE_URL, COLAB_GENERATOR_URL
+from .config import SECRET_KEY, APP_ENV, ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_API_KEY, YOUTUBE_GUIDE_URL, COLAB_GENERATOR_URL
 from .utils import generate_csrf_token, validate_csrf_token, encrypt_bytes_to_b64
 from .storage_b2 import presign_upload, get_b2_status
 import csv
@@ -112,6 +112,25 @@ def current_session_user(request: Request):
     if local:
         local["_id_str"] = str(local["_id"])
     return local
+
+def is_admin_request(request: Request):
+    """
+    Checks if a request is from an admin via:
+    1. Session cookie (logged in browser)
+    2. Static API Key (Header: X-Admin-API-Key)
+    """
+    # Check Session
+    user = current_session_user(request)
+    if user and user.get("role") == "admin":
+        return True
+    
+    # Check API Key Header
+    api_key = request.headers.get("X-Admin-API-Key")
+    if api_key and api_key == ADMIN_API_KEY:
+        return True
+        
+    return False
+
 
 def get_csrf_session_id(request: Request):
     """
@@ -1013,8 +1032,7 @@ async def payment_callback(request: Request):
 # --- Admin API ---
 @app.get("/api/admin/users")
 def api_admin_list_users(request: Request):
-    user = current_session_user(request)
-    if not user or user.get("role") != "admin":
+    if not is_admin_request(request):
         return JSONResponse({"error": "Admin access required"}, status_code=403)
     
     users = list(db.users.find({}, {"credentials_base64": 0, "token_base64": 0}))
@@ -1024,9 +1042,9 @@ def api_admin_list_users(request: Request):
 
 @app.post("/api/admin/users")
 async def api_admin_create_user(request: Request):
-    user = current_session_user(request)
-    if not user or user.get("role") != "admin":
+    if not is_admin_request(request):
          return JSONResponse({"error": "Admin access required"}, status_code=403)
+
     
     body = await request.json()
     email = body.get("email")
@@ -1066,3 +1084,85 @@ async def api_admin_create_user(request: Request):
         return JSONResponse({"error": str(e)}, status_code=500)
     
     return JSONResponse({"error": "Could not create user"}, status_code=400)
+
+@app.patch("/api/admin/users/{user_id}")
+async def api_admin_update_user(user_id: str, request: Request):
+    if not is_admin_request(request):
+        return JSONResponse({"error": "Admin access required"}, status_code=403)
+    
+    body = await request.json()
+    # Fields that admin is allowed to update via API
+    allowed_updates = ["daily_limit", "role", "is_paid", "username", "campaign_active", "subscription_expires_at"]
+    updates = {k: v for k, v in body.items() if k in allowed_updates}
+    
+    if not updates:
+        return JSONResponse({"error": "No valid update fields provided"}, status_code=400)
+    
+    # Data type conversion/normalization
+    if "daily_limit" in updates:
+        try:
+            updates["daily_limit"] = int(updates["daily_limit"])
+        except ValueError:
+            return JSONResponse({"error": "daily_limit must be an integer"}, status_code=400)
+            
+    if "is_paid" in updates:
+        updates["is_paid"] = bool(updates["is_paid"])
+        # If setting to true and no expiry provided, default to +30 days
+        if updates["is_paid"] and "subscription_expires_at" not in updates:
+             updates["subscription_expires_at"] = datetime.utcnow() + timedelta(days=30)
+    
+    if "subscription_expires_at" in updates and isinstance(updates["subscription_expires_at"], str):
+        try:
+            updates["subscription_expires_at"] = datetime.fromisoformat(updates["subscription_expires_at"].replace("Z", "+00:00"))
+        except ValueError:
+            return JSONResponse({"error": "Invalid date format for subscription_expires_at. Use ISO format."}, status_code=400)
+
+    try:
+        res = db.users.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
+        if res.matched_count == 0:
+            return JSONResponse({"error": "User not found"}, status_code=404)
+        return JSONResponse({"ok": True, "updated_fields": list(updates.keys())})
+    except Exception as e:
+        LOG.error("Admin update user failed: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.delete("/api/admin/users/{user_id}")
+async def api_admin_delete_user(user_id: str, request: Request):
+    if not is_admin_request(request):
+        return JSONResponse({"error": "Admin access required"}, status_code=403)
+    
+    try:
+        # Note: This only deletes from local MongoDB. 
+        # To delete from Supabase, a Service Role Key would be required.
+        res = db.users.delete_one({"_id": ObjectId(user_id)})
+        if res.deleted_count == 0:
+            return JSONResponse({"error": "User not found"}, status_code=404)
+        return JSONResponse({"ok": True, "message": "User deleted from local database"})
+    except Exception as e:
+        LOG.error("Admin delete user failed: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/api/admin/stats")
+def api_admin_stats(request: Request):
+    if not is_admin_request(request):
+        return JSONResponse({"error": "Admin access required"}, status_code=403)
+    
+    total_users = db.users.count_documents({})
+    active_campaigns = db.users.count_documents({"campaign_active": True})
+    paid_users = db.users.count_documents({"is_paid": True})
+    total_recipients = db.recipients.count_documents({})
+    pending_recipients = db.recipients.count_documents({"status": "Pending"})
+    
+    return JSONResponse({
+        "total_users": total_users,
+        "active_campaigns": active_campaigns,
+        "paid_users": paid_users,
+        "recipients": {
+            "total": total_recipients,
+            "pending": pending_recipients
+        },
+        "system": {
+            "environment": APP_ENV,
+            "now": datetime.utcnow().isoformat()
+        }
+    })

@@ -11,6 +11,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "change-me")  # change in production
 FERNET_KEY = os.getenv("FERNET_KEY")  # optional, required if you want token encryption
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "admin-secret-key")
 
 # MongoDB
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
