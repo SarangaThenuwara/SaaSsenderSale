@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Admin Dashboard</h2>
+
+  <section>
+    <h3>Quick Actions</h3>
+    <form action="/admin/assign" method="post">
+      <button type="submit">Run Assignment Job</button>
+    </form>
+
+    <form action="/admin/ingest_csv" method="post" enctype="multipart/form-data" style="margin-top:10px;">
+      <label>Ingest Recipients CSV: <input type="file" name="file" accept=".csv" required></label>
+      <button type="submit">Upload</button>
+    </form>
+  </section>
+
+  <section style="margin-top:20px;">
+    <h3>Pool</h3>
+    <p>Pending pool size: <strong>{{ pending_pool }}</strong></p>
+  </section>
+
+  <section style="margin-top:20px;">
+    <h3>Users</h3>
+    <table>
+      <thead>
+        <tr><th>Username</th><th>Email</th><th>Daily Limit</th><th>Daily Sent</th><th>Assigned</th><th>Capacity</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.username }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.daily_limit }}</td>
+          <td>{{ u.daily_sent or 0 }}</td>
+          <td>{{ u.assigned_count }}</td>
+          <td>{{ u.pending_capacity }}</td>
+          <td>
+            <a href="/user/{{ u._id_str }}/dashboard">Open</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

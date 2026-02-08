@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!-- SEO Meta Tags -->
+  <title>{{ title or "Secure Email Outreach Automation | Privacy-First SaaS Sender" }}</title>
+  <meta name="description"
+    content="Privacy-focused email automation platform. OAuth2 integration keeps your Gmail credentials secure. Smart queuing, personalized templates, and transparent data handling.">
+  <meta name="keywords"
+    content="email automation, privacy-first, OAuth2, Gmail automation, secure email sender, GDPR compliant, email outreach">
+
+  <!-- Open Graph / Social Media -->
+  <meta property="og:title" content="Secure Email Outreach Automation | Privacy-First">
+  <meta property="og:description"
+    content="Privacy-focused email automation with OAuth2 security. Your credentials stay in your control.">
+  <meta property="og:type" content="website">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lexend:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Styles & Scripts -->
+  <link rel="stylesheet" href="/static/dist/styles.css">
+  <script defer src="/static/js/presign-upload.js"></script>
+
+  <!-- Structured Data for SEO -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "SaaS Email Sender",
+    "applicationCategory": "BusinessApplication",
+    "description": "Privacy-first email automation platform with OAuth2 security",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": "OAuth2 Authentication, Smart Rate Limiting, Email Personalization, Privacy-First Architecture"
+  }
+  </script>
+</head>
+
+<body class="min-h-screen flex flex-col relative overflow-x-hidden">
+
+  <!-- Background Glow Effects -->
+  <div class="fixed inset-0 z-0 pointer-events-none">
+    <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary-600/20 rounded-full blur-[128px]"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-accent-glow/20 rounded-full blur-[128px]">
+    </div>
+  </div>
+
+  <header class="fixed top-0 w-full z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        {% if session_user %}
+        <a href="/user/{{ session_user._id_str }}/dashboard" class="flex items-center gap-3 group">
+          {% else %}
+          <a href="/" class="flex items-center gap-3 group">
+            {% endif %}
+            <div
+              class="h-9 w-9 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold shadow-lg shadow-primary-500/20 group-hover:scale-105 transition-transform">
+              S</div>
+            <span class="text-lg font-display font-semibold text-white tracking-wide">SaaS Sender</span>
+          </a>
+
+          <!-- Desktop Nav -->
+          <nav class="hidden md:flex items-center gap-8">
+            {% if session_user %}
+            <div class="flex items-center gap-6">
+              <span class="text-sm text-slate-400">Hello, <span class="text-white">{{ session_user.username
+                  }}</span></span>
+              <a href="/user/{{ session_user._id_str }}/dashboard" class="btn-secondary text-sm px-4 py-2">Dashboard</a>
+              <a href="/settings"
+                class="text-sm font-medium text-white hover:text-primary-400 transition-colors">Settings</a>
+              <a href="/logout" class="text-sm font-medium link-hover">Logout</a>
+            </div>
+            {% else %}
+            <a href="/login" class="text-sm font-medium link-hover">Login</a>
+            <a href="/signup" class="btn-primary text-sm px-5 py-2 rounded-lg">Get started</a>
+            {% endif %}
+          </nav>
+
+          <!-- Mobile Menu Button -->
+          <button id="mobile-menu-btn" class="md:hidden p-2 text-slate-400 hover:text-white transition-colors">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path id="menu-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+      </div>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="hidden md:hidden border-t border-white/5 bg-slate-950/95 backdrop-blur-xl">
+      <div class="px-4 pt-2 pb-6 space-y-3">
+        {% if session_user %}
+        <div class="py-3 border-b border-white/5 px-2">
+          <p class="text-xs text-slate-500 uppercase tracking-widest mb-1">Signed in as</p>
+          <p class="text-sm font-bold text-white">{{ session_user.username }}</p>
+        </div>
+        <a href="/user/{{ session_user._id_str }}/dashboard"
+          class="block px-3 py-3 rounded-xl bg-primary-500/10 text-primary-400 font-bold">Dashboard</a>
+        <a href="/settings"
+          class="block px-3 py-3 rounded-xl hover:bg-white/5 text-white transition-colors">Settings</a>
+        <a href="/logout" class="block px-3 py-3 rounded-xl hover:bg-white/5 text-red-400 transition-colors">Logout</a>
+        {% else %}
+        <a href="/login"
+          class="block px-3 py-3 rounded-xl hover:bg-white/5 text-white transition-colors text-center">Login</a>
+        <a href="/signup" class="block px-3 py-3 rounded-xl bg-primary-500 text-white font-bold text-center">Get
+          Started</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <script>
+      const mobileBtn = document.getElementById('mobile-menu-btn');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const menuIcon = document.getElementById('menu-icon');
+
+      mobileBtn.addEventListener('click', () => {
+        const isHidden = mobileMenu.classList.contains('hidden');
+        if (isHidden) {
+          mobileMenu.classList.remove('hidden');
+          menuIcon.setAttribute('d', 'M6 18L18 6M6 6l12 12'); // X icon
+        } else {
+          mobileMenu.classList.add('hidden');
+          menuIcon.setAttribute('d', 'M4 6h16M4 12h16M4 18h16'); // Hamburger icon
+        }
+      });
+    </script>
+  </header>
+
+  <main class="relative z-10 flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="relative z-10 border-t border-white/5 bg-slate-950/50 backdrop-blur-sm">
+    <div class="max-w-7xl mx-auto px-6 py-12">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+        <p class="text-slate-500 text-sm">© 2026 SaaS Email Sender. Secure by design.</p>
+        <div class="flex gap-6">
+          <a href="/privacy" class="link-hover text-sm">Privacy Policy</a>
+          <a href="/terms" class="link-hover text-sm">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+
+</html>

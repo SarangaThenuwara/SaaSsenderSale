@@ -1,0 +1,110 @@
+{% extends "premium/base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto py-16 px-4">
+    <h1 class="text-5xl font-bold text-white mb-8">Privacy Policy</h1>
+    <p class="text-slate-400 mb-12">Last updated: February 2026</p>
+
+    <div class="space-y-8 text-slate-300 leading-relaxed">
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">Our Privacy Commitment</h2>
+            <p>At SaaS Email Sender, your privacy is our top priority. We built this platform with a privacy-first
+                architecture to ensure your data remains secure and under your control at all times.</p>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">Information We Collect</h2>
+            <h3 class="text-xl font-bold text-white mb-2">Account Information</h3>
+            <ul class="list-disc list-inside space-y-2 mb-4">
+                <li>Email address (for account creation and authentication)</li>
+                <li>Username (derived from your email)</li>
+                <li>Account creation date</li>
+            </ul>
+
+            <h3 class="text-xl font-bold text-white mb-2">Campaign Data</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li>Email templates you create</li>
+                <li>CV/resume files you upload</li>
+                <li>Recruiter contact information you import</li>
+                <li>Campaign statistics and sending history</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">How We Use Your Information</h2>
+            <p class="mb-4">We use your information solely to:</p>
+            <ul class="list-disc list-inside space-y-2">
+                <li>Provide and maintain the email automation service</li>
+                <li>Send emails on your behalf through your Gmail account</li>
+                <li>Display campaign statistics and performance metrics</li>
+                <li>Improve and optimize our platform</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">OAuth2 & Gmail Integration</h2>
+            <p class="mb-4"><strong class="text-white">We never see or store your Gmail password.</strong></p>
+            <p class="mb-4">Our platform uses Google's OAuth2 protocol for authentication. This means:</p>
+            <ul class="list-disc list-inside space-y-2">
+                <li>Your Gmail credentials remain exclusively within Google's infrastructure</li>
+                <li>We only receive temporary access tokens that you can revoke at any time</li>
+                <li>All communication with Gmail uses encrypted connections</li>
+                <li>You maintain full control over what permissions you grant</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">Data Storage & Security</h2>
+            <p class="mb-4">Your data is stored securely:</p>
+            <ul class="list-disc list-inside space-y-2">
+                <li>All data stored in encrypted databases</li>
+                <li>Industry-standard encryption for data transmission (HTTPS/TLS)</li>
+                <li>Regular security audits and updates</li>
+                <li>Access controls and authentication requirements</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">Third-Party Sharing</h2>
+            <p class="mb-4"><strong class="text-white">We do not sell, rent, or share your personal data with third
+                    parties.</strong></p>
+            <p>The only external service we interact with is Google Gmail (via OAuth2) to send emails on your behalf. We
+                do not share your data with advertisers, marketers, or data brokers.</p>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">Your Rights</h2>
+            <p class="mb-4">You have the right to:</p>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong class="text-white">Access:</strong> Request a copy of all data we store about you</li>
+                <li><strong class="text-white">Delete:</strong> Request deletion of your account and all associated data
+                </li>
+                <li><strong class="text-white">Export:</strong> Download your campaign data at any time</li>
+                <li><strong class="text-white">Revoke:</strong> Disconnect Gmail access through your Google Account
+                    settings</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">Data Retention</h2>
+            <p>We retain your data only as long as your account is active. When you delete your account, all associated
+                data is permanently removed from our systems within 30 days.</p>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">Changes to This Policy</h2>
+            <p>We may update this privacy policy from time to time. We will notify you of any changes by updating the
+                "Last updated" date at the top of this page.</p>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">Contact Us</h2>
+            <p>If you have any questions about this Privacy Policy, please contact us through your account dashboard or
+                email us directly.</p>
+        </section>
+    </div>
+
+    <div class="mt-12 pt-8 border-t border-white/10">
+        <a href="/" class="text-primary-400 hover:text-primary-300 font-bold">← Back to Home</a>
+    </div>
+</div>
+{% endblock %}

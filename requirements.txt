@@ -1,0 +1,16 @@
+requests
+argon2-cffi
+bleach
+fastapi
+uvicorn[standard]
+celery[redis]
+redis
+pymongo
+jinja2
+python-dotenv
+python-multipart
+boto3
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+slowapi

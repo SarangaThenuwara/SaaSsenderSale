@@ -1,0 +1,32 @@
+{% extends "premium/base.html" %}
+{% block content %}
+<div class="max-w-md mx-auto py-12 px-4">
+    <div class="card-glass p-8 text-center">
+        <h1 class="text-3xl font-bold text-white mb-4">Complete Subscription</h1>
+        <p class="text-slate-400 mb-8">Access the premium email sender service for just <strong>$5.00/month</strong>.
+        </p>
+
+        <div class="flex justify-center mb-8">
+            <div class="bg-primary-500/10 p-6 rounded-2xl border border-primary-500/30">
+                <p class="text-xs text-primary-300 uppercase tracking-widest font-bold mb-2">Total Due</p>
+                <p class="text-4xl font-bold text-white">$5.00</p>
+            </div>
+        </div>
+
+        <form action="{{ webxpay_url }}" method="POST">
+            {% for key, value in payload.items() %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endfor %}
+            <button type="submit" class="btn-primary w-full py-3 shadow-lg shadow-primary-500/20 text-lg font-bold">
+                Pay Securely via Webxpay
+            </button>
+        </form>
+
+        <p class="text-xs text-slate-500 mt-6">
+            By proceeding, you agree to our <a href="/terms" class="text-primary-400 hover:underline">Terms of
+                Service</a>.
+            <br>Secure payment processing provided by Webxpay.
+        </p>
+    </div>
+</div>
+{% endblock %}

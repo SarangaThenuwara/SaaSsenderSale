@@ -1,0 +1,169 @@
+{% extends "premium/base.html" %}
+{% block content %}
+<script src="/static/js/dashboard.js" defer></script>
+
+<div class="max-w-7xl mx-auto space-y-8 animate-fade-in">
+
+    <!-- Top Bar: Welcome & Stats -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+            <h1 class="text-4xl font-bold text-white">Welcome back, {{ user.username }}</h1>
+            <p class="text-slate-400 mt-1">Manage your outreach and track recruiter responses.</p>
+            {% if user.is_paid %}
+            <p class="text-xs text-green-400 font-bold mt-1">Premium Plan Active (Expires: {{
+                user.subscription_expires_at.strftime('%Y-%m-%d') }})</p>
+            {% endif %}
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4 md:gap-6">
+            <div class="text-left md:text-right flex-grow md:flex-grow-0">
+                <p class="text-[10px] text-slate-500 uppercase tracking-wider">Campaign Status</p>
+                <div class="mt-1 flex items-center gap-2 md:justify-end">
+                    {% if user.campaign_active %}
+                    <span class="text-green-400 font-bold flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                        Running
+                    </span>
+                    <button id="toggle-campaign" data-active="true"
+                        class="text-xs text-red-400 hover:text-red-300 transition-colors">Stop</button>
+                    {% else %}
+                    <span class="text-slate-500 font-bold">Paused</span>
+                    <button id="toggle-campaign" data-active="false"
+                        class="text-xs text-primary-400 hover:text-primary-300 transition-colors">Start</button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="hidden sm:block h-10 w-px bg-white/10"></div>
+            <div class="text-left md:text-right">
+                <p class="text-[10px] text-slate-500 uppercase tracking-wider">Assigned</p>
+                <p class="text-2xl font-bold text-white">{{ assigned }}</p>
+            </div>
+        </div>
+    </div>
+
+    {% if not user.credentials_base64 or not user.token_base64 or not user.cv_uploaded_at %}
+    <div
+        class="bg-primary-500/10 border border-primary-500/20 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div class="flex items-start sm:items-center gap-4 text-left">
+            <div class="p-3 rounded-xl bg-primary-500/20 text-primary-400 flex-shrink-0">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div>
+                <h4 class="font-bold text-white">Setup Incomplete</h4>
+                <p class="text-sm text-slate-400">Please upload your CV and configure Gmail to start sending.</p>
+            </div>
+        </div>
+        <a href="/settings"
+            class="btn-primary w-full sm:w-auto px-6 py-2 rounded-xl text-sm whitespace-nowrap text-center">Configure
+            Now</a>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+        <!-- Upload CV Card -->
+        <div class="card-glass p-6 space-y-4 lg:col-span-3">
+            <h3 class="font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Resume (CV)
+            </h3>
+
+            <div id="upload-area"
+                class="border-2 border-dashed border-white/5 rounded-xl p-6 text-center hover:border-primary-500/30 transition-all cursor-pointer bg-slate-800/20">
+                <p class="text-sm text-slate-400">Click or drag PDF here</p>
+                <input type="hidden" id="csrf_token" value="{{ csrf_token }}">
+                <input type="file" id="cv_file" class="hidden" accept=".pdf">
+            </div>
+
+            <div id="upload-progress" class="hidden space-y-2">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                    <span>Uploading...</span>
+                    <span id="progress-percent">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
+                    <div id="progress-bar" class="bg-primary-500 h-full w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            {% if user.cv_filename %}
+            <div class="flex items-center gap-3 p-3 bg-white/2 rounded-lg border border-white/5">
+                <div class="p-2 rounded bg-primary-500/10 text-primary-400">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-white truncate">{{ user.cv_filename }}</p>
+                    <p class="text-[10px] text-slate-500">Uploaded on {{ user.cv_uploaded_at.strftime('%b %d, %Y')
+                        if user.cv_uploaded_at else 'Unknown' }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Info -->
+        <div class="card-glass p-6 lg:col-span-2">
+            <h3 class="font-bold text-white mb-4">Account Usage</h3>
+            <div class="space-y-4">
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Daily Quota</span>
+                        <span class="text-white font-medium">{{ user.daily_sent|default(0) }} / {{
+                            user.daily_limit|default(240) }}</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5">
+                        <div class="bg-primary-500 h-1.5 rounded-full"
+                            style="width: {{ (user.daily_sent|default(0) / user.daily_limit|default(240) * 100)|round }}%">
+                        </div>
+                    </div>
+                </div>
+                <a href="/settings" class="block text-center text-xs text-primary-400 hover:underline">Update
+                    Settings & Templates</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('toggle-campaign')?.addEventListener('click', async () => {
+        const btn = document.getElementById('toggle-campaign');
+        const currentActive = btn.getAttribute('data-active') === 'true';
+        const nextActive = !currentActive;
+        const originalText = btn.innerText;
+        btn.innerText = 'Wait...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/campaign/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ active: nextActive })
+            });
+            const data = await response.json();
+            if (response.status === 402 || (data && data.payment_required)) {
+                if (confirm('A premium subscription ($5/mo) is required to start the campaign. Proceed to payment?')) {
+                    window.location.href = '/payment';
+                }
+                return;
+            }
+
+            if (data.ok) {
+                window.location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to toggle campaign'));
+            }
+        } catch (err) {
+            alert('Request failed: ' + err.message);
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

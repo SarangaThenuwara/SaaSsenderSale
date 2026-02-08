@@ -1,0 +1,184 @@
+{% extends "premium/base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8 animate-fade-in">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div>
+            <h1 class="text-4xl font-bold">Admin Dashboard</h1>
+            <p class="text-slate-400">Manage the global recruiter pool and oversee user campaign status.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 items-center">
+            <!-- Payment Gateway Toggle -->
+            <form action="/admin/payments/toggle" method="post" class="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-lg border border-white/10">
+                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                <span class="text-sm font-medium text-slate-300">Payment Gateway:</span>
+                {% if payment_active %}
+                    <span class="text-xs font-bold text-green-400 mr-2">ENABLED</span>
+                    <button type="submit" name="active" value="false" class="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-1 rounded transition-colors">Disable</button>
+                {% else %}
+                    <span class="text-xs font-bold text-red-400 mr-2">DISABLED</span>
+                    <button type="submit" name="active" value="true" class="text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 px-3 py-1 rounded transition-colors">Enable</button>
+                {% endif %}
+            </form>
+
+            <form action="/admin/sync_pool" method="post" class="w-full sm:w-auto">
+                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                <button type="submit" class="btn-secondary w-full px-6 py-2 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Sync HR.UAE
+                </button>
+            </form>
+            <form action="/admin/assign" method="post" class="w-full sm:w-auto">
+                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                <button type="submit"
+                    class="btn-primary w-full px-6 py-2 shadow-lg shadow-primary-500/20 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Run Assignment
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div class="card-glass p-6 group">
+            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Pending Pool</p>
+            <p class="text-4xl font-bold text-white mt-1 group-hover:text-primary-400 transition-colors">{{ pending_pool
+                }}</p>
+            <p class="text-xs text-slate-500 mt-2">Unassigned recruiters</p>
+        </div>
+
+        <div class="card-glass p-6 group">
+            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">MongoDB Health</p>
+            {% if mongo_status.ok %}
+            <div class="mt-2 space-y-1">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span class="text-sm font-bold text-white">Connected v{{ mongo_status.version }}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-y-1 mt-2">
+                    <p class="text-[10px] text-slate-400">Cols/Objs: <span class="text-white">{{
+                            mongo_status.collections }} / {{ mongo_status.objects }}</span></p>
+                    <p class="text-[10px] text-slate-400">Data Size: <span class="text-white">{{ mongo_status.data_size
+                            }} MB</span></p>
+                    <p class="text-[10px] text-slate-400">Index Size: <span class="text-white">{{
+                            mongo_status.index_size }} MB</span></p>
+                    <p class="text-[10px] text-slate-400">Conns: <span class="text-white">{{ mongo_status.active_conns
+                            }}</span></p>
+                </div>
+            </div>
+            {% else %}
+            <div class="mt-2 flex items-center gap-2 text-red-400">
+                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                <span class="text-sm">Disconnected</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card-glass p-6 group">
+            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">B2 Storage</p>
+            {% if b2_status.ok %}
+            <div class="mt-2 space-y-1">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span class="text-sm font-bold text-white">Active</span>
+                </div>
+                <p class="text-[10px] text-slate-400 font-medium">{{ b2_status.file_count }} files | {{
+                    b2_status.folder_count }} folders</p>
+                <p class="text-[10px] text-slate-500">{{ b2_status.total_size_mb }} MB used</p>
+            </div>
+            {% else %}
+            <div class="mt-2 flex items-center gap-2 text-red-400">
+                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                <span class="text-sm">Config Error</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card-glass p-6 group">
+            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Capacity</p>
+            <p class="text-4xl font-bold text-white mt-1 group-hover:text-green-400 transition-colors">{{ total_capacity
+                }}</p>
+            <p class="text-xs text-slate-500 mt-2">Combined daily limits</p>
+        </div>
+
+        <div class="card-glass p-6 group">
+            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Network Status</p>
+            <div class="mt-2 space-y-2">
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-slate-500 uppercase tracking-widest">Private IP</span>
+                    <span class="text-sm font-bold text-white font-mono">{{ server_ips.private }}</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-slate-500 uppercase tracking-widest">Public IP</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-primary-400 font-mono">{{ server_ips.public }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 flex gap-2">
+                <a href="http://{{ server_ips.private }}:8000" target="_blank"
+                    class="text-[10px] text-slate-500 hover:text-white transition-colors underline">Access Private</a>
+                <a href="http://{{ server_ips.public }}:8000" target="_blank"
+                    class="text-[10px] text-slate-500 hover:text-white transition-colors underline">Access Public</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-6">
+        <!-- User List Panel -->
+        <div class="card-glass p-8">
+            <h3 class="text-xl font-bold mb-6">User Overview</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-white/5 text-slate-400 text-sm">
+                            <th class="pb-4 font-semibold">User</th>
+                            <th class="pb-4 font-semibold text-center">Campaign</th>
+                            <th class="pb-4 font-semibold text-center">Limits</th>
+                            <th class="pb-4 font-semibold text-center">Assigned</th>
+                            <th class="pb-4 font-semibold text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for u in users %}
+                        <tr class="group hover:bg-white/2">
+                            <td class="py-4">
+                                <div class="font-medium text-white">{{ u.username }}</div>
+                                <div class="text-xs text-slate-500">{{ u.email }}</div>
+                            </td>
+                            <td class="py-4 text-center">
+                                {% if u.campaign_active %}
+                                <span
+                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-400">Active</span>
+                                {% else %}
+                                <span
+                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-500/10 text-slate-500">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-4 text-center">
+                                <div class="text-sm">{{ u.daily_limit|default(240) }}</div>
+                            </td>
+                            <td class="py-4 text-center">
+                                <div class="text-sm font-bold text-primary-400">{{ u.assigned_count|default(0) }}
+                                </div>
+                            </td>
+                            <td class="py-4 text-right">
+                                <a href="/user/{{ u._id_str }}/dashboard"
+                                    class="text-xs text-primary-400 hover:text-primary-300 transition-colors">View
+                                    Dashboard</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

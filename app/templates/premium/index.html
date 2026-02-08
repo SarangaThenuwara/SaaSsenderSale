@@ -1,0 +1,352 @@
+{% extends "premium/base.html" %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="relative min-h-[90vh] flex items-center justify-center -mt-20 px-4 overflow-hidden">
+  <!-- Dynamic Background Glow -->
+  <div
+    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse-slow">
+  </div>
+
+  <div class="relative max-w-5xl mx-auto text-center z-10">
+    <div
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 animate-fade-in backdrop-blur-sm">
+      <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+      <span class="text-sm font-medium text-slate-300">Privacy-First Email Infrastructure</span>
+    </div>
+
+    <h1
+      class="text-5xl md:text-7xl lg:text-8xl font-display font-bold text-white leading-[1.1] mb-8 tracking-tight animate-slide-up">
+      Scale Outreach<br>
+      <span
+        class="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-accent-400 to-primary-500 text-glow">
+        Without Compromise
+      </span>
+    </h1>
+
+    <p class="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-10 leading-relaxed animate-slide-up"
+      style="animation-delay: 100ms;">
+      Your credentials stay in your control. The only email automation platform built on a
+      <span class="text-white font-semibold">Zero-Knowledge Architecture</span>.
+    </p>
+
+    <div class="flex flex-col sm:flex-row gap-5 justify-center items-center animate-slide-up"
+      style="animation-delay: 200ms;">
+      <a href="/signup"
+        class="btn-primary px-8 py-4 text-lg font-bold shadow-lg shadow-primary-500/20 hover:scale-105 transition-transform duration-300">
+        Start Free Trial
+      </a>
+      <a href="/login" class="btn-secondary px-8 py-4 text-lg font-medium hover:bg-white/10 transition-colors">
+        View Live Demo
+      </a>
+    </div>
+
+    <!-- Trust Badges -->
+    <div
+      class="mt-16 pt-8 border-t border-white/5 flex flex-wrap justify-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+      <div class="flex items-center gap-3">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5z" />
+        </svg> <!-- Placeholder for Google Icon -->
+        <span class="font-bold text-lg">Google Verified</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+        </svg>
+        <span class="font-bold text-lg">OAuth2 Secure</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+        </svg>
+        <span class="font-bold text-lg">GDPR Compliant</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats / Trust Indicators -->
+<section class="py-20 border-y border-white/5 bg-slate-900/30 backdrop-blur-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+      <!-- Stat 1 -->
+      <div
+        class="relative group p-8 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-primary-500/20 transition-colors duration-300">
+        <div
+          class="absolute inset-0 bg-primary-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        </div>
+        <div class="relative text-center">
+          <div
+            class="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-2 font-display">
+            100%</div>
+          <p class="text-sm font-semibold text-primary-400 uppercase tracking-widest mb-1">Encrypted</p>
+          <p class="text-slate-400">End-to-end OAuth2 protocol</p>
+        </div>
+      </div>
+
+      <!-- Stat 2 -->
+      <div
+        class="relative group p-8 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-accent-500/20 transition-colors duration-300">
+        <div
+          class="absolute inset-0 bg-accent-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        </div>
+        <div class="relative text-center">
+          <div
+            class="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-2 font-display">
+            0</div>
+          <p class="text-sm font-semibold text-accent-400 uppercase tracking-widest mb-1">Data Sharing</p>
+          <p class="text-slate-400">Strictly no third-party access</p>
+        </div>
+      </div>
+
+      <!-- Stat 3 -->
+      <div
+        class="relative group p-8 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-primary-500/20 transition-colors duration-300">
+        <div
+          class="absolute inset-0 bg-primary-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        </div>
+        <div class="relative text-center">
+          <div
+            class="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mb-2 font-display">
+            24/7</div>
+          <p class="text-sm font-semibold text-primary-400 uppercase tracking-widest mb-1">Reliability</p>
+          <p class="text-slate-400">Automated queue management</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Grid -->
+<section class="py-32 px-4 relative">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-20">
+      <h2 class="text-4xl md:text-5xl font-bold text-white mb-6 font-display">Privacy-First Architecture</h2>
+      <p class="text-slate-400 text-xl max-w-2xl mx-auto">
+        Built from the ground up to protect your sender reputation and your data.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8 lg:gap-12">
+      <!-- Feature 1 -->
+      <div
+        class="group card-glass p-8 md:p-10 hover:border-primary-500/30 transition-all duration-300 hover:shadow-primary-500/10 hover:-translate-y-1">
+        <div
+          class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500/20 to-primary-600/10 flex items-center justify-center text-primary-400 mb-8 p-3 shadow-inner shadow-white/5 group-hover:scale-110 transition-transform duration-300">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-4">OAuth2 Authentication</h3>
+        <p class="text-slate-400 leading-relaxed text-lg">
+          We never see your password. Google handles the authentication directly using industry-standard OAuth2,
+          ensuring your credentials remain exclusively within Google's secure ecosystem.
+        </p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div
+        class="group card-glass p-8 md:p-10 hover:border-accent-500/30 transition-all duration-300 hover:shadow-accent-500/10 hover:-translate-y-1">
+        <div
+          class="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent-500/20 to-accent-600/10 flex items-center justify-center text-accent-400 mb-8 p-3 shadow-inner shadow-white/5 group-hover:scale-110 transition-transform duration-300">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-4">Total Data Ownership</h3>
+        <p class="text-slate-400 leading-relaxed text-lg">
+          Your campaign data lives in your private dedicated database slice. Export, modify, or permanently delete
+          everything with a single click. We provide complete transparency.
+        </p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div
+        class="group card-glass p-8 md:p-10 hover:border-primary-500/30 transition-all duration-300 hover:shadow-primary-500/10 hover:-translate-y-1">
+        <div
+          class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500/20 to-primary-600/10 flex items-center justify-center text-primary-400 mb-8 p-3 shadow-inner shadow-white/5 group-hover:scale-110 transition-transform duration-300">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-4">Intelligent Rate Limiting</h3>
+        <p class="text-slate-400 leading-relaxed text-lg">
+          Our smart queuing engine automatically adjusts sending velocity to respect Gmail's limits, protecting your
+          sender reputation and ensuring maximum deliverability.
+        </p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div
+        class="group card-glass p-8 md:p-10 hover:border-accent-500/30 transition-all duration-300 hover:shadow-accent-500/10 hover:-translate-y-1">
+        <div
+          class="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent-500/20 to-accent-600/10 flex items-center justify-center text-accent-400 mb-8 p-3 shadow-inner shadow-white/5 group-hover:scale-110 transition-transform duration-300">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+          </svg>
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-4">Transparent Operations</h3>
+        <p class="text-slate-400 leading-relaxed text-lg">
+          Zero hidden tracking pixels for advertising. No data mining. Just clean, honest email automation software that
+          does exactly what it says it does.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="py-32 bg-slate-900/40 relative overflow-hidden">
+  <!-- Decorative background elements -->
+  <div
+    class="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary-900/10 to-transparent pointer-events-none">
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 relative z-10">
+    <div class="text-center mb-24">
+      <h2 class="text-4xl md:text-5xl font-bold text-white mb-6 font-display">Setup in Minutes</h2>
+      <p class="text-slate-400 text-xl">Three simple steps to launch your first campaign</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-12 relative">
+      <!-- Steps Connector Line (Desktop) -->
+      <div
+        class="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-primary-500/0 via-primary-500/30 to-primary-500/0 z-0">
+      </div>
+
+      <!-- Step 1 -->
+      <div class="relative z-10 text-center group">
+        <div
+          class="w-24 h-24 mx-auto rounded-3xl bg-slate-900 border border-white/10 flex items-center justify-center mb-8 shadow-xl shadow-black/20 group-hover:border-primary-500/50 transition-colors duration-300">
+          <span
+            class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-primary-400 to-primary-600">1</span>
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-4">Connect</h3>
+        <p class="text-slate-400 leading-relaxed">
+          Link your Gmail account securely via OAuth2 permission screen.
+        </p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="relative z-10 text-center group">
+        <div
+          class="w-24 h-24 mx-auto rounded-3xl bg-slate-900 border border-white/10 flex items-center justify-center mb-8 shadow-xl shadow-black/20 group-hover:border-accent-500/50 transition-colors duration-300">
+          <span
+            class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-accent-400 to-accent-600">2</span>
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-4">Configure</h3>
+        <p class="text-slate-400 leading-relaxed">
+          Upload contacts and draft your personalized email templates.
+        </p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="relative z-10 text-center group">
+        <div
+          class="w-24 h-24 mx-auto rounded-3xl bg-slate-900 border border-white/10 flex items-center justify-center mb-8 shadow-xl shadow-black/20 group-hover:border-primary-500/50 transition-colors duration-300">
+          <span
+            class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-primary-400 to-primary-600">3</span>
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-4">Launch</h3>
+        <p class="text-slate-400 leading-relaxed">
+          Start your campaign. We handle the scheduling and delivery.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Security Commitments List -->
+<section class="py-24 px-4">
+  <div class="max-w-5xl mx-auto">
+    <div class="card-glass p-8 md:p-16">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-4 font-display">Uncompromising Security</h2>
+        <p class="text-slate-400">Our promises to you regarding data handling and privacy.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-y-6 gap-x-12">
+        <div class="flex items-start gap-4">
+          <div class="w-8 h-8 rounded-full bg-green-500/10 flex-shrink-0 flex items-center justify-center mt-0.5">
+            <svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-white font-bold mb-1">No Password Storage</h4>
+            <p class="text-slate-400 text-sm">We strictly rely on OAuth2 tokens, never touching your actual credentials.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-8 h-8 rounded-full bg-green-500/10 flex-shrink-0 flex items-center justify-center mt-0.5">
+            <svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-white font-bold mb-1">Zero Monetization of Data</h4>
+            <p class="text-slate-400 text-sm">Your data is never sold, shared, or used for advertising purposes.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-8 h-8 rounded-full bg-green-500/10 flex-shrink-0 flex items-center justify-center mt-0.5">
+            <svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-white font-bold mb-1">Encrypted Transmission</h4>
+            <p class="text-slate-400 text-sm">All data is encrypted in transit using TLS 1.3 standards.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4">
+          <div class="w-8 h-8 rounded-full bg-green-500/10 flex-shrink-0 flex items-center justify-center mt-0.5">
+            <svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-white font-bold mb-1">Full User Control</h4>
+            <p class="text-slate-400 text-sm">Delete your account and all associated data instantly at any time.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="py-32 px-4 relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-b from-transparent to-primary-900/20 pointer-events-none"></div>
+
+  <div class="max-w-4xl mx-auto text-center relative z-10">
+    <h2 class="text-5xl md:text-6xl font-bold text-white mb-8 font-display tracking-tight">Ready to Scale?</h2>
+    <p class="text-xl md:text-2xl text-slate-300 mb-12 max-w-2xl mx-auto">
+      Join the privacy-conscious professionals who trust us with their outreach.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-5 justify-center">
+      <a href="/signup"
+        class="btn-primary px-12 py-5 text-xl font-bold shadow-2xl shadow-primary-500/30 hover:shadow-primary-500/50 hover:-translate-y-1 transition-all duration-300">
+        Create Key & Start
+      </a>
+    </div>
+    <p class="mt-8 text-slate-500 text-sm">No credit card required for trial.</p>
+  </div>
+</section>
+
+{% endblock %}

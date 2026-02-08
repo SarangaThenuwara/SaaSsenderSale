@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>User Dashboard — {{ user.username }}</h2>
+  <p>Email: {{ user.email }}</p>
+  <p>Daily Sent: {{ user.daily_sent or 0 }}</p>
+  <p>Assigned recipients: {{ assigned }}</p>
+  <p>Needs Reauth: {{ user.needs_reauth or false }}</p>
+
+  <section style="margin-top:20px;">
+    <h3>Upload Gmail Credentials & Token</h3>
+    <form action="/user/{{ user._id }}/upload_credentials" enctype="multipart/form-data" method="post">
+      <label>credentials.json: <input type="file" name="credentials_file" accept=".json" required></label><br>
+      <label>token.json: <input type="file" name="token_file" accept=".json" required></label><br>
+      <button type="submit">Upload</button>
+    </form>
+  </section>
+
+  <section style="margin-top:20px;">
+    <h3>Upload CV (B2)</h3>
+    <form action="/user/{{ user._id }}/upload_cv" enctype="multipart/form-data" method="post">
+      <label>CV (PDF): <input type="file" name="file" accept="application/pdf" required></label><br>
+      <button type="submit">Upload CV</button>
+    </form>
+    {% if user.cv_filename %}
+      <p>Current CV: {{ user.cv_filename }}</p>
+    {% endif %}
+  </section>
+
+  <section style="margin-top:20px;">
+    <h3>Templates</h3>
+    <form action="/user/{{ user._id }}/templates" method="post">
+      <label>Subject:<br>
+        <input type="text" name="subject" style="width:80%;" value="{{ user.subject_template or 'Hi {first_name}, IT System Engineer with 7 Years of Experience' }}" required>
+      </label><br>
+      <label>Body (HTML):<br>
+        <textarea name="body" rows="8" style="width:80%;">{{ user.body_template or '<p>Hi {first_name},</p><p>Good day to you,</p>' }}</textarea>
+      </label><br>
+      <button type="submit">Save Templates</button>
+    </form>
+  </section>
+
+  <section style="margin-top:20px;">
+    <h3>Actions</h3>
+    <form action="/user/{{ user._id }}/start_send" method="post">
+      <label>Batch size: <input type="number" name="batch_size" value="10"></label>
+      <button type="submit">Start Send (enqueue)</button>
+    </form>
+  </section>
+{% endblock %}

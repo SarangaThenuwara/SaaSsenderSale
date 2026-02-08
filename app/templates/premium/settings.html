@@ -1,0 +1,226 @@
+{% extends "premium/base.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8 animate-fade-in px-4 sm:px-0">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div>
+            <h1 class="text-4xl font-bold">Settings</h1>
+            <p class="text-slate-400">Configure your Gmail API credentials and email templates.</p>
+        </div>
+        <a href="/user/{{ session_user._id_str }}/dashboard"
+            class="btn-secondary text-sm px-4 py-2 w-full sm:w-auto text-center">
+            Back to Dashboard
+        </a>
+    </div>
+
+    {% if success %}
+    <div
+        class="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-center gap-3">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        {{ success }}
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-200 text-sm mb-8">
+        <div class="flex items-center gap-3 mb-2 font-bold">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Configuration Errors
+        </div>
+        <ul class="list-disc list-inside space-y-1 ml-8">
+            {% for err in error.split(' | ') %}
+            <li>{{ err }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Setup Guide Card -->
+    <div class="card-glass p-6 sm:p-8 border-primary-500/20 bg-primary-500/5">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <div class="flex-1 space-y-4">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <svg class="w-6 h-6 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Setup Guide
+                </h2>
+                <p class="text-sm text-slate-400 leading-relaxed">
+                    Setting up Gmail sending requires a few technical steps on Google Cloud. We've simplified the
+                    process with a video guide and a code generator tool.
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    <a href="https://console.cloud.google.com/" target="_blank"
+                        class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group">
+                        <div
+                            class="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+                            </svg>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-200">Google Console</span>
+                    </a>
+                    <a href="{{ youtube_guide_url }}" target="_blank"
+                        class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group">
+                        <div
+                            class="p-2 rounded-lg bg-red-500/10 text-red-400 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                            </svg>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-200">Watch Video Guide</span>
+                    </a>
+                    <a href="{{ colab_generator_url }}" target="_blank"
+                        class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group">
+                        <div
+                            class="p-2 rounded-lg bg-orange-500/10 text-orange-400 group-hover:scale-110 transition-transform">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2.01V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7s2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z" />
+                            </svg>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-200">Permission Generator</span>
+                    </a>
+                </div>
+            </div>
+            <div class="hidden lg:block w-px bg-white/10"></div>
+            <div class="hidden sm:block lg:w-64 space-y-4">
+                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Quick Steps</h4>
+                <ol class="space-y-3">
+                    <li class="flex gap-3 text-xs text-slate-300">
+                        <span
+                            class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center font-bold">1</span>
+                        <span>Enable Gmail API in Google Cloud Console</span>
+                    </li>
+                    <li class="flex gap-3 text-xs text-slate-300">
+                        <span
+                            class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center font-bold">2</span>
+                        <span>Create OAuth Credentials & download JSON</span>
+                    </li>
+                    <li class="flex gap-3 text-xs text-slate-300">
+                        <span
+                            class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center font-bold">3</span>
+                        <span>Run Generator to get Token, then paste both below</span>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <form action="/settings" method="post" class="space-y-8">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+
+        <!-- Gmail API Credentials Section -->
+        <div class="card-glass p-8 space-y-6">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+                <svg class="w-5 h-5 text-primary-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                        d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L12 9.573l8.073-6.08c1.618-1.214 3.927-.059 3.927 1.964z" />
+                </svg>
+                Gmail API Configuration
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-slate-300">Sender Email</label>
+                    <input name="sender_email" type="email" value="{{ user.sender_email or '' }}"
+                        class="input-glass px-4 py-3" placeholder="your-apps-email@gmail.com" />
+                    <p class="text-xs text-slate-500">The email address authorized in Google Cloud Console.</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-slate-300">Credentials (JSON or Base64)</label>
+                    <textarea name="credentials_base64" rows="3" class="input-glass px-4 py-3 font-mono text-xs"
+                        placeholder="Paste the raw JSON or Base64 encoded string of your client_secret.json here">{{ user.credentials_base64 or '' }}</textarea>
+                    <p class="text-[10px] text-slate-500">You can paste the <strong>raw JSON content</strong> or the
+                        <strong>Base64 string</strong>. The system will handle the conversion for you.
+                    </p>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-slate-300">Token (JSON or Base64)</label>
+                    <textarea name="token_base64" rows="3" class="input-glass px-4 py-3 font-mono text-xs"
+                        placeholder="Paste the raw JSON or Base64 encoded string of your token.json here">{{ user.token_base64 or '' }}</textarea>
+                    <p class="text-[10px] text-slate-500">You can paste the <strong>raw JSON content</strong> or the
+                        <strong>Base64 string</strong>. This is the content of your <code>token.json</code>.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Templates Section -->
+        <div class="card-glass p-8 space-y-6">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+                <svg class="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Email Outreach Templates
+            </h2>
+
+            <div class="space-y-4">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-slate-300">Subject Template</label>
+                    <input name="subject_template" type="text"
+                        value="{{ user.subject_template or 'Hi {first_name} - Regarding the opening' }}"
+                        class="input-glass px-4 py-3" />
+                    <p class="text-xs text-slate-500">Variables: <code>{first_name}</code></p>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-slate-300">Body Template (HTML Supported)</label>
+                    <textarea name="body_template" rows="8" class="input-glass px-4 py-3 text-sm"
+                        placeholder="<p>Hi {first_name},</p><p>I am interested in...</p>">{{ user.body_template or '<p>Hi {first_name},</p><p>I hope you are doing well.</p>' }}</textarea>
+                    <p class="text-xs text-slate-500">Variables: <code>{first_name}</code> (Required for
+                        personalization)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-4">
+            <button type="button" id="test-connection" class="btn-secondary px-8">Test Connection</button>
+            <button type="submit" class="btn-primary px-8">Save All Settings</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('test-connection')?.addEventListener('click', async () => {
+        const btn = document.getElementById('test-connection');
+        const originalText = btn.innerText;
+        btn.innerText = 'Testing...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/validate_credentials', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+
+            if (data.ok) {
+                alert('Success: ' + data.message);
+                window.location.reload(); // Reload to show updated validation status if needed
+            } else {
+                alert('Error: ' + (data.error || 'Validation failed'));
+            }
+        } catch (err) {
+            alert('Request failed: ' + err.message);
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}
