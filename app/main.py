@@ -648,43 +648,58 @@ async def settings_post(
 
     # 2) Credentials
     if credentials_base64:
-        # Check if it's already Base64 JSON
-        is_b64 = False
+        # Robust check: remove all whitespace/newlines first
+        clean_cred = "".join(credentials_base64.split())
+        is_valid = False
+        
+        # Scenario A: It's raw JSON
         try:
-            decoded = base64.b64decode(credentials_base64).decode("utf-8")
-            json.loads(decoded)
-            is_b64 = True
+            json.loads(credentials_base64.strip())
+            # Convert to clean base64 for internal consistency
+            credentials_base64 = base64.b64encode(credentials_base64.strip().encode()).decode()
+            is_valid = True
         except Exception:
             pass
-        
-        if not is_b64:
-            # Try if it's Raw JSON
+            
+        # Scenario B: It's Base64 encoded JSON
+        if not is_valid:
             try:
-                json.loads(credentials_base64)
-                # It is raw JSON! Auto-encode it
-                credentials_base64 = base64.b64encode(credentials_base64.encode()).decode()
+                decoded = base64.b64decode(clean_cred).decode("utf-8")
+                json.loads(decoded)
+                credentials_base64 = clean_cred # Use the cleaned version
+                is_valid = True
             except Exception:
-                errors.append("Credentials must be either a valid JSON string or a Base64 encoded JSON string.")
+                pass
+        
+        if not is_valid:
+            errors.append("Credentials: Must be valid JSON or a Base64 encoded JSON string. Please ensure you copied the entire file content.")
 
     # 3) Token
     if token_base64:
-        # Check if it's already Base64 JSON
-        is_b64 = False
+        clean_tok = "".join(token_base64.split())
+        is_valid = False
+        
+        # Scenario A: Raw JSON
         try:
-            decoded = base64.b64decode(token_base64).decode("utf-8")
-            json.loads(decoded)
-            is_b64 = True
+            json.loads(token_base64.strip())
+            token_base64 = base64.b64encode(token_base64.strip().encode()).decode()
+            is_valid = True
         except Exception:
             pass
-        
-        if not is_b64:
-            # Try if it's Raw JSON
+            
+        # Scenario B: Base64 JSON
+        if not is_valid:
             try:
-                json.loads(token_base64)
-                # It is raw JSON! Auto-encode it
-                token_base64 = base64.b64encode(token_base64.encode()).decode()
+                decoded = base64.b64decode(clean_tok).decode("utf-8")
+                json.loads(decoded)
+                token_base64 = clean_tok
+                is_valid = True
             except Exception:
-                errors.append("Token must be either a valid JSON string or a Base64 encoded JSON string.")
+                pass
+        
+        if not is_valid:
+             errors.append("Token: Must be valid JSON or a Base64 encoded JSON string. This is usually the content of your token.json.")
+
 
     # 4) Templates
     if not subject_template or "{first_name}" not in subject_template:
@@ -694,8 +709,9 @@ async def settings_post(
         # Sanitize subject
         subject_template = bleach.clean(subject_template, tags=[], strip=True)
 
-    if not body_template or "{first_name}" not in body_template:
-        errors.append("Body template must contain {first_name} for personalization.")
+    if not body_template or "{first_name}" not in body_template.lower():
+        errors.append("Body template MUST contain {first_name} (case-insensitive) for personalization.")
+
     else:
         # Sanitize body (allow some basic formatting if needed, or strip all)
         # For email templates, we might want to allow basic HTML.
