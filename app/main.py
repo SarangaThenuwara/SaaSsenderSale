@@ -658,17 +658,16 @@ async def settings_post(
         try:
             # Try standard base64 first
             try:
-                decoded_bytes = base64.b64decode(clean_cred)
+                base64.b64decode(clean_cred)
             except Exception:
                 # Fallback to urlsafe base64
-                decoded_bytes = base64.urlsafe_b64decode(clean_cred)
+                base64.urlsafe_b64decode(clean_cred)
             
-            decoded = decoded_bytes.decode("utf-8")
-            json.loads(decoded) # must be valid JSON inside
             credentials_base64 = clean_cred
         except Exception as e:
             LOG.error("Admin credentials validation failed: %s", e)
-            errors.append("Credentials: Not a valid Base64 encoded JSON. Please copy the full string from the generator.")
+            errors.append("Credentials: Not a valid Base64 string. Please copy the full string.")
+
 
 
     # 3) Token
@@ -682,16 +681,15 @@ async def settings_post(
             
         try:
             try:
-                decoded_bytes = base64.b64decode(clean_tok)
+                base64.b64decode(clean_tok)
             except Exception:
-                decoded_bytes = base64.urlsafe_b64decode(clean_tok)
+                base64.urlsafe_b64decode(clean_tok)
                 
-            decoded = decoded_bytes.decode("utf-8")
-            json.loads(decoded) # must be valid JSON inside
             token_base64 = clean_tok
         except Exception as e:
              LOG.error("Admin token validation failed: %s", e)
-             errors.append("Token: Not a valid Base64 encoded JSON. Ensure you are copying correctly.")
+             errors.append("Token: Not a valid Base64 string. Ensure you are copying correctly.")
+
 
 
 

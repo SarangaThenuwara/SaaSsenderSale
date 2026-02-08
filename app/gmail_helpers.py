@@ -47,15 +47,26 @@ def get_gmail_service_for_user(user_id):
     # Decode B64 to JSON
     try:
         client_info_json = base64.b64decode(credentials_b64_str).decode("utf-8")
-        token_info_json = base64.b64decode(token_b64_str).decode("utf-8")
+        token_info_raw = base64.b64decode(token_b64_str).decode("utf-8")
     except Exception:
         raise ValueError("Failed to decode credentials/token from Base64")
 
-    client_info = json.loads(client_info_json)
-    token_info = json.loads(token_info_json)
+    try:
+        client_info = json.loads(client_info_json)
+    except Exception:
+        raise ValueError("Credentials must be a valid Base64 encoded JSON.")
+
+    try:
+        token_info = json.loads(token_info_raw)
+    except Exception:
+        # If not JSON, treat it as a raw token
+        token_info = {"token": token_info_raw}
 
     # client_info may have keys under 'installed' or 'web'
     client_section = client_info.get("installed") or client_info.get("web")
+    if not client_section:
+        raise ValueError("Invalid credentials JSON structure")
+        
     client_id = client_section.get("client_id")
     client_secret = client_section.get("client_secret")
 
