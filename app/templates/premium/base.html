@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lexend:wght@400;500;600;700&display=swap"
-    rel="stylesheet">
+    rel="stylesheet" crossorigin="anonymous">
 
   <!-- Styles & Scripts -->
   <link rel="stylesheet" href="/static/dist/styles.css">
@@ -48,14 +48,15 @@
 
   <!-- PWA & Icons -->
   <link rel="icon" type="image/svg+xml" href="/static/img/icon.svg">
-  <link rel="manifest" href="/static/manifest.json">
+  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#3b82f6">
   <link rel="apple-touch-icon" href="/static/img/icon.svg">
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/static/sw.js').then(reg => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+
           console.log('SW registered:', reg);
         }).catch(err => {
           console.log('SW registration failed:', err);
@@ -66,7 +67,14 @@
 
 </head>
 
-<body class="min-h-screen flex flex-col relative overflow-x-hidden">
+<body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-primary-500/30">
+  {% if is_maintenance %}
+  <div
+    class="bg-amber-500 text-slate-950 py-1.5 px-4 text-center text-[10px] font-black uppercase tracking-[0.2em] sticky top-0 z-[100] animate-pulse">
+    System Policy: Maintenance Mode Active &mdash; {{ maintenance_message|default('Intermittent availability expected')
+    }}
+  </div>
+  {% endif %}
 
   <!-- Background Glow Effects -->
   <div class="fixed inset-0 z-0 pointer-events-none">
@@ -75,7 +83,8 @@
     </div>
   </div>
 
-  <header class="fixed top-0 w-full z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-md">
+  <header
+    class="fixed {{ 'top-7' if is_maintenance else 'top-0' }} w-full z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-md transition-all duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
         {% if session_user %}
@@ -139,7 +148,7 @@
       </div>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
       const mobileBtn = document.getElementById('mobile-menu-btn');
       const mobileMenu = document.getElementById('mobile-menu');
       const menuIcon = document.getElementById('menu-icon');
@@ -172,6 +181,69 @@
       </div>
     </div>
   </footer>
+  {% if session_user %}
+  <script nonce="{{ csp_nonce }}">
+    // Session Timeout Warning (25 mins)
+    setTimeout(() => {
+      const warning = document.createElement('div');
+      warning.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[200] bg-orange-500 text-white px-6 py-3 rounded-full shadow-2xl font-bold animate-bounce flex items-center gap-3';
+      warning.innerHTML = `
+         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+         Session expiring in 5 minutes
+       `;
+      document.body.appendChild(warning);
+    }, 25 * 60 * 1000);
+
+    // Auto Logout (30 mins)
+    setTimeout(() => {
+      window.location.href = '/logout';
+    }, 30 * 60 * 1000);
+  </script>
+  {% endif %}
+  <script nonce="{{ csp_nonce }}">
+    let deferredPrompt;
+    const installBtn = document.createElement('button');
+    installBtn.id = 'pwa-install-btn';
+    installBtn.className = 'fixed bottom-8 right-8 z-[100] hidden items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-full shadow-2xl shadow-primary-500/40 hover:bg-primary-500 transition-all hover:scale-105 active:scale-95 font-bold text-sm';
+    installBtn.innerHTML = `
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12h.01M16 8l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+      Install App
+    `;
+    document.body.appendChild(installBtn);
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      deferredPrompt = e;
+      // Update UI notify the user they can install the PWA
+      installBtn.classList.remove('hidden');
+      installBtn.classList.add('flex');
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      // Show the install prompt
+      deferredPrompt.prompt();
+      // Wait for the user to respond to the prompt
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      // We've used the prompt, and can't use it again
+      deferredPrompt = null;
+      // Hide the button
+      installBtn.classList.add('hidden');
+      installBtn.classList.remove('flex');
+    });
+
+    window.addEventListener('appinstalled', () => {
+      // Log install to analytics
+      console.log('INSTALL: Success');
+      installBtn.classList.add('hidden');
+      installBtn.classList.remove('flex');
+    });
+  </script>
 </body>
 
 </html>

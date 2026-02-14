@@ -6,7 +6,7 @@ from bson.objectid import ObjectId
 
 from .celery_app import celery_app
 from .db import db
-from .user_helpers import get_cv_bytes_for_user, get_user
+from .user_helpers import get_cv_bytes_for_user, get_user, get_user_daily_limit
 from .gmail_helpers import get_gmail_service_for_user
 from .create_message import create_message
 from pymongo import ReturnDocument
@@ -21,8 +21,8 @@ USERS = db.users
 def send_batch_for_user(self, user_id, batch_size=10):
     """
     Claim up to batch_size assigned recipients for user_id and send them.
+    Uses the User Recruiter Ledger and Recruiters collection.
     """
-    # Accept both ObjectId and string
     if isinstance(user_id, str):
         try:
             user_id = ObjectId(user_id)
@@ -31,98 +31,154 @@ def send_batch_for_user(self, user_id, batch_size=10):
 
     user = USERS.find_one({"_id": user_id})
     if not user:
-        LOG.error("User not found in send_batch_for_user: %s", user_id)
         return {"error": "user not found"}
 
+    if user.get("is_blocked") or user.get("is_deleted"):
+        return {"error": "user blocked or deleted"}
+
     if not user.get("campaign_active"):
-        LOG.info("Campaign not active for user %s, skipping.", user_id)
         return {"status": "campaign inactive"}
+    
+    # Get active campaign ID (default or specific)
+    active_campaign_id = user.get("active_campaign_id", "default")
 
     if not user.get("credentials_base64") or not user.get("token_base64"):
-        LOG.warning("Missing credentials/token for user %s, skipping.", user_id)
         return {"error": "missing credentials"}
 
     if user.get("needs_reauth"):
-        LOG.warning("User needs reauth, skipping sends: %s", user_id)
         return {"error": "user needs reauth"}
 
-    # Check Subscription
-    from .db import db
-    settings = db.settings.find_one({"_id": "global"}) or {}
-    if settings.get("payment_gateway_enabled", False):
-         # Admin bypass
-         if user.get("role") != "admin":
-             expires_at = user.get("subscription_expires_at")
-             is_paid = user.get("is_paid")
-             if not is_paid or not expires_at or expires_at < datetime.datetime.utcnow():
-                 LOG.info("Subscription expired for user %s", user_id)
-                 return {"status": "subscription expired"}
-
-
-    daily_limit = user.get("daily_limit", 240)
+    daily_limit = get_user_daily_limit(user)
     daily_sent = user.get("daily_sent", 0)
+    
     if daily_sent >= daily_limit:
-        LOG.info("Daily limit reached for user %s", user_id)
         return {"status": "daily limit reached"}
 
-    sent = 0
+    sent_count = 0
+    # Process batch
     for _ in range(batch_size):
-        r = RECIPIENTS.find_one_and_update(
-            {"assigned_to": user_id, "status": "Assigned"},
-            {"$set": {"status": "InProgress", "started_at": datetime.datetime.utcnow()}},
-            sort=[("assigned_at", 1)],
-            return_document=ReturnDocument.AFTER
-        )
-        if not r:
+        # 1. Refresh User Settings to pick up live changes (CV/Templates/Stop signals)
+        user = USERS.find_one({"_id": user_id})
+        if not user or user.get("is_blocked") or user.get("is_deleted") or not user.get("campaign_active"):
+            break
+            
+        if user.get("daily_sent", 0) >= get_user_daily_limit(user):
             break
 
-        recipient_email = r.get("email")
-        first_name = (r.get("name") or recipient_email.split("@")[0]).split()[0].capitalize()
-        subject_template = user.get("subject_template", "Hi {first_name}")
-        body_template = user.get("body_template", "<p>Hi {first_name}</p>")
-        subject = subject_template.format(first_name=first_name)
-        body = body_template.format(first_name=first_name)
+        # 2. Pick a pending job from the ledger
+        active_campaign_id = user.get("active_campaign_id", "default")
+        ledger_query = {
+            "userId": user_id, 
+            "status": "pending",
+            "campaignId": active_campaign_id 
+        }
+        
+        # Atomically lock the job
+        job = db.user_recruiter_ledger.find_one_and_update(
+            ledger_query,
+            {"$set": {"status": "sending", "lastAttempt": datetime.datetime.utcnow()}},
+            sort=[("lastAttempt", 1)] # Fair queue or priority? LastAttempt usage?
+        )
+        
+        if not job:
+            break
 
-        cv_info = get_cv_bytes_for_user(user_id)
+        recruiter_id = job["recruiterId"]
+        recruiter = db.recruiters.find_one({"_id": recruiter_id})
+        
+        # 2. Validation Checks
+        if not recruiter:
+            db.user_recruiter_ledger.update_one({"_id": job["_id"]}, {"$set": {"status": "failed", "error": "recruiter missing"}})
+            continue
+            
+        email = recruiter.get("email")
+        if not email:
+            db.user_recruiter_ledger.update_one({"_id": job["_id"]}, {"$set": {"status": "failed", "error": "email missing"}})
+            continue
+
+        # Check Health
+        if recruiter.get("health") == "dead":
+            db.user_recruiter_ledger.update_one({"_id": job["_id"]}, {"$set": {"status": "skipped", "error": "recruiter dead"}})
+            continue
+
+        # Check Global Suppression
+        if db.suppression.find_one({"email": email}):
+            db.user_recruiter_ledger.update_one({"_id": job["_id"]}, {"$set": {"status": "skipped", "error": "suppressed"}})
+            continue
+
+        # 3. Preparation (Prioritize snapshot for locked assets)
+        snapshot = user.get("campaign_snapshot")
+        if snapshot:
+            subject_template = snapshot.get("subject", "Regarding the job opening")
+            body_template = snapshot.get("body", "<p>Hi,</p><p>I'm interested in the position.</p>")
+            cv_key = snapshot.get("cv_key")
+            cv_name = snapshot.get("cv_filename")
+        else:
+            subject_template = user.get("subject_template", "Regarding the job opening")
+            body_template = user.get("body_template", "<p>Hi,</p><p>I'm interested in the position.</p>")
+            cv_key = user.get("cv_b2_key")
+            cv_name = user.get("cv_filename")
+
+        subject = subject_template
+        body = body_template
+
+        # Fetch CV bytes using the key from snapshot (or user current if no snapshot)
+        cv_info = get_cv_bytes_for_user(user_id, key=cv_key, filename=cv_name)
         attachment_bytes = None
         attachment_name = None
         if cv_info:
             attachment_bytes, attachment_name, _ct = cv_info
 
+        # 4. Sending
         try:
             service = get_gmail_service_for_user(user_id)
-            msg = create_message("me", recipient_email, subject, body, attachment_bytes=attachment_bytes, attachment_name=attachment_name or "cv.pdf")
+            msg = create_message("me", email, subject, body, attachment_bytes=attachment_bytes, attachment_name=attachment_name or "cv.pdf")
             service.users().messages().send(userId="me", body=msg).execute()
-            RECIPIENTS.update_one({"_id": r["_id"]}, {"$set": {"status": "Sent", "sent_at": datetime.datetime.utcnow()}})
+            
+            # Success
+            db.user_recruiter_ledger.update_one({"_id": job["_id"]}, {"$set": {"status": "sent", "sent_at": datetime.datetime.utcnow()}})
             USERS.update_one({"_id": user_id}, {"$inc": {"daily_sent": 1}})
-            sent += 1
+            sent_count += 1
+            
         except HttpError as e:
-            LOG.exception("Gmail API HttpError sending to %s: %s", recipient_email, e)
-            RECIPIENTS.update_one({"_id": r["_id"]}, {"$set": {"status": "Failed", "last_error": str(e)}})
+            LOG.exception("Gmail API HttpError sending to %s: %s", email, e)
+            db.user_recruiter_ledger.update_one({"_id": job["_id"]}, {"$set": {"status": "failed", "error": str(e)}})
+            # If hard bounce indicated in API error (rare, usually separate), handle it.
+            # Usually bounces come via standard bounce mails, captured by another worker.
+            
         except Exception as e:
-            LOG.exception("Unexpected error sending to %s: %s", recipient_email, e)
-            RECIPIENTS.update_one({"_id": r["_id"]}, {"$set": {"status": "Failed", "last_error": str(e)}})
+            LOG.exception("Unexpected error sending to %s: %s", email, e)
+            db.user_recruiter_ledger.update_one({"_id": job["_id"]}, {"$set": {"status": "failed", "error": str(e)}})
 
-        # polite delay between sends to avoid rapid bursts; randomized small delay
+        # 6. Throttling
         time_sleep = random.randint(10, 30)
         time.sleep(time_sleep)
 
-        # enforce per-user daily limit mid-batch
-        user = USERS.find_one({"_id": user_id})
-        if user.get("daily_sent", 0) >= daily_limit:
-            break
-
-    return {"sent": sent}
+    return {"sent": sent_count}
 
 @celery_app.task
 def reset_daily_limits():
     """
-    Resets daily_sent to 0 for all users at the start of a new day.
+    Resets daily_sent to 0 for all users.
     """
     LOG.info("Global daily limit reset started.")
     res = USERS.update_many({}, {"$set": {"daily_sent": 0}})
-    LOG.info("Reset successful. Impacted %d users.", res.modified_count)
     return {"reset_count": res.modified_count}
+
+@celery_app.task
+def purge_deleted_users():
+    """
+    Permanently deletes users who have been soft-deleted for more than 90 days.
+    """
+    threshold = datetime.datetime.utcnow() - datetime.timedelta(days=90)
+    to_delete = list(USERS.find({"is_deleted": True, "deleted_at": {"$lt": threshold}}))
+    count = 0
+    for u in to_delete:
+        USERS.delete_one({"_id": u["_id"]})
+        # Cleanup ledger?
+        db.user_recruiter_ledger.delete_many({"userId": u["_id"]})
+        count += 1
+    return {"purged_count": count}
 
 
 def send_single_message_for_user(user_id, to_email, subject_override=None, body_override=None):
@@ -141,6 +197,9 @@ def send_single_message_for_user(user_id, to_email, subject_override=None, body_
     user = USERS.find_one({"_id": user_id})
     if not user:
         raise ValueError("User not found")
+
+    if user.get("is_blocked"):
+        raise RuntimeError("User is blocked")
 
     if user.get("needs_reauth"):
         raise RuntimeError("User needs re-authentication")

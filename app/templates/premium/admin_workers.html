@@ -1,0 +1,207 @@
+{% extends "premium/admin_layout.html" %}
+
+{% block admin_content %}
+<div class="space-y-8 animate-fade-in">
+
+    <!-- System Analytics Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-3 bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h3 class="text-xl font-bold text-white tracking-tight">Queue Pipeline</h3>
+                    <p class="text-xs text-slate-500 mt-1">Real-time message throughput across Redis brokers.</p>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 rounded-lg border border-green-500/20">
+                    <span class="relative flex h-2 w-2">
+                        <span
+                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    <span class="text-[10px] font-bold text-green-400 uppercase tracking-widest">Live Monitoring</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" id="queue-stats-grid">
+                <!-- Populated by JS -->
+                <div class="col-span-full py-12 flex justify-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    CRITICAL ACTION: FORCE FLUSH DAILY LIMITS
+                </div>
+                <button id="reset-queues-btn"
+                    class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-bold rounded-lg border border-red-500/20 transition-all">
+                    EMERGENCY RESET
+                </button>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1 bg-slate-900 border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+            <div class="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent pointer-events-none"></div>
+            <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">Service Health</h4>
+
+            <div class="space-y-6 relative z-10">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-300 font-medium">Redis Broker</span>
+                    <span class="text-[10px] font-bold text-green-400">ACTIVE</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-300 font-medium">Celery Master</span>
+                    <span class="text-[10px] font-bold text-green-400">ONLINE</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-300 font-medium">Task Inspector</span>
+                    <span class="text-[10px] font-bold text-green-400">ENABLED</span>
+                </div>
+
+                <div class="pt-4 mt-4 border-t border-white/5">
+                    <p class="text-[10px] text-slate-500 leading-relaxed italic">
+                        "System detects 4 active queues. Worker distribution is weighted towards 'send_queue' priority."
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Workers Section -->
+    <div class="space-y-6">
+        <div class="flex items-center justify-between">
+            <h3 class="text-xl font-bold text-white tracking-tight px-2">Worker Pool</h3>
+            <button id="refresh-workers"
+                class="flex items-center gap-2 text-xs font-bold text-primary-400 hover:text-white transition-all">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                POLL WORKERS
+            </button>
+        </div>
+
+        <div id="workers-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Populated by JS -->
+            <div class="col-span-full py-20 text-center">
+                <div class="inline-block p-4 rounded-2xl bg-slate-900 border border-white/5">
+                    <p class="text-sm text-slate-500">Querying active worker nodes...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- Queue Monitoring ---
+        async function loadSystemHealth() {
+            try {
+                const res = await fetch('/api/admin/queues');
+                const data = await res.json();
+
+                const grid = document.getElementById('queue-stats-grid');
+                if (data.ok) {
+                    grid.innerHTML = Object.entries(data.queues).map(([q, count]) => `
+                        <div class="bg-slate-950 border border-white/5 p-6 rounded-2xl group hover:border-primary-500/30 transition-all">
+                            <h4 class="text-[10px] uppercase text-slate-500 font-bold tracking-widest mb-3">${q}</h4>
+                            <div class="flex items-end justify-between">
+                                <div class="text-3xl font-bold ${count > 500 ? 'text-red-400' : count > 100 ? 'text-amber-400' : 'text-primary-400'} tracking-tighter">${count}</div>
+                                <div class="h-8 w-2 bg-white/5 rounded-full overflow-hidden flex flex-col justify-end">
+                                    <div class="w-full bg-primary-500" style="height: ${Math.min(count, 100)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    grid.innerHTML = `<div class="col-span-full p-4 bg-red-500/10 text-red-500 rounded-xl text-xs border border-red-500/20">System Error: Failed to communicate with Redis broker.</div>`;
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        document.getElementById('reset-queues-btn')?.addEventListener('click', async () => {
+            if (!confirm("CRITICAL: This command will reset ALL daily limits system-wide. Continue?")) return;
+            try {
+                const res = await fetch('/api/admin/queue/reset', { method: 'POST' });
+                const d = await res.json();
+                alert(`Operation successful. ${d.reset_count} accounts synchronized.`);
+            } catch (e) { alert(e); }
+        });
+
+        // --- Worker Management ---
+        async function loadWorkers() {
+            const list = document.getElementById('workers-list');
+            try {
+                const res = await fetch('/api/admin/workers');
+                const data = await res.json();
+
+                if (!data.ok || Object.keys(data.workers).length === 0) {
+                    list.innerHTML = `<div class="col-span-full p-12 bg-slate-900 rounded-3xl text-center border border-dashed border-white/10">
+                        <p class="text-slate-500 text-sm">No active worker nodes detected. Ensure Celery processes are initialized.</p>
+                    </div>`;
+                    return;
+                }
+
+                list.innerHTML = Object.entries(data.workers).map(([name, queues]) => {
+                    const isPaused = !queues || queues.length === 0;
+                    return `
+                    <div class="bg-slate-900 border ${isPaused ? 'border-amber-500/30' : 'border-white/5'} rounded-3xl p-6 shadow-xl group hover:border-primary-500/20 transition-all">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <div class="w-2 h-2 rounded-full ${isPaused ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}"></div>
+                                    <h4 class="font-bold text-white tracking-tight font-mono text-sm">${name.split('@')[0]}<span class="text-slate-600">@${name.split('@')[1]}</span></h4>
+                                </div>
+                                <div class="flex flex-wrap gap-1 mt-2">
+                                    ${queues && queues.length > 0 ? queues.map(q => `<span class="bg-slate-950 border border-white/5 px-2 py-0.5 rounded text-[9px] text-slate-400 font-mono">${q.name}</span>`).join('') : '<span class="text-[9px] text-amber-500 font-bold italic tracking-widest">SUSPENDED / IDLE</span>'}
+                                </div>
+                            </div>
+                            <div class="w-full sm:w-auto">
+                                ${isPaused ?
+                            `<button onclick="controlWorker('${name}', 'resume')" class="w-full sm:w-auto bg-green-500 hover:bg-green-400 text-slate-950 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Resume</button>` :
+                            `<button onclick="controlWorker('${name}', 'pause')" class="w-full sm:w-auto bg-white/5 hover:bg-amber-500/20 hover:text-amber-400 text-slate-400 px-6 py-2 rounded-xl text-[10px] font-bold border border-white/10 transition-all">Pause Node</button>`
+                        }
+                            </div>
+                        </div>
+                    </div>
+                `}).join('');
+
+            } catch (e) {
+                console.error(e);
+                list.innerHTML = `<div class="col-span-full p-6 bg-red-500/10 text-red-500 rounded-xl">Node query failed: ${e.message}</div>`;
+            }
+        }
+
+        window.controlWorker = async (workerName, action) => {
+            const btn = event.currentTarget;
+            btn.disabled = true;
+            btn.innerText = 'COMMANDING...';
+
+            try {
+                const res = await fetch(`/api/admin/workers/${action}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ worker: workerName })
+                });
+                if (res.ok) {
+                    setTimeout(loadWorkers, 1000);
+                } else {
+                    alert(`Node handshake failed.`);
+                    loadWorkers();
+                }
+            } catch (e) { alert(e); loadWorkers(); }
+        }
+
+        document.getElementById('refresh-workers')?.addEventListener('click', loadWorkers);
+
+        // Auto-refresh stats
+        loadSystemHealth();
+        loadWorkers();
+        setInterval(loadSystemHealth, 30000);
+    });
+</script>
+{% endblock %}

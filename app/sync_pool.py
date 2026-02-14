@@ -1,10 +1,13 @@
 import logging
 import datetime
+from .celery_app import celery_app
 from .db import db, client
 
 LOG = logging.getLogger(__name__)
 
+@celery_app.task
 def sync_from_main_database(source_name="HR.UAE"):
+
     """
     Syncs new recruiter records from a source collection into the 'recipients' pool.
     Uses email as a deduplication key.
@@ -27,39 +30,49 @@ def sync_from_main_database(source_name="HR.UAE"):
 
         LOG.info(f"Syncing from source collection: {source_coll.database.name}.{source_coll.name}")
         
-        # Get all existing emails to avoid duplicates
-        existing_emails = set(db.recipients.distinct("email"))
-        
-        new_records = []
+        from pymongo import UpdateOne
+        operations = []
         source_cursor = source_coll.find({})
         
         now = datetime.datetime.utcnow()
+        new_count = 0
         for doc in source_cursor:
             email = doc.get("email")
             if not email:
                 continue
             
-            # Basic validation/cleanup
             email = email.strip().lower()
-            if not email or email in existing_emails:
-                continue
             
-            new_records.append({
-                "email": email,
-                "name": (doc.get("name") or doc.get("full_name") or "").strip(),
-                "company": (doc.get("company") or doc.get("company_name") or "").strip(),
-                "status": "Pending",
-                "source": source_name,
-                "created_at": now
-            })
-            existing_emails.add(email)
+            # Use UpdateOne with upsert=True on email 
+            # This ensures even if something was deleted or modified manually, we preserve unique emails.
+            # $setOnInsert ensures we only set status=Pending for NEW records.
+            operations.append(UpdateOne(
+                {"email": email},
+                {
+                    "$setOnInsert": {
+                        "email": email,
+                        "name": (doc.get("name") or doc.get("full_name") or "").strip(),
+                        "company": (doc.get("company") or doc.get("company_name") or "").strip(),
+                        "status": "Pending",
+                        "source": source_name,
+                        "created_at": now
+                    }
+                },
+                upsert=True
+            ))
 
-        if new_records:
-            db.recipients.insert_many(new_records)
-            LOG.info(f"Successfully synced {len(new_records)} new recruiters.")
-            return {"count": len(new_records), "status": "success"}
-        
-        return {"count": 0, "status": "no_new_records"}
+            if len(operations) >= 1000:
+                res = db.recipients.bulk_write(operations, ordered=False)
+                new_count += res.upserted_count
+                operations = []
+
+        if operations:
+            res = db.recipients.bulk_write(operations, ordered=False)
+            new_count += res.upserted_count
+
+        LOG.info(f"Successfully synced {new_count} new recruiters.")
+        return {"count": new_count, "status": "success"}
+
 
     except Exception as e:
         LOG.exception(f"Sync failed for {source_name}")

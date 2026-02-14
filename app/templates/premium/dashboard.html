@@ -41,7 +41,8 @@
         </div>
     </div>
 
-    {% if not user.credentials_base64 or not user.token_base64 or not user.cv_uploaded_at %}
+    {% if not user.credentials_base64 or not user.token_base64 or not user.cv_uploaded_at or not user.credentials_valid
+    %}
     <div
         class="bg-primary-500/10 border border-primary-500/20 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div class="flex items-start sm:items-center gap-4 text-left">
@@ -53,7 +54,8 @@
             </div>
             <div>
                 <h4 class="font-bold text-white">Setup Incomplete</h4>
-                <p class="text-sm text-slate-400">Please upload your CV and configure Gmail to start sending.</p>
+                <p class="text-sm text-slate-400">Please upload your CV and validate your Gmail credentials in Settings
+                    to start sending.</p>
             </div>
         </div>
         <a href="/settings"
@@ -107,7 +109,34 @@
             {% endif %}
         </div>
 
-        <!-- Quick Info -->
+        <!-- Snapshot Info (Active Campaign) -->
+        {% if user.campaign_active and user.campaign_snapshot %}
+        <div class="card-glass p-6 lg:col-span-2 border-primary-500/30 bg-primary-500/5">
+            <h3 class="font-bold text-white mb-4 flex items-center gap-2">
+                <svg class="w-4 h-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Live Snapshot
+            </h3>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center text-[10px]">
+                    <span class="text-slate-400">Locked CV</span>
+                    <span class="text-primary-300 font-mono">{{ user.campaign_snapshot.cv_filename }}</span>
+                </div>
+                <div class="flex justify-between items-center text-[10px]">
+                    <span class="text-slate-400">Template Sync</span>
+                    <span class="text-primary-300">{{ user.campaign_snapshot.snapshot_at.strftime('%H:%M:%S UTC')
+                        }}</span>
+                </div>
+                <div class="pt-2 border-t border-white/5">
+                    <p class="text-[9px] text-slate-500 italic">Editing is locked while active. Assets are frozen to
+                        ensure delivery integrity.</p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- Quick Info (Inactive) -->
         <div class="card-glass p-6 lg:col-span-2">
             <h3 class="font-bold text-white mb-4">Account Usage</h3>
             <div class="space-y-4">
@@ -126,6 +155,89 @@
                 <a href="/settings" class="block text-center text-xs text-primary-400 hover:underline">Update
                     Settings & Templates</a>
             </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+
+<!-- Campaign Management -->
+<div class="card-glass p-8 mb-8">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h3 class="font-bold text-xl text-white">Campaign Segments</h3>
+            <p class="text-xs text-slate-400 mt-1">Organize your outreach by country or provider.</p>
+        </div>
+        <button id="btn-create-campaign"
+            class="btn-primary px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-transform hover:scale-105">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            New Segment
+        </button>
+    </div>
+
+    <!-- Campaign List -->
+    <div class="space-y-3" id="campaign-list">
+        <div class="animate-pulse flex space-x-4 p-4 border border-white/5 rounded-xl bg-white/2">
+            <div class="flex-1 space-y-2">
+                <div class="h-4 bg-slate-700/50 rounded w-1/4"></div>
+                <div class="h-3 bg-slate-700/50 rounded w-1/2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Campaign Modal (Hidden) -->
+<div id="modal-create-campaign"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+    <div class="bg-slate-900 border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl scale-95 transition-transform duration-300 transform relative overflow-hidden"
+        id="modal-content">
+        <!-- Background Glow -->
+        <div class="absolute top-0 right-0 -mt-10 -mr-10 w-32 h-32 bg-primary-500/20 rounded-full blur-3xl"></div>
+
+        <h3 class="text-xl font-bold text-white mb-6 relative z-10">Create New Segment</h3>
+
+        <div class="space-y-5 relative z-10">
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Segment Name</label>
+                <input type="text" id="new-camp-name"
+                    class="w-full bg-slate-800 border border-white/5 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-primary-500 outline-none transition-all placeholder:text-slate-600"
+                    placeholder="e.g. UK Corporate Outreach">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Target Country</label>
+                    <select id="new-camp-country"
+                        class="w-full bg-slate-800 border border-white/5 rounded-lg px-4 py-2.5 text-white outline-none appearance-none cursor-pointer hover:bg-slate-700/50 transition-colors">
+                        <option value="">All Countries</option>
+                        <!-- JS Loaded Options -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Provider Type</label>
+                    <select id="new-camp-provider"
+                        class="w-full bg-slate-800 border border-white/5 rounded-lg px-4 py-2.5 text-white outline-none appearance-none cursor-pointer hover:bg-slate-700/50 transition-colors">
+                        <option value="">All Types</option>
+                        <!-- JS Loaded Options -->
+                    </select>
+                </div>
+            </div>
+
+            <p class="text-[10px] text-slate-500 italic bg-white/5 p-3 rounded-lg border border-white/5">
+                <span class="text-primary-400 font-bold">Note:</span> Creating this segment will move matching pending
+                leads from your 'Default' pool.
+            </p>
+        </div>
+
+        <div class="flex gap-3 mt-8 relative z-10">
+            <button id="btn-cancel-campaign"
+                class="flex-1 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium">Cancel</button>
+            <button id="btn-submit-campaign"
+                class="flex-1 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-400 text-white font-medium transition-colors shadow-lg shadow-primary-500/20 text-sm">Create
+                Segment</button>
         </div>
     </div>
 </div>
@@ -161,11 +273,18 @@
 </div>
 
 
-<script>
+<script nonce="{{ csp_nonce }}">
     document.getElementById('toggle-campaign')?.addEventListener('click', async () => {
         const btn = document.getElementById('toggle-campaign');
         const currentActive = btn.getAttribute('data-active') === 'true';
         const nextActive = !currentActive;
+
+        const confirmMsg = nextActive
+            ? "Start outreach? This will lock a SNAPSHOT of your current CV and templates. Recent changes in Settings will be frozen for this run."
+            : "Stop outreach immediately? You can resume or update your snapshot anytime.";
+
+        if (!confirm(confirmMsg)) return;
+
         const originalText = btn.innerText;
         btn.innerText = 'Wait...';
         btn.disabled = true;
@@ -178,7 +297,7 @@
             });
             const data = await response.json();
             if (response.status === 402 || (data && data.payment_required)) {
-                if (confirm('A premium subscription ($5/mo) is required to start the campaign. Proceed to payment?')) {
+                if (confirm('A premium subscription ($10/mo) is required to start the campaign. Proceed to payment?')) {
                     window.location.href = '/payment';
                 }
                 return;

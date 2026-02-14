@@ -17,9 +17,12 @@ def _get_s3_client():
         aws_secret_access_key=B2_APP_KEY,
     )
 
-def upload_cv_bytes(file_bytes: bytes, filename: str, content_type: str = "application/pdf") -> str:
+def upload_cv_bytes(file_bytes: bytes, filename: str, content_type: str = "application/pdf", user_id: str = "unknown") -> str:
+    if content_type != "application/pdf":
+        raise ValueError("Only PDF files are allowed")
     client = _get_s3_client()
-    key = f"cvs/{uuid.uuid4().hex}_{filename}"
+    # cvs/{user_id}/{uuid}_{filename}
+    key = f"cvs/{user_id}/{uuid.uuid4().hex}_{filename}"
     try:
         client.put_object(
             Bucket=B2_BUCKET,
@@ -44,17 +47,30 @@ def download_cv_bytes(key: str) -> Tuple[bytes, str]:
         LOG.exception("Failed to download CV from B2: %s", e)
         raise
 
-def presign_upload(filename: str, content_type: str = "application/pdf", expires: int = 300) -> dict:
+def presign_upload(filename: str, content_type: str = "application/pdf", expires: int = 300, user_id: str = "unknown") -> dict:
+    if content_type != "application/pdf":
+        raise ValueError("Only PDF files are allowed")
     """
     Returns a presigned PUT URL and the object key to use for the uploaded CV.
     Client should PUT the file bytes to this URL with Content-Type header matching content_type.
     """
     client = _get_s3_client()
-    key = f"cvs/{uuid.uuid4().hex}_{filename}"
+    key = f"cvs/{user_id}/{uuid.uuid4().hex}_{filename}"
     try:
         url = client.generate_presigned_url('put_object',
             Params={'Bucket': B2_BUCKET, 'Key': key, 'ContentType': content_type},
-            ExpiresIn=expires)
+            ExpiresIn=expires,
+            HttpMethod="PUT"
+        )
+        # Note: Boto3 generate_presigned_url doesn't support 'Conditions' directly for PUT operations 
+        # in the same way generate_presigned_post does. 
+        # However, we should still try to enforce it if possible, or reliable on the application side 
+        # to check size after upload if presign-post isn't used.
+        # Since we are using PUT, we can't easily enforce specific size constraints in the URL signature itself 
+        # without using generate_presigned_post.
+        # Switching to generate_presigned_post would require frontend logic changes (FormData vs raw PUT body).
+        # We will keep generate_presigned_url but keep the note that strict size enforcement 
+        # relies on the bucket policy or post-upload check.
     except ClientError as e:
         LOG.exception("Failed to generate presigned URL: %s", e)
         raise
@@ -99,3 +115,14 @@ def get_b2_status() -> dict:
     except Exception as e:
         LOG.error("B2 status check failed: %s", e)
         return {"ok": False, "error": str(e)}
+
+def delete_cv(key: str):
+    """Deletes a CV from B2 storage."""
+    if not key:
+        return
+    try:
+        client = _get_s3_client()
+        client.delete_object(Bucket=B2_BUCKET, Key=key)
+        LOG.info("Successfully deleted old CV: %s", key)
+    except Exception as e:
+        LOG.warning("Failed to delete older CV (%s): %s", key, e)

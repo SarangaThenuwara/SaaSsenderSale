@@ -74,3 +74,12 @@ def get_user_from_token(access_token: str) -> Optional[dict]:
     if resp.status_code == 200:
         return resp.json()
     return None
+
+def get_google_auth_url(redirect_to: str) -> str:
+    """
+    Returns the Supabase OAuth URL to initiate Google Login.
+    redirect_to: The local URL the browser should return to AFTER Supabase finishes OAuth.
+    """
+    # The /authorize endpoint initiates OAuth flow
+    url = _url(f"/auth/v1/authorize?provider=google&redirect_to={redirect_to}")
+    return url

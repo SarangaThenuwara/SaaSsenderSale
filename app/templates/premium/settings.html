@@ -12,6 +12,21 @@
         </a>
     </div>
 
+    {% if user.campaign_active %}
+    <div
+        class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 flex-shrink-0 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span><strong>Outreach Active:</strong> Saving changes will stop your current campaign. </span>
+        </div>
+        <p class="text-[10px] italic opacity-80">Manual restart required after saving.</p>
+    </div>
+    {% endif %}
+
+
     {% if success %}
     <div
         class="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-center gap-3">
@@ -114,7 +129,8 @@
         </div>
     </div>
 
-    <form action="/settings" method="post" class="space-y-8">
+    <form action="/settings" method="post" class="space-y-8"
+        onsubmit="return confirm('Save these configuration changes? This will impact your email outreach immediately.')">
         <input type="hidden" name="csrf" value="{{ csrf_token }}">
 
         <!-- Gmail API Credentials Section -->
@@ -139,19 +155,32 @@
             <div class="space-y-4">
                 <div class="space-y-2">
                     <label class="block text-sm font-medium text-slate-300">Credentials (Base64)</label>
-                    <textarea name="credentials_base64" rows="3" class="input-glass px-4 py-3 font-mono text-xs"
+                    <textarea name="credentials_base64" rows="3"
+                        class="input-glass px-4 py-3 font-mono text-xs {% if user.credentials_base64 == '[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]' %}text-primary-400 italic blur-[1px] hover:blur-0 transition-all font-bold{% endif %}"
                         placeholder="Paste the Base64 encoded string provided by the generator">{{ user.credentials_base64 or '' }}</textarea>
-                    <p class="text-[10px] text-slate-500">Paste the <strong>Base64 string</strong> for your credentials.
-                        Do not paste raw JSON files.
+                    <p class="text-[10px] text-slate-500">
+                        {% if user.credentials_base64 == '[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]' %}
+                        <span class="text-green-500/80 font-bold">✔ Securely Stored & Encrypted.</span> To update, clear
+                        this and paste new base64.
+                        {% else %}
+                        Paste the <strong>Base64 string</strong> for your credentials. Do not paste raw JSON files.
+                        {% endif %}
                     </p>
                 </div>
 
 
                 <div class="space-y-2">
                     <label class="block text-sm font-medium text-slate-300">Token (Base64)</label>
-                    <textarea name="token_base64" rows="3" class="input-glass px-4 py-3 font-mono text-xs"
+                    <textarea name="token_base64" rows="3"
+                        class="input-glass px-4 py-3 font-mono text-xs {% if user.token_base64 == '[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]' %}text-primary-400 italic blur-[1px] hover:blur-0 transition-all font-bold{% endif %}"
                         placeholder="Paste the Base64 encoded string provided by the generator">{{ user.token_base64 or '' }}</textarea>
-                    <p class="text-[10px] text-slate-500">Paste the <strong>Base64 string</strong> for your token.
+                    <p class="text-[10px] text-slate-500">
+                        {% if user.token_base64 == '[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]' %}
+                        <span class="text-green-500/80 font-bold">✔ Securely Stored & Encrypted.</span> To update, clear
+                        this and paste new base64.
+                        {% else %}
+                        Paste the <strong>Base64 string</strong> for your token.
+                        {% endif %}
                     </p>
                 </div>
 
@@ -172,9 +201,9 @@
                 <div class="space-y-2">
                     <label class="block text-sm font-medium text-slate-300">Subject Template</label>
                     <input name="subject_template" type="text"
-                        value="{{ user.subject_template or 'Hi {first_name} - Regarding the opening' }}"
+                        value="{{ user.subject_template or 'Regarding the job opening' }}"
                         class="input-glass px-4 py-3" />
-                    <p class="text-xs text-slate-500">Variables: <code>{first_name}</code></p>
+
                 </div>
 
                 <div class="space-y-4">
@@ -187,11 +216,11 @@
                     <div class="relative">
                         <textarea id="body-editor" name="body_template" rows="8"
                             class="input-glass px-4 py-3 text-sm focus:ring-1 focus:ring-primary-500 transition-all"
-                            placeholder="<p>Hi {first_name},</p><p>I am interested in...</p>">{{ user.body_template or '<p>Hi {first_name},</p><p>I hope you are doing well.</p>' }}</textarea>
+                            placeholder="<p>Hi,</p><p>I am interested in...</p>">{{ user.body_template or '<p>Hi,</p><p>I hope you are doing well.</p>' }}</textarea>
                     </div>
 
                     <div id="preview-container" class="hidden animate-fade-in">
-                        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 px-1">Email Preview (John)
+                        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 px-1">Email Preview
                         </p>
                         <div class="rounded-xl bg-white p-6 shadow-2xl overflow-hidden min-h-[200px]">
                             <div id="html-preview" class="prose prose-sm max-w-none text-slate-800">
@@ -200,7 +229,7 @@
                         </div>
                     </div>
 
-                    <p class="text-xs text-slate-500">Variables: <code>{first_name}</code> (Case-insensitive)</p>
+
                 </div>
 
             </div>
@@ -213,7 +242,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
     // --- Live Preview Logic ---
     const bodyEditor = document.getElementById('body-editor');
     const htmlPreview = document.getElementById('html-preview');
@@ -223,8 +252,12 @@
     function updatePreview() {
         if (!bodyEditor || !htmlPreview) return;
         let content = bodyEditor.value;
-        // Replace variable for preview
-        content = content.replace(/{first_name}/gi, '<strong>John</strong>');
+
+        // Mimic server-side logic: if no tags, show <br> conversion
+        if (!content.toLowerCase().match(/<[a-z][\s\S]*>/i)) {
+            content = content.replace(/\n/g, '<br>');
+        }
+
         htmlPreview.innerHTML = content;
     }
 

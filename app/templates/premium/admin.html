@@ -1,288 +1,1136 @@
 {% extends "premium/base.html" %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-8 animate-fade-in">
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div>
-            <h1 class="text-4xl font-bold">Admin Dashboard</h1>
-            <p class="text-slate-400">Manage the global recruiter pool and oversee user campaign status.</p>
-        </div>
-        <div class="flex flex-col sm:flex-row gap-3 items-center">
-            <!-- Payment Gateway Toggle -->
-            <form action="/admin/payments/toggle" method="post"
-                class="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-lg border border-white/10">
-                <input type="hidden" name="csrf" value="{{ csrf_token }}">
-                <span class="text-sm font-medium text-slate-300">Payment Gateway:</span>
-                {% if payment_active %}
-                <span class="text-xs font-bold text-green-400 mr-2">ENABLED</span>
-                <button type="submit" name="active" value="false"
-                    class="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-1 rounded transition-colors">Disable</button>
-                {% else %}
-                <span class="text-xs font-bold text-red-400 mr-2">DISABLED</span>
-                <button type="submit" name="active" value="true"
-                    class="text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 px-3 py-1 rounded transition-colors">Enable</button>
-                {% endif %}
-            </form>
+<div class="max-w-7xl mx-auto space-y-6 animate-fade-in relative">
 
-            <form action="/admin/sync_pool" method="post" class="w-full sm:w-auto">
-                <input type="hidden" name="csrf" value="{{ csrf_token }}">
-                <button type="submit" class="btn-secondary w-full px-6 py-2 flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Sync HR.UAE
-                </button>
-            </form>
-            <form action="/admin/assign" method="post" class="w-full sm:w-auto">
-                <input type="hidden" name="csrf" value="{{ csrf_token }}">
-                <button type="submit"
-                    class="btn-primary w-full px-6 py-2 shadow-lg shadow-primary-500/20 flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    Run Assignment
-                </button>
-            </form>
+    <!-- Top KPI Bar: Always Visible -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="card-glass p-4 border-l-4 border-primary-500 bg-slate-900/40">
+            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Global Reach</p>
+            <div class="flex items-end justify-between mt-1">
+                <p class="text-2xl font-bold text-white">{{ users|length }} <span
+                        class="text-xs text-slate-500 font-normal">Users</span></p>
+                <span class="text-[10px] text-primary-400 font-mono">{{ active_users_count }} Active</span>
+            </div>
         </div>
-    </div>
-
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        <div class="card-glass p-6 group">
-            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Pending Pool</p>
-            <p class="text-4xl font-bold text-white mt-1 group-hover:text-primary-400 transition-colors">{{ pending_pool
-                }}</p>
-            <p class="text-xs text-slate-500 mt-2">Unassigned recruiters</p>
-        </div>
-
-        <div class="card-glass p-6 group border-l-4 border-green-500/50">
-            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Sent (24h)</p>
-            <p class="text-4xl font-bold text-green-400 mt-1">{{ sent_24h }}</p>
-            <p class="text-xs text-slate-500 mt-2">Successful outreaches</p>
-        </div>
-
-        <div class="card-glass p-6 group border-l-4 border-red-500/50">
-            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Failed (24h)</p>
-            <p class="text-4xl font-bold text-red-400 mt-1">{{ failed_24h }}</p>
-            <p class="text-xs text-slate-500 mt-2">Errors in last 24h</p>
-        </div>
-
-        <div class="card-glass p-6 group">
-            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Capacity</p>
-            <p class="text-4xl font-bold text-white mt-1 group-hover:text-green-400 transition-colors">{{ total_capacity
-                }}</p>
-            <p class="text-xs text-slate-500 mt-2">Combined daily limits</p>
-        </div>
-
-        <div class="card-glass p-6 group">
-            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Infrastructure</p>
-            <div class="mt-2 space-y-2">
-                <div class="flex items-center justify-between">
-                    <span class="text-[10px] text-slate-400 uppercase tracking-widest">MongoDB</span>
-                    <span class="w-2 h-2 rounded-full {{ 'bg-green-500' if mongo_status.ok else 'bg-red-500' }}"></span>
+        <div class="card-glass p-4 border-l-4 border-green-500 bg-slate-900/40">
+            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest">24h Volume</p>
+            <div class="flex items-end justify-between mt-1">
+                <p class="text-2xl font-bold text-green-400">{{ sent_24h }} <span
+                        class="text-xs text-slate-500 font-normal">Sent</span></p>
+                <div class="h-1.5 w-16 bg-white/5 rounded-full overflow-hidden">
+                    <div class="bg-green-500 h-full" style="width: 75%"></div>
                 </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-[10px] text-slate-400 uppercase tracking-widest">B2 Storage</span>
-                    <span class="w-2 h-2 rounded-full {{ 'bg-green-500' if b2_status.ok else 'bg-red-500' }}"></span>
+            </div>
+        </div>
+        <div class="card-glass p-4 border-l-4 border-red-500 bg-slate-900/40">
+            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Failures</p>
+            <div class="flex items-end justify-between mt-1">
+                <p class="text-2xl font-bold text-red-400">{{ failed_24h }} <span
+                        class="text-xs text-slate-500 font-normal">Errors</span></p>
+                <span class="text-[10px] text-red-500/50 font-mono">24h Window</span>
+            </div>
+        </div>
+        <div class="card-glass p-4 border-l-4 border-amber-500 bg-slate-900/40">
+            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Infrastructure</p>
+            <div class="flex items-center gap-3 mt-2">
+                <div class="flex items-center gap-1.5">
+                    <span class="relative flex h-2 w-2">
+                        <span
+                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    <span class="text-[10px] font-bold text-white tracking-wide">ONLINE</span>
                 </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-[10px] text-slate-400 uppercase tracking-widest">Active Jobs</span>
-                    <span class="text-[10px] font-bold text-primary-400">{{ active_users_count }}</span>
-                </div>
+                <div class="h-4 w-px bg-white/10"></div>
+                <span class="text-[10px] text-slate-400">v2.2.0-STABLE</span>
             </div>
         </div>
     </div>
 
-    <div class="space-y-6">
-        <!-- User List Panel -->
-        <div class="card-glass p-8">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold">Comprehensive User Management</h3>
-                <input type="text" id="user-search" placeholder="Search by email..."
-                    class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 transition-all w-64">
-            </div>
+    <!-- Main Navigation Bar -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-6 border-b border-white/5 pb-2">
+        <div class="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+            <button
+                class="tab-btn active-tab-btn px-4 py-2 text-sm font-bold flex items-center gap-2 transition-all rounded-lg"
+                data-target="panel-users">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                User Control
+            </button>
+            <button
+                class="tab-btn px-4 py-2 text-sm font-bold text-slate-400 hover:text-white flex items-center gap-2 transition-all rounded-lg"
+                data-target="panel-recruiters">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Recruiter Pool
+            </button>
+            <button
+                class="tab-btn px-4 py-2 text-sm font-bold text-slate-400 hover:text-white flex items-center gap-2 transition-all rounded-lg"
+                data-target="panel-deliverability">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Deliverability
+            </button>
+            <button
+                class="tab-btn px-4 py-2 text-sm font-bold text-slate-400 hover:text-white flex items-center gap-2 transition-all rounded-lg"
+                data-target="panel-nodes">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Node Console
+            </button>
+            <button
+                class="tab-btn px-4 py-2 text-sm font-bold text-slate-400 hover:text-white flex items-center gap-2 transition-all rounded-lg"
+                data-target="panel-infra">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                </svg>
+                Infrastructure
+            </button>
+            <button
+                class="tab-btn px-4 py-2 text-sm font-bold text-slate-400 hover:text-white flex items-center gap-2 transition-all rounded-lg"
+                data-target="panel-policy">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                System Policy
+            </button>
+        </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead>
-                        <tr class="border-b border-white/5 text-slate-400 text-sm">
-                            <th class="pb-4 font-semibold">User Details</th>
-                            <th class="pb-4 font-semibold text-center">Campaign Status</th>
-                            <th class="pb-4 font-semibold text-center">Subscription</th>
-                            <th class="pb-4 font-semibold text-center">Daily Limit</th>
-                            <th class="pb-4 font-semibold text-center">Assigned</th>
-                            <th class="pb-4 font-semibold text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-white/5" id="user-table-body">
-                        {% for u in users %}
-                        <tr class="group hover:bg-white/2 user-row" data-email="{{ u.email }}">
-                            <td class="py-4">
-                                <div class="flex items-center gap-3">
-                                    <div
-                                        class="h-8 w-8 rounded-full bg-primary-500/20 flex items-center justify-center text-[10px] font-bold text-primary-400">
-                                        {{ u.username[:2]|upper }}
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-white flex items-center gap-2">
-                                            {{ u.username }}
-                                            {% if u.role == 'admin' %}
-                                            <span
-                                                class="text-[9px] bg-primary-500/20 text-primary-400 px-1.5 py-0.5 rounded font-bold uppercase">Admin</span>
-                                            {% endif %}
+        <!-- Global Actions -->
+        <div class="flex items-center gap-2">
+            <form action="/admin/payments/toggle" id="payment-toggle-form" method="post">
+                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                <button type="button" id="payment-toggle-btn" data-active="{{ 'true' if payment_active else 'false' }}"
+                    class="btn-secondary px-3 py-1.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                    Payment Gateway: <span class="{{ 'text-green-400' if payment_active else 'text-red-400' }}">{{
+                        'ACTIVE' if payment_active else 'OFF' }}</span>
+                </button>
+            </form>
+            <a href="/api/admin/export_users" class="btn-secondary p-2 group" title="Export CSV">
+                <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M16 10l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- Tab Contents Container -->
+    <div class="relative min-h-[600px]">
+
+        <!-- PANEL: USERS -->
+        <div id="panel-users" class="panel-content animate-slide-up">
+            <div class="bg-slate-900/60 border border-white/5 rounded-2xl overflow-hidden">
+                <div class="p-6 flex items-center justify-between border-b border-white/5">
+                    <h3 class="text-lg font-bold">User Directory</h3>
+                    <div class="relative">
+                        <input type="text" id="user-search" placeholder="Filter accounts..."
+                            class="bg-slate-950 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-xs focus:ring-1 focus:ring-primary-500 w-64 outline-none">
+                        <svg class="w-3.5 h-3.5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-950/30 text-[10px] uppercase font-bold text-slate-500 tracking-widest">
+                            <tr>
+                                <th class="px-6 py-4">Identity</th>
+                                <th class="px-6 py-4 text-center">Campaign</th>
+                                <th class="px-6 py-4 text-center">Subscription</th>
+                                <th class="px-6 py-4 text-center">Daily Limit</th>
+                                <th class="px-6 py-4 text-right">Control</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5 text-sm" id="user-table-body">
+                            {% for u in users %}
+                            <tr class="user-row hover:bg-white/[0.02] transition-colors" data-email="{{ u.email }}"
+                                data-username="{{ u.username }}">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="h-8 w-8 rounded-lg bg-primary-500/10 flex items-center justify-center text-[10px] font-bold text-primary-400 border border-primary-500/10">
+                                            {{ u.username[:2]|upper }}
                                         </div>
-                                        <div class="text-[11px] text-slate-500">{{ u.email }}</div>
+                                        <div>
+                                            <p class="font-bold text-white flex items-center gap-2">
+                                                {{ u.username }}
+                                                {% if u.locked_until and u.locked_until > now %}
+                                                <span
+                                                    class="text-[8px] bg-red-500 text-white px-1 rounded uppercase tracking-wider font-black">LOCKED</span>
+                                                {% endif %}
+                                            </p>
+                                            <div class="flex items-center gap-1.5 mt-0.5">
+                                                <p class="text-[9px] text-slate-500 font-mono">{{ u.email }}</p>
+                                                <span class="text-[9px] text-primary-500/50">&bull;</span>
+                                                <p class="text-[9px] text-slate-500 font-mono">{{
+                                                    u.last_login_ip|default('No record') }}</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                            <td class="py-4 text-center">
-                                <div class="flex flex-col items-center gap-1">
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <button onclick="verifyUserDNS('{{ u.email }}', this)"
+                                        class="px-2 py-0.5 bg-white/5 border border-white/5 rounded text-[8px] font-black tracking-widest text-slate-500 hover:text-white transition-all uppercase">DNS
+                                        CHECK</button>
+                                </td>
+                                <td class="px-6 py-4 text-center">
                                     {% if u.campaign_active %}
                                     <span
-                                        class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/10 text-green-400">RUNNING</span>
+                                        class="px-2 py-0.5 bg-green-500/10 text-green-400 text-[9px] font-black rounded border border-green-500/10">RUNNING</span>
                                     {% else %}
                                     <span
-                                        class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/10 text-slate-500">PAUSED</span>
+                                        class="px-2 py-0.5 bg-slate-800 text-slate-500 text-[9px] font-black rounded">HALTED</span>
                                     {% endif %}
-
-                                    {% if u.needs_reauth %}
-                                    <span
-                                        class="text-[9px] text-red-400 font-bold uppercase tracking-tighter animate-pulse">Reauth
-                                        Required</span>
-                                    {% elif not u.credentials_valid %}
-                                    <span class="text-[9px] text-amber-400 font-bold uppercase tracking-tighter">No
-                                        Credentials</span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td class="py-4 text-center">
-                                <div class="flex flex-col items-center gap-1">
+                                </td>
+                                <td class="px-6 py-4 text-center">
                                     {% if u.is_paid %}
-                                    <span class="text-xs font-bold text-primary-400">PAID</span>
-                                    <span class="text-[9px] text-slate-500">Till {{
-                                        u.subscription_expires_at.strftime('%Y-%m-%d') if u.subscription_expires_at else
-                                        'N/A' }}</span>
+                                    <span class="text-xs font-bold text-primary-400">PREMIUM</span>
                                     {% else %}
-                                    <span class="text-xs font-bold text-red-500/70">FREE</span>
-                                    <button class="toggle-paid text-[9px] text-primary-400 hover:text-white underline"
-                                        data-id="{{ u._id_str }}" data-state="true">Set Paid</button>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td class="py-4 text-center">
-                                <div class="flex items-center justify-center gap-2">
-                                    <input type="number" value="{{ u.daily_limit|default(240) }}"
-                                        class="update-limit bg-white/5 border border-white/10 rounded w-16 text-center text-xs py-1 focus:ring-1 focus:ring-primary-500"
-                                        data-id="{{ u._id_str }}">
-                                </div>
-                            </td>
-                            <td class="py-4 text-center">
-                                <div class="text-sm font-bold text-primary-400">{{ u.assigned_count|default(0) }}</div>
-                                <div class="text-[9px] text-slate-500">Recipients</div>
-                            </td>
-                            <td class="py-4 text-right">
-                                <div class="flex justify-end items-center gap-3">
-                                    <a href="/user/{{ u._id_str }}/dashboard"
-                                        class="p-2 bg-white/5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-all shadow-sm"
-                                        title="Dashboard">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path
-                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
-                                    </a>
                                     <button
-                                        class="delete-user p-2 bg-red-500/10 rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all shadow-sm"
-                                        data-id="{{ u._id_str }}" data-username="{{ u.username }}" title="Delete User">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                        class="toggle-paid text-[10px] text-slate-500 hover:text-primary-400 transition-colors underline"
+                                        data-id="{{ u._id_str }}">Upgrade FREE</button>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <input type="number" value="{{ u.daily_limit|default(240) }}"
+                                        class="update-limit w-16 bg-slate-950 border border-white/10 rounded px-2 py-1 text-center text-xs focus:ring-1 focus:ring-primary-500 font-mono"
+                                        data-id="{{ u._id_str }}">
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex justify-end gap-2">
+                                        {% if u.locked_until and u.locked_until > now %}
+                                        <button
+                                            class="unlock-user p-2 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 transition-all"
+                                            data-id="{{ u._id_str }}" title="Unlock Account">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                            </svg>
+                                        </button>
+                                        {% endif %}
+                                        <button
+                                            class="toggle-block p-2 rounded bg-white/5 hover:bg-white/10 text-slate-400 transition-all {{ 'text-red-400 bg-red-500/10' if u.is_blocked }}"
+                                            data-id="{{ u._id_str }}"
+                                            data-blocked="{{ 'true' if u.is_blocked else 'false' }}">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            class="delete-user p-2 rounded bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-all"
+                                            data-id="{{ u._id_str }}" data-username="{{ u.username }}">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Global Activity Monitor -->
+            <div class="mt-8 bg-slate-900/60 border border-white/5 rounded-2xl p-6">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4">Live Activity Monitor</h3>
+                <div class="overflow-x-auto max-h-80 scrollbar-hide">
+                    <table class="w-full text-xs text-left">
+                        <tbody class="divide-y divide-white/5" id="global-activity-body">
+                            <tr>
+                                <td colspan="4"
+                                    class="py-12 text-center text-slate-500 animate-pulse font-mono uppercase tracking-tighter">
+                                    Connecting to system bus...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL: RECRUITERS -->
+        <div id="panel-recruiters" class="panel-content hidden animate-slide-up">
+            <div class="grid grid-cols-1 gap-6">
+                <div
+                    class="card-glass p-8 bg-slate-900 border border-white/5 rounded-2xl relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent"></div>
+                    <div class="relative z-10 flex flex-col md:flex-row gap-4 items-center justify-between mb-8">
+                        <div>
+                            <h3 class="text-xl font-bold">Global Recruiter Pool</h3>
+                            <p class="text-xs text-slate-500 mt-1">Manage and verify cross-border entries.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="recruiter-search" placeholder="Search pool..."
+                                class="bg-slate-950 border border-white/10 rounded-lg px-4 py-2 text-xs w-64 outline-none focus:ring-1 focus:ring-primary-500">
+                            <button id="btn-refresh-recruiters"
+                                class="p-2 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead
+                                class="text-[10px] uppercase font-bold text-slate-500 tracking-widest border-b border-white/5">
+                                <tr>
+                                    <th class="pb-4">Email / Entry</th>
+                                    <th class="pb-4">Region</th>
+                                    <th class="pb-4 text-center">Status</th>
+                                    <th class="pb-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recruiters-table-body" class="divide-y divide-white/5 text-sm">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL: DELIVERABILITY -->
+        <div id="panel-deliverability" class="panel-content hidden animate-slide-up">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Manual Block -->
+                <div class="card-glass p-8 bg-slate-900 border border-white/5 rounded-2xl">
+                    <h3 class="text-lg font-bold mb-2">Supression Engine</h3>
+                    <p class="text-xs text-slate-500 mb-6">Instantly block addresses across the entire stack.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="suppress-email" placeholder="e.g. bounce@invalid.com"
+                            class="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-red-500">
+                        <button id="btn-suppress"
+                            class="bg-red-600 hover:bg-red-500 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-red-600/20">BLOCK</button>
+                    </div>
+
+                    <div class="mt-8">
+                        <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Service Failure
+                            Map</h4>
+                        <div id="deliverability-breakdown" class="space-y-4">
+                            <!-- JS Populated -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risky Accounts -->
+                <div class="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
+                    <div class="p-6 border-b border-white/5">
+                        <h3 class="text-lg font-bold text-amber-400">High Risk Anomalies</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Real-time bounce detection
+                        </p>
+                    </div>
+                    <div class="p-0">
+                        <div id="risky-users-container" class="divide-y divide-white/5">
+                            <!-- JS Populated -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL: NODES -->
+        <div id="panel-nodes" class="panel-content hidden animate-slide-up">
+            <div class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="queue-stats-grid">
+                    <!-- JS Populated Queues -->
+                </div>
+
+                <div class="bg-slate-900/60 border border-white/5 rounded-3xl p-8">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-xl font-bold">Worker Pool Controller</h3>
+                        <button id="refresh-workers"
+                            class="text-xs font-bold text-primary-400 hover:text-white transition-all uppercase tracking-widest">Poll
+                            Handshake</button>
+                    </div>
+                    <div id="workers-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- JS Populated Workers -->
+                    </div>
+                    <div class="mt-12 pt-6 border-t border-white/5 text-center">
+                        <button id="reset-queues-btn"
+                            class="text-[10px] text-red-500/50 hover:text-red-500 underline uppercase tracking-widest font-black transition-all">Emergency
+                            Core Synchronize (Daily Reset)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL: SYSTEM POLICY & BUSINESS BI -->
+        <div id="panel-policy" class="panel-content hidden animate-slide-up">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                <!-- Business Intelligence -->
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="card-glass p-8 bg-slate-900 border border-white/5 rounded-3xl">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Revenue Overview
+                        </h3>
+                        <div id="revenue-stats" class="space-y-4">
+                            <!-- JS Populated -->
+                        </div>
+                    </div>
+
+                    <div class="card-glass p-6 bg-slate-900 border border-white/5 rounded-2xl">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Quick Actions</h3>
+                        <div class="space-y-2">
+                            <form action="/admin/sync_pool" method="post"
+                                onsubmit="return confirm('Sync HR pool from main database? This may take a few seconds.')">
+                                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                                <button type="submit"
+                                    class="w-full py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 text-[10px] font-bold rounded-lg border border-green-500/20 transition-all uppercase">
+                                    SYNC HR POOL
+                                </button>
+                            </form>
+                            <form action="/admin/assign" method="post"
+                                onsubmit="return confirm('Distribute pending recipients to active users?')">
+                                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                                <button type="submit"
+                                    class="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded-lg border border-amber-500/20 transition-all uppercase">
+                                    ASSIGN RECIPIENTS
+                                </button>
+                            </form>
+                            <button onclick="if(confirm('Send a system-wide notification?')) broadcastMessage()"
+                                class="w-full py-2 bg-primary-500/10 hover:bg-primary-500/20 text-primary-400 text-[10px] font-bold rounded-lg border border-primary-500/20 transition-all">BROADCAST
+                                NOTIFICATION</button>
+                            <button
+                                onclick="if(confirm('Optimize database indexes? This may briefly impact performance.')) optimizeIndexes()"
+                                class="w-full py-2 bg-white/5 hover:bg-white/10 text-slate-400 text-[10px] font-bold rounded-lg border border-white/10 transition-all">OPTIMIZE
+                                MONGO INDEXES</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Configuration -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="card-glass p-8 bg-slate-900 border border-white/5 rounded-3xl">
+                        <h3 class="text-lg font-bold mb-6">Policy Governance</h3>
+                        <div id="system-settings-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- JS Populated Form -->
+                        </div>
+                        <div class="mt-8 pt-6 border-t border-white/5 flex justify-end">
+                            <button id="save-settings-btn"
+                                class="bg-primary-600 hover:bg-primary-500 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-primary-500/20 transition-all">Save
+                                Changes</button>
+                        </div>
+                    </div>
+
+                    <!-- Admin Audit Log -->
+                    <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-6">
+                        <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Admin Audit
+                            Trail</h4>
+                        <div class="overflow-x-auto max-h-64 scrollbar-hide">
+                            <table class="w-full text-[10px] text-left">
+                                <thead
+                                    class="text-slate-500 font-bold border-b border-white/5 uppercase tracking-tighter">
+                                    <tr>
+                                        <th class="pb-2">Admin</th>
+                                        <th class="pb-2">Action</th>
+                                        <th class="pb-2">Details</th>
+                                        <th class="pb-2 text-right">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-white/5" id="audit-log-body">
+                                    <!-- JS Populated -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- PANEL: INFRASTRUCTURE -->
+        <div id="panel-infra" class="panel-content hidden animate-slide-up">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- System Utilization -->
+                <div class="card-glass p-8 bg-slate-900 border border-white/5 rounded-xl space-y-6">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <svg class="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        System Resources
+                    </h3>
+                    <div id="sys-resource-stats" class="space-y-4">
+                        <div class="animate-pulse space-y-2">
+                            <div class="h-4 bg-white/5 rounded w-3/4"></div>
+                            <div class="h-4 bg-white/5 rounded w-1/2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Utilization -->
+                <div class="card-glass p-8 bg-slate-900 border border-white/5 rounded-xl space-y-6">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                        </svg>
+                        Database Clusters
+                    </h3>
+                    <div id="db-utilization-stats" class="space-y-4">
+                        <!-- JS Populated -->
+                    </div>
+                </div>
+
+                <!-- Network & IP -->
+                <div class="card-glass p-8 bg-slate-900 border border-white/5 rounded-xl space-y-6">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                        </svg>
+                        Networking
+                    </h3>
+                    <div id="network-infra-stats" class="space-y-4">
+                        <!-- JS Populated -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
+<!-- Modal: Edit Recruiter -->
+<div id="modal-edit-recruiter"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 hidden opacity-0 transition-opacity backdrop-blur-xl">
+    <div class="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl scale-95 transition-transform"
+        id="edit-modal-content">
+        <h3 class="text-xl font-bold mb-6">Refine Data Entry</h3>
+        <input type="hidden" id="edit-recruiter-id">
+        <div class="space-y-5">
+            <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-2 block">Detected
+                    Region</label>
+                <input type="text" id="edit-country"
+                    class="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:ring-1 focus:ring-primary-500">
+            </div>
+            <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-2 block">Health
+                    Vector</label>
+                <select id="edit-health"
+                    class="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white">
+                    <option value="good">Reliable (Good)</option>
+                    <option value="risky">Degraded (Risky)</option>
+                    <option value="dead">Blacklisted (Dead)</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                <input type="checkbox" id="edit-override"
+                    class="w-4 h-4 rounded border-white/10 bg-slate-950 text-primary-500">
+                <div class="text-xs">
+                    <p class="font-bold text-white">Permanent Override</p>
+                    <p class="text-[10px] text-slate-500">Lock entry from automated metadata scrapers.</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-3 mt-8">
+            <button onclick="closeEditModal()"
+                class="flex-1 py-3 text-sm font-bold text-slate-400 hover:bg-white/5 rounded-xl transition-all">Cancel</button>
+            <button id="btn-save-edit"
+                class="flex-1 py-3 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl shadow-lg shadow-primary-600/20 transition-all">Commit</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .active-tab-btn {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .panel-content.animate-slide-up {
+        animation: slideUp 0.3s ease-out forwards;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<script nonce="{{ csp_nonce }}">
     document.addEventListener('DOMContentLoaded', () => {
-        // Search Functionality
-        const searchInput = document.getElementById('user-search');
-        const rows = document.querySelectorAll('.user-row');
 
-        searchInput?.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            rows.forEach(row => {
-                const email = row.getAttribute('data-email').toLowerCase();
-                row.style.display = email.includes(term) ? '' : 'none';
+        // --- 1. Navigation Controller ---
+        const tabs = document.querySelectorAll('.tab-btn');
+        const panels = document.querySelectorAll('.panel-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.target;
+
+                // Update Buttons
+                tabs.forEach(t => {
+                    t.classList.remove('active-tab-btn');
+                    t.classList.add('text-slate-400');
+                });
+                tab.classList.remove('text-slate-400');
+                tab.classList.add('active-tab-btn');
+
+                // Update Panels
+                panels.forEach(p => p.classList.add('hidden'));
+                const targetPanel = document.getElementById(target);
+                targetPanel.classList.remove('hidden');
+
+                // Lazy load data
+                if (target === 'panel-recruiters') loadRecruiters();
+                if (target === 'panel-deliverability') loadDeliverability();
+                if (target === 'panel-nodes') { loadQueues(); loadWorkers(); }
+                if (target === 'panel-users') loadGlobalActivity();
+                if (target === 'panel-infra') loadInfraData();
+                if (target === 'panel-policy') loadPolicyData();
             });
         });
 
-        // Update Daily Limit (Debounced)
-        let limitTimer;
+        // --- Policy & BI Data Fetching ---
+        async function loadPolicyData() {
+            const revenueContainer = document.getElementById('revenue-stats');
+            const settingsForm = document.getElementById('system-settings-form');
+            const auditBody = document.getElementById('audit-log-body');
+
+            try {
+                // 1. Fetch Revenue
+                const revRes = await fetch('/api/admin/revenue');
+                const rev = await revRes.json();
+                revenueContainer.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
+                            <span class="text-xs text-slate-400">Monthly Revenue</span>
+                            <span class="text-xl font-bold text-white">${rev.mrr.toLocaleString()} <span class="text-[10px] text-primary-400">${rev.currency}</span></span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
+                            <span class="text-xs text-slate-400">Total Premium Accounts</span>
+                            <span class="text-lg font-bold text-white">${rev.total_paid_users}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
+                            <span class="text-xs text-slate-400">New Subscriptions (30d)</span>
+                            <span class="text-lg font-bold text-green-400">+${rev.new_subs_30d}</span>
+                        </div>
+                    </div>
+                `;
+
+                // 2. Fetch Settings
+                const setRes = await fetch('/api/admin/settings');
+                const settings = await setRes.json();
+                settingsForm.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-4 bg-slate-950/50 rounded-2xl border border-white/5">
+                            <div>
+                                <p class="text-sm font-bold text-white">Maintenance Mode</p>
+                                <p class="text-[10px] text-slate-500">Block all user access temporarily.</p>
+                            </div>
+                            <input type="checkbox" id="set-maintenance" class="w-5 h-5 rounded border-white/10 bg-slate-950 text-primary-500" ${settings.maintenance_mode ? 'checked' : ''}>
+                        </div>
+                        <div class="flex items-center justify-between p-4 bg-slate-950/50 rounded-2xl border border-white/5">
+                            <div>
+                                <p class="text-sm font-bold text-white">Public Registration</p>
+                                <p class="text-[10px] text-slate-500">Enable/Disable new user signups.</p>
+                            </div>
+                            <input type="checkbox" id="set-signup" class="w-5 h-5 rounded border-white/10 bg-slate-950 text-primary-500" ${settings.signup_enabled ? 'checked' : ''}>
+                        </div>
+                        <div class="flex items-center justify-between p-4 bg-slate-950/50 rounded-2xl border border-white/5">
+                            <div>
+                                <p class="text-sm font-bold text-white">Payment Gateway</p>
+                                <p class="text-[10px] text-slate-500">Enable user billing and subscription checkout.</p>
+                            </div>
+                            <input type="checkbox" id="set-payment" class="w-5 h-5 rounded border-white/10 bg-slate-950 text-primary-500" ${settings.payment_gateway_enabled ? 'checked' : ''}>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="space-y-2">
+                             <label class="text-[10px] font-bold text-slate-500 uppercase">Default Daily Limit</label>
+                             <input type="number" id="set-limit" class="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm" value="${settings.default_daily_limit}">
+                        </div>
+                        <div class="space-y-2">
+                             <label class="text-[10px] font-bold text-slate-500 uppercase">Maintenance Message</label>
+                             <input type="text" id="set-msg" class="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm" value="${settings.maintenance_message}">
+                        </div>
+                    </div>
+                `;
+
+                // 3. Fetch Audit Logs
+                const logRes = await fetch('/api/admin/audit_logs');
+                const logs = await logRes.json();
+                auditBody.innerHTML = logs.map(l => `
+                    <tr class="hover:bg-white/[0.01]">
+                        <td class="py-2 font-bold text-primary-400">${l.username}</td>
+                        <td class="py-2 text-white italic uppercase">${l.action}</td>
+                        <td class="py-2 text-slate-400">${l.details}</td>
+                        <td class="py-2 text-right text-slate-600">${new Date(l.timestamp).toLocaleDateString()}</td>
+                    </tr>
+                `).join('');
+                if (logs.length === 0) auditBody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-600 italic">No admin interventions documented.</td></tr>';
+
+            } catch (err) { console.error(err); }
+        }
+
+        document.getElementById('save-settings-btn')?.addEventListener('click', async () => {
+            const payload = {
+                maintenance_mode: document.getElementById('set-maintenance').checked,
+                signup_enabled: document.getElementById('set-signup').checked,
+                payment_gateway_enabled: document.getElementById('set-payment').checked,
+                default_daily_limit: parseInt(document.getElementById('set-limit').value),
+                maintenance_message: document.getElementById('set-msg').value
+            };
+            if (!confirm("Apply these global policy changes? This will instantly affect system-wide behavior and user access.")) return;
+            await fetch('/api/admin/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            alert("System policies propagated successfully.");
+            loadPolicyData();
+        });
+
+        // --- Infrastructure Data Fetching ---
+        async function loadInfraData() {
+            const sysContainer = document.getElementById('sys-resource-stats');
+            const dbContainer = document.getElementById('db-utilization-stats');
+            const netContainer = document.getElementById('network-infra-stats');
+
+            try {
+                const res = await fetch('/api/admin/infra');
+                const data = await res.json();
+                const sys = data.system;
+                const dbs = data.databases;
+
+                sysContainer.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400">CPU Usage</span>
+                                <span class="text-white font-mono">${sys.cpu}%</span>
+                            </div>
+                            <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div class="bg-primary-500 h-full" style="width: ${sys.cpu}%"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400">Memory (${sys.memory_used}GB / ${sys.memory_total}GB)</span>
+                                <span class="text-white font-mono">${sys.memory_pct}%</span>
+                            </div>
+                            <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div class="bg-primary-500 h-full" style="width: ${sys.memory_pct}%"></div>
+                            </div>
+                        </div>
+                         <div class="space-y-1">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400">Storage (${sys.storage_used}GB / ${sys.storage_total}GB)</span>
+                                <span class="text-white font-mono">${sys.storage_pct}%</span>
+                            </div>
+                            <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div class="bg-green-500 h-full" style="width: ${sys.storage_pct}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                dbContainer.innerHTML = `
+                    <div class="space-y-4 text-sm">
+                        <div class="p-3 bg-white/5 rounded-lg">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">MongoDB</p>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Data Size</span>
+                                <span class="text-white">${dbs.mongo.data_size} MB</span>
+                            </div>
+                            <div class="flex justify-between mt-1">
+                                <span class="text-slate-400">Objects</span>
+                                <span class="text-white">${dbs.mongo.objects}</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-white/5 rounded-lg">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Redis Cache</p>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Memory Used</span>
+                                <span class="text-white">${dbs.redis.used_memory}</span>
+                            </div>
+                            <div class="flex justify-between mt-1">
+                                <span class="text-slate-400">Clients</span>
+                                <span class="text-white">${dbs.redis.clients}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                netContainer.innerHTML = `
+                    <div class="space-y-4 text-sm">
+                         <div class="grid grid-cols-2 gap-3 p-3 bg-white/5 rounded-lg">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase">Local IP</p>
+                                <p class="text-white font-mono text-xs">${sys.local_ip}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase">Public IP</p>
+                                <p class="text-primary-400 font-mono text-xs">${sys.public_ip}</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-white/5 rounded-lg">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase">Hostname</p>
+                                <p class="text-white text-xs">${sys.hostname}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="p-3 bg-white/5 rounded-lg text-center">
+                                <p class="text-[10px] font-bold text-slate-500 uppercase mb-1">Inbound</p>
+                                <p class="text-white font-bold">${sys.net_recv} MB</p>
+                            </div>
+                            <div class="p-3 bg-white/5 rounded-lg text-center">
+                                <p class="text-[10px] font-bold text-slate-500 uppercase mb-1">Outbound</p>
+                                <p class="text-white font-bold">${sys.net_sent} MB</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (err) { console.error(err); }
+        }
+
+        // --- 2. User Dashboard Logic ---
+        const userSearch = document.getElementById('user-search');
+        console.log('User search element:', userSearch);
+
+        if (userSearch) {
+            console.log('Attaching search event listener');
+            userSearch.addEventListener('input', (e) => {
+                const term = (e.target.value || '').toLowerCase().trim();
+                const rows = document.querySelectorAll('.user-row');
+                console.log(`Filtering for term: "${term}", found ${rows.length} rows`);
+
+                let visibleCount = 0;
+                rows.forEach(row => {
+                    const email = (row.getAttribute('data-email') || '').toLowerCase();
+                    const username = (row.getAttribute('data-username') || '').toLowerCase();
+                    const isMatch = !term || email.includes(term) || username.includes(term);
+                    row.style.display = isMatch ? '' : 'none';
+                    if (isMatch) visibleCount++;
+                });
+                console.log(`Showing ${visibleCount} of ${rows.length} users`);
+            });
+        } else {
+            console.error('User search input not found!');
+        }
+
+        async function loadGlobalActivity() {
+            const body = document.getElementById('global-activity-body');
+            try {
+                const res = await fetch('/api/admin/global_report');
+                const data = await res.json();
+                if (data.length === 0) {
+                    body.innerHTML = '<tr><td colspan="4" class="py-12 text-center text-slate-500 italic">No system activity logged in last 24h.</td></tr>';
+                    return;
+                }
+                body.innerHTML = data.map(r => `
+                    <tr class="hover:bg-white/[0.01] transition-colors">
+                        <td class="py-3 px-2 font-mono text-primary-400 opacity-80">${r.username}</td>
+                        <td class="py-3 px-2 text-slate-300 font-medium">${r.email}</td>
+                        <td class="py-3 px-2 text-center">
+                            <span class="text-[8px] text-slate-600 font-mono">${r.ip_address || '0.0.0.0'}</span>
+                        </td>
+                        <td class="py-3 px-2 text-center">
+                            <span class="px-1.5 py-0.5 rounded text-[8px] font-black tracking-widest ${r.status === 'Sent' ? 'bg-green-500/10 text-green-400 border border-green-500/10' : 'bg-red-500/10 text-red-400 border border-red-500/10'}">${r.status.toUpperCase()}</span>
+                        </td>
+                        <td class="py-3 px-2 text-right text-slate-600 font-mono">${new Date(r.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
+                    </tr>
+                `).join('');
+            } catch (err) { }
+        }
+        loadGlobalActivity();
+        setInterval(loadGlobalActivity, 15000);
+
+        window.verifyUserDNS = async (email, btn) => {
+            const domain = email.split('@').pop();
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = 'CHECKING...';
+            try {
+                const res = await fetch(`/api/admin/dns_check?domain=${domain}`);
+                const data = await res.json();
+                const healthy = data.mx === 'configured' && data.spf === 'configured';
+
+                btn.className = `px-2 py-0.5 border rounded text-[8px] font-black tracking-widest uppercase transition-all ${healthy ? 'bg-green-500/10 text-green-400 border-green-500/10' : 'bg-red-500/10 text-red-400 border-red-500/10'}`;
+                btn.innerText = healthy ? 'HEALTHY' : 'ISSUES DETECTED';
+                btn.title = `MX: ${data.mx}, SPF: ${data.spf}, DMARC: ${data.dmarc}`;
+            } catch (err) {
+                btn.innerText = 'ERROR';
+                btn.disabled = false;
+            }
+        };
+
+        // Limit update / Block / Toggle Paid logic
         document.querySelectorAll('.update-limit').forEach(input => {
+            let timer;
             input.addEventListener('input', (e) => {
-                clearTimeout(limitTimer);
-                const userId = e.target.dataset.id;
-                const newLimit = e.target.value;
-
-                limitTimer = setTimeout(async () => {
-                    try {
-                        const res = await fetch(`/api/admin/users/${userId}`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ daily_limit: newLimit })
-                        });
-                        if (!res.ok) alert('Failed to update limit');
-                    } catch (err) { console.error(err); }
-                }, 1000);
+                clearTimeout(timer);
+                timer = setTimeout(async () => {
+                    await fetch(`/api/admin/users/${e.target.dataset.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ daily_limit: e.target.value }) });
+                }, 800);
             });
         });
 
-        // Toggle Paid Status
-        document.querySelectorAll('.toggle-paid').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const userId = e.target.dataset.id;
-                const isPaid = e.target.dataset.state === 'true';
+        document.querySelectorAll('.toggle-block').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const isBlocked = btn.dataset.blocked === 'true';
+                if (!confirm(`Are you sure you want to ${isBlocked ? 'UNBLOCK' : 'BLOCK'} this user?`)) return;
 
-                if (!confirm(`Set user to ${isPaid ? 'PAID' : 'FREE'}?`)) return;
-
-                try {
-                    const res = await fetch(`/api/admin/users/${userId}`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ is_paid: isPaid })
-                    });
-                    if (res.ok) window.location.reload();
-                    else alert('Failed to update status');
-                } catch (err) { console.error(err); }
+                await fetch(`/api/admin/users/${btn.dataset.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_blocked: !isBlocked })
+                });
+                window.location.reload();
             });
         });
 
-        // Delete User
         document.querySelectorAll('.delete-user').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const btnEl = e.target.closest('.delete-user');
-                const userId = btnEl.dataset.id;
-                const userName = btnEl.dataset.username;
+            btn.addEventListener('click', async () => {
+                if (!confirm(`CRITICAL: Soft-delete user "${btn.dataset.username}"? This will halt their campaigns immediately.`)) return;
 
-                if (!confirm(`Are you absolutely sure you want to delete ${userName}? This action cannot be undone.`)) return;
-
-                try {
-                    const res = await fetch(`/api/admin/users/${userId}`, {
-                        method: 'DELETE'
-                    });
-                    if (res.ok) window.location.reload();
-                    else alert('Failed to delete user');
-                } catch (err) { console.error(err); }
+                await fetch(`/api/admin/users/${btn.dataset.id}`, { method: 'DELETE' });
+                window.location.reload();
             });
+        });
+
+        document.querySelectorAll('.unlock-user').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm(`Unlock this user's account? This clears their brute-force lockout.`)) return;
+
+                const res = await fetch(`/api/admin/users/${btn.dataset.id}/unlock`, { method: 'POST' });
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Failed to unlock user.');
+                }
+            });
+        });
+
+        document.querySelectorAll('.toggle-paid').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm("Grant PREMIUM access to this user?")) return;
+
+                await fetch(`/api/admin/users/${btn.dataset.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_paid: true })
+                });
+                window.location.reload();
+            });
+        });
+
+        // --- 3. Recruiter Pool Logic ---
+        let recPage = 1;
+        async function loadRecruiters(page = 1) {
+            recPage = page;
+            const tableBody = document.getElementById('recruiters-table-body');
+            const term = document.getElementById('recruiter-search').value;
+            const params = new URLSearchParams({ page, limit: 20 });
+            if (term) params.append('search', term);
+
+            try {
+                const res = await fetch(`/api/admin/recruiters?${params}`);
+                const data = await res.json();
+                tableBody.innerHTML = data.items.map(r => `
+                    <tr class="hover:bg-white/[0.02] transition-colors">
+                        <td class="py-4">
+                            <p class="font-bold text-white select-all">${r.email}</p>
+                            <p class="text-[9px] text-slate-600 font-mono">ID: ${r._id.slice(-6)}</p>
+                        </td>
+                        <td class="py-4 text-xs text-slate-400">${r.detectedCountry || 'Unspecified'}</td>
+                        <td class="py-4 text-center">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold tracking-tighter border 
+                                ${r.health === 'good' ? 'bg-green-500/10 text-green-400 border-green-500/10' :
+                        r.health === 'dead' ? 'bg-red-500/10 text-red-400 border-red-500/10' : 'bg-amber-500/10 text-amber-400 border-amber-500/10'}">
+                                ${r.health.toUpperCase()}
+                            </span>
+                        </td>
+                        <td class="py-4 text-right">
+                             <button onclick="openEditRecruiter('${r._id}', '${r.detectedCountry}', '${r.health}', ${r.manual_override || false})" class="px-3 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-primary-400 hover:bg-white/10 transition-all font-bold">Edit</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) { }
+        }
+        document.getElementById('recruiter-search')?.addEventListener('change', () => loadRecruiters(1));
+        document.getElementById('btn-refresh-recruiters')?.addEventListener('click', () => loadRecruiters(1));
+
+        // --- 4. Deliverability Logic ---
+        async function loadDeliverability() {
+            try {
+                const res = await fetch('/api/admin/bounces/stats');
+                const data = await res.json();
+
+                // Breakdown list
+                const breakdown = document.getElementById('deliverability-breakdown');
+                const max = Math.max(...data.by_provider.map(p => p.count), 1);
+                breakdown.innerHTML = data.by_provider.map(p => `
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+                            <span>${p._id}</span>
+                            <span class="text-white">${p.count} ERRORS</span>
+                        </div>
+                        <div class="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full bg-primary-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]" style="width: ${(p.count / max * 100)}%"></div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Risky Users
+                const risky = document.getElementById('risky-users-container');
+                if (data.risky_users.length === 0) {
+                    risky.innerHTML = '<div class="py-12 text-center text-slate-600 italic text-xs">No active account anomalies found.</div>';
+                } else {
+                    risky.innerHTML = data.risky_users.map(u => `
+                        <div class="p-4 flex items-center justify-between hover:bg-white/[0.01] transition-all">
+                            <div>
+                                <p class="text-sm font-bold text-white">${u.username}</p>
+                                <p class="text-[10px] text-slate-500 font-mono">${u.email}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs font-black text-red-500 tracking-tighter">${u.rate}% BOUNCE RATE</p>
+                                <p class="text-[9px] text-slate-600 uppercase font-bold">${u.bounces_today} Hard Failures Today</p>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) { }
+        }
+
+        document.getElementById('btn-suppress')?.addEventListener('click', async () => {
+            const email = document.getElementById('suppress-email').value;
+            if (!email || !confirm(`Supress ${email} globally?`)) return;
+            await fetch('/api/admin/suppression', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, reason: 'admin_manual' }) });
+            document.getElementById('suppress-email').value = '';
+            loadDeliverability();
+        });
+
+        // --- 5. System Nodes Logic ---
+        async function loadQueues() {
+            try {
+                const res = await fetch('/api/admin/queues');
+                const d = await res.json();
+                const grid = document.getElementById('queue-stats-grid');
+                grid.innerHTML = Object.entries(d.queues).map(([name, count]) => `
+                    <div class="bg-slate-900 border border-white/5 p-4 rounded-xl text-center">
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">${name}</p>
+                        <p class="text-xl font-bold ${count > 100 ? 'text-amber-500' : 'text-primary-400'}">${count}</p>
+                        <p class="text-[9px] text-slate-600 mt-1 uppercase">Pending</p>
+                    </div>
+                `).join('');
+            } catch (err) { }
+        }
+
+        async function loadWorkers() {
+            const list = document.getElementById('workers-list');
+            try {
+                const res = await fetch('/api/admin/workers');
+                const d = await res.json();
+                if (Object.keys(d.workers).length === 0) {
+                    list.innerHTML = '<div class="col-span-full py-12 text-center text-slate-600 italic">No node heartbeat detected.</div>';
+                    return;
+                }
+                list.innerHTML = Object.entries(d.workers).map(([name, qs]) => {
+                    const paused = !qs || qs.length === 0;
+                    return `
+                        <div class="bg-slate-950 border border-white/5 p-4 rounded-2xl flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <div class="h-2 w-2 rounded-full ${paused ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}"></div>
+                                    <p class="font-mono text-xs text-white">${name.split('@')[0]}</p>
+                                </div>
+                                <p class="text-[9px] text-slate-600 mt-1 uppercase tracking-widest font-bold">${paused ? 'Halted' : 'Consuming: ' + qs.length + ' queues'}</p>
+                            </div>
+                            <button onclick="controlWorker('${name}', '${paused ? 'resume' : 'pause'}')" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${paused ? 'bg-green-500 text-slate-950 hover:bg-green-400' : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10'}">
+                                ${paused ? 'Resume' : 'Pause'}
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) { }
+        }
+        window.controlWorker = async (worker, action) => {
+            if (!confirm(`Are you sure you want to ${action.toUpperCase()} worker ${worker}?`)) return;
+            await fetch(`/api/admin/workers/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ worker }) });
+            setTimeout(loadWorkers, 800);
+        };
+        document.getElementById('refresh-workers')?.addEventListener('click', () => { loadQueues(); loadWorkers(); });
+
+        document.getElementById('reset-queues-btn')?.addEventListener('click', async () => {
+            if (!confirm("Reset ALL and force synchronize system counters?")) return;
+            await fetch('/api/admin/queue/reset', { method: 'POST' });
+            alert("Counters synchronized.");
+            window.location.reload();
+        });
+
+        // --- 6. Modal Logic ---
+        const modal = document.getElementById('modal-edit-recruiter');
+        window.openEditRecruiter = (id, country, health, override) => {
+            document.getElementById('edit-recruiter-id').value = id;
+            document.getElementById('edit-country').value = country !== 'null' ? country : '';
+            document.getElementById('edit-health').value = health;
+            document.getElementById('edit-override').checked = override;
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            document.getElementById('edit-modal-content').classList.remove('scale-95');
+        };
+        window.closeEditModal = () => {
+            modal.classList.add('opacity-0');
+            document.getElementById('edit-modal-content').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        };
+        document.getElementById('btn-save-edit')?.addEventListener('click', async () => {
+            if (!confirm("Commit these metadata overrides to the recruiter pool? This will bypass automated scrapers.")) return;
+            const id = document.getElementById('edit-recruiter-id').value;
+            await fetch(`/api/admin/recruiters/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ detectedCountry: document.getElementById('edit-country').value, health: document.getElementById('edit-health').value, manual_override: document.getElementById('edit-override').checked }) });
+            closeEditModal();
+            loadRecruiters(recPage);
+        });
+
+        // Initialize first view
+        loadGlobalActivity();
+
+        // Payment Toggle Security
+        document.getElementById('payment-toggle-btn')?.addEventListener('click', () => {
+            const isActive = document.getElementById('payment-toggle-btn').dataset.active === 'true';
+            if (confirm(`CRITICAL: ${isActive ? 'DISABLE' : 'ENABLE'} the Payment Gateway? This will instantly impact all user checkout flows and subscription activations.`)) {
+                // Add the hidden input to match the button value
+                const form = document.getElementById('payment-toggle-form');
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'active';
+                input.value = isActive ? 'false' : 'true';
+                form.appendChild(input);
+                form.submit();
+            }
         });
     });
 </script>

@@ -1,5 +1,6 @@
 import logging
 import uuid
+import secrets
 from datetime import datetime, timedelta
 from bson.objectid import ObjectId
 
@@ -9,17 +10,21 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from .db import db
-from .config import SECRET_KEY, APP_ENV, ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_API_KEY, YOUTUBE_GUIDE_URL, COLAB_GENERATOR_URL
+from .config import (
+    SECRET_KEY, APP_ENV, ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_API_KEY, 
+    YOUTUBE_GUIDE_URL, COLAB_GENERATOR_URL, SESSION_IDLE_TIMEOUT, SESSION_ABSOLUTE_TIMEOUT, APP_URL
+)
 from .utils import generate_csrf_token, validate_csrf_token, encrypt_bytes_to_b64
-from .storage_b2 import presign_upload, get_b2_status
+from .storage_b2 import presign_upload, get_b2_status, delete_cv
 import csv
 import io
-from .supabase_auth import signup as supabase_signup, signin as supabase_signin, get_user_from_token
+from .supabase_auth import signup as supabase_signup, signin as supabase_signin, get_user_from_token, get_google_auth_url
 from .send_worker import send_single_message_for_user
 from .assigner import assign_pending_recipients
 from .sync_pool import sync_from_main_database
@@ -39,6 +44,9 @@ LOG = logging.getLogger(__name__)
 
 # create app BEFORE any route decorators or middleware usage
 app = FastAPI(title="SaaS Email Sender - Premium")
+from app.routers import admin, campaigns
+app.include_router(admin.router)
+app.include_router(campaigns.router)
 
 # --- Security: Rate Limiting ---
 limiter = Limiter(key_func=get_remote_address)
@@ -106,10 +114,17 @@ def current_session_user(request: Request):
             "username": (user_info.get("email") or "").split("@")[0],
             "email": user_info.get("email"),
             "role": "user",
+            "daily_limit": 240,
+            "is_blocked": False,
+            "is_deleted": False,
             "created_at": datetime.utcnow()
         })
         local = db.users.find_one({"_id": res.inserted_id})
+    
     if local:
+        if local.get("is_blocked") or local.get("is_deleted"):
+            LOG.warning("Authenticated user %s is blocked or deleted. Denying session.", local["email"])
+            return None
         local["_id_str"] = str(local["_id"])
     return local
 
@@ -152,33 +167,103 @@ def get_csrf_session_id(request: Request):
 
 # middleware to inject template context safely
 @app.middleware("http")
-async def add_template_context(request: Request, call_next):
+async def session_security_middleware(request: Request, call_next):
     """
-    Add session_user and csrf_token to request.state in a robust way.
-    If SessionMiddleware is not present, we just set session_user=None
-    and create a CSRF token using a fallback session identifier.
+    1. Enforce Session Timeouts (Idle and Absolute).
+    2. Inject session_user and csrf_token into request.state.
+    3. Prevent caching of private/authenticated pages.
     """
+    session = _get_session_dict(request)
+    now = datetime.utcnow().timestamp()
+    
+    # --- 1) Session Timeout Enforcements ---
+    if session:
+        # Check absolute lifetime
+        created_at = session.get("created_at")
+        if created_at and now - created_at > SESSION_ABSOLUTE_TIMEOUT:
+            LOG.info("Session absolute timeout reached. Clearing session.")
+            request.session.clear()
+            session = None
+        
+        # Check idle timeout
+        if session:
+            last_active = session.get("last_active")
+            if last_active and now - last_active > SESSION_IDLE_TIMEOUT:
+                LOG.info("Session idle timeout reached. Clearing session.")
+                request.session.clear()
+                session = None
+            else:
+                # Update last active for next time
+                session["last_active"] = now
+                if "created_at" not in session:
+                    session["created_at"] = now
+    
+    # --- 2) Prepare Template context ---
     try:
-        session = request.session
-        request.state.session_user = None
+        # Check Maintenance Mode (NEW)
+        path = request.url.path
+        is_maintenance = False
+        m_msg = "System under maintenance."
         
-        # 1) Ensure anonymous users have a stable ID for CSRF *BEFORE* generating the token
-        if not session.get("session_id") and not session.get("access_token"):
-            session["session_id"] = str(uuid.uuid4())
-            LOG.info("Assigning new session_id: %s", session["session_id"])
+        # Exclude static/admin from maintenance check
+        if not path.startswith(("/static", "/admin", "/api/admin", "/maintenance")):
+            global_settings = db.settings.find_one({"_id": "global"}) or {}
+            request.state.is_maintenance = global_settings.get("maintenance_mode", False)
+            request.state.maintenance_message = global_settings.get("maintenance_message", m_msg)
+            
+            if request.state.is_maintenance:
+                is_maintenance = True
+                m_msg = request.state.maintenance_message
+        else:
+            request.state.is_maintenance = False
+            request.state.maintenance_message = ""
 
-        # 2) Now get the ID (it will definitely use the session_id we just set)
-        csrf_sid = get_csrf_session_id(request)
-        request.state.csrf_token = generate_csrf_token(csrf_sid)
+        if not session:
+            # Re-fetch session dict in case it was cleared above
+            session = _get_session_dict(request)
         
-        request.state.session_user = current_session_user(request)
-        LOG.debug("Generated CSRF for SID %s: %s", csrf_sid, request.state.csrf_token)
+        # Ensure session exists (mostly for anonymous CSRF)
+        if session is not None:
+             if not session.get("session_id") and not session.get("access_token"):
+                session["session_id"] = str(uuid.uuid4())
+             
+             csrf_sid = get_csrf_session_id(request)
+             request.state.csrf_token = generate_csrf_token(csrf_sid)
+             request.state.session_user = current_session_user(request)
+        else:
+             request.state.csrf_token = ""
+             request.state.session_user = None
+
+        # Enforce Maintenance Redirect
+        if is_maintenance:
+            user = request.state.session_user
+            if not user or user.get("role") != "admin":
+                if path != "/maintenance":
+                    return RedirectResponse(url="/maintenance")
+
     except Exception as e:
         LOG.exception("Error while preparing template context: %s", e)
         request.state.session_user = None
         request.state.csrf_token = ""
+
+    # Generate Nonce if not present (for template context)
+    if not getattr(request.state, "csp_nonce", None):
+        request.state.csp_nonce = secrets.token_hex(16)
         
     response = await call_next(request)
+
+    # --- 3) Cache Control for Private Routes ---
+    # If user is logged in or if it's a known private route, prevent caching
+    is_private_route = False
+    path = request.url.path
+    if path.startswith(("/user/", "/settings", "/admin", "/api/", "/logout")):
+        is_private_route = True
+        
+    if getattr(request.state, "session_user", None) or is_private_route:
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        
     return response
 
 def get_server_ips():
@@ -221,15 +306,41 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # CSP with Nonce
+    nonce = getattr(request.state, "csp_nonce", "")
+    if not nonce:
+        nonce = secrets.token_hex(16)
+        request.state.csp_nonce = nonce
+        
+    # allow webxpay in frame-ancestors or form-action if needed
+    csp_policy = (
+        f"default-src 'self'; "
+        f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net; "
+        f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        f"font-src 'self' https://fonts.gstatic.com; "
+        f"img-src 'self' data: https:; "
+        f"connect-src 'self' https://api.ipify.org; "
+        f"frame-ancestors 'self'; "
+        f"base-uri 'self'; "
+        f"form-action 'self' {WEBXPAY_DOMAIN};"
+    )
     if APP_ENV == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    # Basic CSP - failing open but reporting (adjust as needed)
-    # response.headers["Content-Security-Policy"] = "default-src 'self' https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:;"
+        response.headers["Content-Security-Policy"] = csp_policy
+    else:
+        # Report-only in dev or simpler policy? 
+        # For now, apply same policy to test it, but maybe laxer on https
+        response.headers["Content-Security-Policy"] = csp_policy
+
     return response
 
 # 2. Trusted Host (Prevents Host Header attacks)
 # Allow all for now, but restrict in production if domain is known
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+
+# 3. Enforce HTTPS Redirection
+if APP_ENV == "production":
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 # Register SessionMiddleware LAST so it is the OUTERMOST layer
 app.add_middleware(
@@ -237,7 +348,8 @@ app.add_middleware(
     secret_key=SECRET_KEY, 
     https_only=(APP_ENV == "production"), 
     same_site="lax",
-    session_cookie="saas_sender_session" # Unique name to avoid conflicts
+    session_cookie="__Host-saas_sender_session" if APP_ENV == "production" else "saas_sender_session",
+    max_age=SESSION_ABSOLUTE_TIMEOUT
 )
 
 
@@ -247,9 +359,12 @@ def template_ctx(request: Request):
         "request": request,
         "session_user": getattr(request.state, "session_user", None),
         "csrf_token": getattr(request.state, "csrf_token", ""),
+        "is_maintenance": getattr(request.state, "is_maintenance", False),
+        "maintenance_message": getattr(request.state, "maintenance_message", ""),
         "now": datetime.utcnow(),
         "youtube_guide_url": YOUTUBE_GUIDE_URL,
-        "colab_generator_url": COLAB_GENERATOR_URL
+        "colab_generator_url": COLAB_GENERATOR_URL,
+        "csp_nonce": getattr(request.state, "csp_nonce", "")
     }
 
 # --- Routes ---
@@ -283,6 +398,16 @@ Allow: /
 @app.get("/robot.txt")
 async def robot_txt():
     return await robots_txt()
+
+@app.get("/sw.js")
+async def service_worker():
+    from fastapi.responses import FileResponse
+    return FileResponse("app/static/sw.js")
+
+@app.get("/manifest.json")
+async def manifest():
+    from fastapi.responses import FileResponse
+    return FileResponse("app/static/manifest.json")
 
 @app.get("/sitemap.xml")
 async def sitemap_xml(request: Request):
@@ -333,10 +458,25 @@ async def api_info():
 
 @app.get("/api/user/{user_id}/dashboard")
 async def api_dashboard_alias(user_id: str, request: Request):
-    # This acts as an alias or redirect to the HTML dashboard
-    # If the user specifically wanted JSON data here, we'd need a separate logic
-    # but based on the 404 logs, we'll redirect to the existing dashboard route.
+    user = current_session_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    # SECURITY: Prevent enumeration/open redirect to other user dashboards
+    if str(user["_id"]) != user_id and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     return RedirectResponse(url=f"/user/{user_id}/dashboard")
+
+
+@app.get("/maintenance")
+def maintenance_page(request: Request):
+    global_settings = db.settings.find_one({"_id": "global"}) or {}
+    ctx = {
+        **template_ctx(request),
+        "maintenance_message": global_settings.get("maintenance_message")
+    }
+    return templates.TemplateResponse("premium/maintenance.html", ctx)
 
 
 @app.get("/")
@@ -351,17 +491,23 @@ def index(request: Request):
 
 @app.get("/admin-login")
 def admin_login_form(request: Request):
+    user = current_session_user(request)
+    if user and user.get("role") == "admin":
+        return RedirectResponse(url="/admin")
     return templates.TemplateResponse("premium/admin_login.html", template_ctx(request))
 
 @app.post("/admin-login")
-@limiter.limit("5/minute")
+@limiter.limit("3/minute")  # SECURITY: Strict limit for admin login
 async def admin_login_submit(request: Request, username: str = Form(...), password: str = Form(...), csrf: str = Form(None)):
     sid = get_csrf_session_id(request)
     if not validate_csrf_token(csrf, sid):
         return templates.TemplateResponse("premium/admin_login.html", {**template_ctx(request), "error": "CSRF failed"})
     
     if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        # SECURITY: Regenerate session to prevent session fixation
+        old_data = dict(request.session)
         request.session.clear()
+        request.session.update(old_data)
         request.session["is_admin"] = True
         return RedirectResponse(url="/admin", status_code=303)
     
@@ -369,39 +515,70 @@ async def admin_login_submit(request: Request, username: str = Form(...), passwo
 
 @app.get("/login")
 def login_form(request: Request):
+    user = current_session_user(request)
+    if user:
+        if user.get("role") == "admin":
+            return RedirectResponse(url="/admin")
+        return RedirectResponse(url=f"/user/{user.get('_id_str', user.get('_id'))}/dashboard")
     return templates.TemplateResponse("premium/login.html", template_ctx(request))
 
 @app.post("/login")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")  # SECURITY: Prevent brute-force attacks
 def login_submit(request: Request, email: str = Form(...), password: str = Form(...), csrf: str = Form(None)):
     sid = get_csrf_session_id(request)
     if not validate_csrf_token(csrf, sid):
         ua = request.headers.get("user-agent", "unknown")
         LOG.warning("CSRF validation failed. SID: %s | UA: %s", sid, ua)
         return templates.TemplateResponse("premium/login.html", {**template_ctx(request), "error": "CSRF validation failed. Please refresh and try again."})
+    # SECURITY: Check for account lockout
+    user_check = db.users.find_one({"email": email})
+    if user_check:
+        if user_check.get("locked_until") and user_check["locked_until"] > datetime.utcnow():
+            remain = int((user_check["locked_until"] - datetime.utcnow()).total_seconds() / 60)
+            return templates.TemplateResponse("premium/login.html", {**template_ctx(request), "error": f"Account locked. Try again in {remain} minutes."})
+
     try:
         token_resp = supabase_signin(email=email, password=password)
+        # Success - reset lockout
+        if user_check:
+             db.users.update_one({"_id": user_check["_id"]}, {"$set": {"failed_login_attempts": 0, "locked_until": None}})
     except Exception as e:
         # Handle 400 (Bad Request) from Supabase (wrong password etc) without full traceback
         import requests
+        
+        # Increment failure count
+        if user_check:
+             attempts = user_check.get("failed_login_attempts", 0) + 1
+             update = {"failed_login_attempts": attempts}
+             if attempts >= 5:
+                 update["locked_until"] = datetime.utcnow() + timedelta(minutes=15)
+                 LOG.warning(f"Account locked for {email} after {attempts} failed attempts")
+             db.users.update_one({"_id": user_check["_id"]}, {"$set": update})
+             
+             if attempts >= 5:
+                 return templates.TemplateResponse("premium/login.html", {**template_ctx(request), "error": "Account locked due to too many failed attempts."})
+
         if isinstance(e, requests.exceptions.HTTPError) and e.response is not None and e.response.status_code == 400:
             LOG.warning("Auth failure for %s: %s", email, e.response.text)
         else:
             LOG.exception("Supabase signin error")
         return templates.TemplateResponse("premium/login.html", {**template_ctx(request), "error": "Login failed"})
+
     access_token = token_resp.get("access_token")
     refresh_token = token_resp.get("refresh_token")
     if not access_token:
         return templates.TemplateResponse("premium/login.html", {**template_ctx(request), "error": "Login failed: no token"})
-    # store tokens in session (refresh token encrypted when present)
+    # SECURITY: Regenerate session to prevent session fixation
     if _get_session_dict(request) is None:
-        # ensure session exists by touching request.session (this will raise if SessionMiddleware missing)
-        request.session  # keep for clarity; SessionMiddleware should be present
+        request.session  # Ensure session exists
+    old_data = {k: v for k, v in request.session.items() if k not in ["access_token", "refresh_token_enc"]}
     request.session.clear()
+    request.session.update(old_data)
     request.session["access_token"] = access_token
     if refresh_token:
         request.session["refresh_token_enc"] = encrypt_bytes_to_b64(refresh_token.encode())
-    # map to local user
+    # Map to local user and log IP
+    client_ip = request.client.host
     user_info = get_user_from_token(access_token)
     local = db.users.find_one({"supabase_id": user_info["id"]})
     if not local:
@@ -410,9 +587,78 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
             "username": (user_info.get("email") or "").split("@")[0],
             "email": user_info.get("email"),
             "role": "user",
+            "last_login_ip": client_ip,
             "created_at": datetime.utcnow()
         })
         local = db.users.find_one({"_id": res.inserted_id})
+    else:
+        db.users.update_one({"_id": local["_id"]}, {"$set": {"last_login_ip": client_ip}})
+    
+    return RedirectResponse(url=f"/user/{local['_id']}/dashboard", status_code=302)
+
+
+@app.get("/login/google")
+@limiter.limit("5/minute")
+def google_login(request: Request):
+    """Initiate Google OAuth login via Supabase"""
+    # Redirect URL dynamic based on request host
+    base_url = str(request.base_url).rstrip("/")
+    callback_url = f"{base_url}/auth/callback"
+    google_auth_url = get_google_auth_url(callback_url)
+    return RedirectResponse(url=google_auth_url)
+
+@app.get("/auth/callback")
+async def auth_callback(request: Request):
+    """
+    Handle OAuth callback from Supabase.
+    Supabase redirects here with access_token and refresh_token in URL fragment or query params.
+    """
+    # Supabase sends tokens as URL fragments (#access_token=...) for implicit flow
+    # OR as query params for server-side flow
+    # We'll handle query params here
+    access_token = request.query_params.get("access_token")
+    refresh_token = request.query_params.get("refresh_token")
+    error = request.query_params.get("error")
+    
+    if error:
+        LOG.warning("OAuth error: %s", error)
+        return RedirectResponse(url="/login?error=oauth_failed")
+    
+    if not access_token:
+        # Tokens might be in fragment - render a page that extracts them via JS
+        return templates.TemplateResponse("premium/oauth_callback.html", template_ctx(request))
+    
+    # Store tokens in session
+    if _get_session_dict(request) is None:
+        request.session
+    request.session.clear()
+    request.session["access_token"] = access_token
+    if refresh_token:
+        request.session["refresh_token_enc"] = encrypt_bytes_to_b64(refresh_token.encode())
+    
+    # Get user info and create/update local user
+    client_ip = request.client.host
+    user_info = get_user_from_token(access_token)
+    if not user_info:
+        return RedirectResponse(url="/login?error=invalid_token")
+    
+    local = db.users.find_one({"supabase_id": user_info["id"]})
+    if not local:
+        res = db.users.insert_one({
+            "supabase_id": user_info["id"],
+            "username": (user_info.get("email") or "").split("@")[0],
+            "email": user_info.get("email"),
+            "role": "user",
+            "daily_limit": 240,
+            "is_blocked": False,
+            "is_deleted": False,
+            "last_login_ip": client_ip,
+            "created_at": datetime.utcnow()
+        })
+        local = db.users.find_one({"_id": res.inserted_id})
+    else:
+        db.users.update_one({"_id": local["_id"]}, {"$set": {"last_login_ip": client_ip}})
+    
     return RedirectResponse(url=f"/user/{local['_id']}/dashboard", status_code=302)
 
 
@@ -421,6 +667,7 @@ def forgot_password_form(request: Request):
     return templates.TemplateResponse("premium/forgot-password.html", template_ctx(request))
 
 @app.post("/forgot-password")
+@limiter.limit("3/minute")
 def forgot_password_submit(request: Request, email: str = Form(...), csrf: str = Form(None)):
     sid = get_csrf_session_id(request)
     if not validate_csrf_token(csrf, sid):
@@ -440,10 +687,13 @@ def forgot_password_submit(request: Request, email: str = Form(...), csrf: str =
 
 @app.get("/signup")
 def signup_form(request: Request):
+    user = current_session_user(request)
+    if user:
+        return RedirectResponse(url=f"/user/{user.get('_id_str', user.get('_id'))}/dashboard")
     return templates.TemplateResponse("premium/signup.html", template_ctx(request))
 
 @app.post("/signup")
-@limiter.limit("5/minute")
+@limiter.limit("5/minute")  # SECURITY: Prevent spam signups
 def signup_submit(request: Request, email: str = Form(...), password: str = Form(...), csrf: str = Form(None)):
     sid = get_csrf_session_id(request)
     if not validate_csrf_token(csrf, sid):
@@ -519,6 +769,8 @@ def signup_submit(request: Request, email: str = Form(...), password: str = Form
             "email": user_info.get("email"),
             "role": "user",
             "daily_limit": 240,
+            "is_blocked": False,
+            "is_deleted": False,
             "created_at": datetime.utcnow()
         })
         local = db.users.find_one({"_id": res.inserted_id})
@@ -526,25 +778,41 @@ def signup_submit(request: Request, email: str = Form(...), password: str = Form
 
 @app.get("/logout")
 def logout(request: Request):
-    # clear server session
-    session = _get_session_dict(request)
-    if session is not None:
-        request.session.clear()
-    return RedirectResponse(url="/", status_code=302)
+    """
+    Properly invalidate the session and clear cookies.
+    """
+    LOG.info("User logging out.")
+    request.session.clear()
+    
+    # We redirect with 303 to ensure the browser doesn't try to cache the redirect itself
+    response = RedirectResponse(url="/", status_code=303)
+    
+    # Explicitly clear the session cookie just in case
+    response.delete_cookie(
+        "saas_sender_session",
+        path="/",
+        domain=None,
+        httponly=True,
+        samesite="lax"
+    )
+    return response
 
 # Presign endpoints
 @app.post("/api/presign_upload")
+@limiter.limit("10/minute")
 async def api_presign_upload(request: Request):
+    user = current_session_user(request)
+    if not user:
+        return JSONResponse({"error": "auth required"}, status_code=401)
+    
     form = await request.form()
     filename = form.get("filename")
     content_type = form.get("content_type") or "application/pdf"
     allowed_types = [
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/pdf"
     ]
     if content_type not in allowed_types:
-        return JSONResponse({"error": "Invalid content type. Only PDF and Word documents are allowed."}, status_code=400)
+        return JSONResponse({"error": "Invalid content type. Only PDF files are allowed."}, status_code=400)
 
     try:
         res = presign_upload(filename=filename, content_type=content_type)
@@ -554,6 +822,7 @@ async def api_presign_upload(request: Request):
     return JSONResponse(res)
 
 @app.post("/api/presign_complete")
+@limiter.limit("10/minute")
 async def api_presign_complete(request: Request):
     body = await request.json()
     key = body.get("key")
@@ -563,11 +832,25 @@ async def api_presign_complete(request: Request):
     user = current_session_user(request)
     if not user:
         return JSONResponse({"error": "auth required"}, status_code=401)
-    db.users.update_one({"_id": user["_id"]}, {"$set": {"cv_b2_key": key, "cv_filename": filename, "cv_uploaded_at": datetime.utcnow()}})
+    
+    # Store old key to delete it after successful update
+    old_key = user.get("cv_b2_key")
+    
+    db.users.update_one({"_id": user["_id"]}, {"$set": {
+        "cv_b2_key": key, 
+        "cv_filename": filename, 
+        "cv_uploaded_at": datetime.utcnow(),
+        "campaign_active": False # Stop campaign on CV update
+    }})
+
+    # Delete the old file from B2 storage if it exists and is different from the new one
+    if old_key and old_key != key:
+        delete_cv(old_key)
+
     return JSONResponse({"ok": True, "key": key})
 
 @app.post("/api/test_send")
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 async def api_test_send(request: Request):
 
     payload = await request.json()
@@ -581,8 +864,9 @@ async def api_test_send(request: Request):
         res = send_single_message_for_user(user_id=user["_id"], to_email=to_email, subject_override=payload.get("subject"), body_override=payload.get("body"))
         return JSONResponse({"ok": True, "result": res})
     except Exception as e:
-        LOG.exception("test send failed")
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+        LOG.error(f"Test send failed for user {user['_id']}: {str(e)}")
+        # SECURITY: Do not leak internal exception details to client
+        return JSONResponse({"ok": False, "error": "Failed to send test email. Check server logs."}, status_code=500)
 
 @app.get("/user/{user_id}/dashboard")
 def user_dashboard(request: Request, user_id: str):
@@ -637,9 +921,19 @@ def settings_get(request: Request):
     user = current_session_user(request)
     if not user:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "user": user})
+    
+    # Create a shadow copy for rendering to mask sensitive data
+    display_user = dict(user)
+    mask = "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]"
+    if display_user.get("credentials_base64"):
+        display_user["credentials_base64"] = mask
+    if display_user.get("token_base64"):
+        display_user["token_base64"] = mask
+
+    return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "user": display_user})
 
 @app.post("/settings")
+@limiter.limit("5/minute")
 async def settings_post(
     request: Request,
     sender_email: str = Form(None),
@@ -670,7 +964,7 @@ async def settings_post(
         errors.append("Invalid Sender Email format.")
 
     # 2) Credentials
-    if credentials_base64:
+    if credentials_base64 and credentials_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
         # Strictly enforce Base64 (remove all whitespace/newlines)
         clean_cred = "".join(credentials_base64.split())
         # Fix padding if missing
@@ -694,7 +988,7 @@ async def settings_post(
 
 
     # 3) Token
-    if token_base64:
+    if token_base64 and token_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
         # Strictly enforce Base64 (remove all whitespace/newlines)
         clean_tok = "".join(token_base64.split())
         # Fix padding if missing
@@ -718,22 +1012,24 @@ async def settings_post(
 
 
     # 4) Templates
-    if not subject_template or "{first_name}" not in subject_template:
-
-        errors.append("Subject template must contain {first_name} for personalization.")
-    else:
+    if subject_template:
         # Sanitize subject
         subject_template = bleach.clean(subject_template, tags=[], strip=True)
-
-    if not body_template or "{first_name}" not in body_template.lower():
-        errors.append("Body template MUST contain {first_name} (case-insensitive) for personalization.")
-
     else:
-        # Sanitize body (allow some basic formatting if needed, or strip all)
-        # For email templates, we might want to allow basic HTML.
+        subject_template = "Regarding the job opening"
+
+    if body_template:
+        # 1. Simple heuristic: if no common tags, assume plain text and convert \n to <br>
+        # This is extremely lightweight (one string scan and one replace)
+        if not any(tag in body_template.lower() for tag in ['<p', '<div', '<br', '<li']):
+             body_template = body_template.replace('\n', '<br>')
+
+        # 2. Sanitize body (allow some basic formatting if needed)
         allowed_tags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'a', 'div', 'span', 'ul', 'li', 'ol']
         allowed_attrs = {'a': ['href', 'title', 'target']}
         body_template = bleach.clean(body_template, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+    else:
+        body_template = "<p>Hi,</p><p>I am interested in the position.</p>"
 
     if errors:
         # Return to settings with current user but merge form data so they don't lose input
@@ -754,8 +1050,7 @@ async def settings_post(
              encrypted_credentials = encrypt_bytes_to_b64(credentials_base64.encode())
         except Exception:
              LOG.exception("Failed to encrypt credentials")
-             # Fallback? Probably better to fail request
-             encrypted_credentials = credentials_base64 # insecure fallback, or error?
+             return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "Internal error: Encryption failed", "user": user})
     
     encrypted_token = None
     if token_base64:
@@ -763,29 +1058,32 @@ async def settings_post(
              encrypted_token = encrypt_bytes_to_b64(token_base64.encode())
          except Exception:
              LOG.exception("Failed to encrypt token")
-             encrypted_token = token_base64
+             return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "Internal error: Encryption failed", "user": user})
 
     update_data = {
         "sender_email": sender_email,
         "subject_template": subject_template,
         "body_template": body_template,
-        "updated_at": datetime.utcnow()
+        "updated_at": datetime.utcnow(),
+        "campaign_active": False # Automatically stop campaign on settings change
     }
     
-    if encrypted_credentials:
+    if encrypted_credentials and credentials_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
         update_data["credentials_base64"] = encrypted_credentials
-    if encrypted_token:
+        update_data["credentials_valid"] = False # Must re-validate
+    if encrypted_token and token_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
         update_data["token_base64"] = encrypted_token
+        update_data["credentials_valid"] = False # Must re-validate
     
     db.users.update_one({"_id": user["_id"]}, {"$set": update_data})
 
     
     # Refresh user for response
     user = db.users.find_one({"_id": user["_id"]})
-    return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "user": user, "success": "Settings updated successfully!"})
+    return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "user": user, "success": "Settings updated! Please click 'Test Connection' below to verify your Gmail API access."})
 
 @app.post("/api/validate_credentials")
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 async def api_validate_credentials(request: Request):
 
     user = current_session_user(request)
@@ -804,15 +1102,16 @@ async def api_validate_credentials(request: Request):
         )
         return JSONResponse({"ok": True, "message": "Credentials validated successfully!"})
     except Exception as e:
-        LOG.exception("Credential validation failed")
+        LOG.error(f"Credential validation failed for {user['_id']}: {str(e)}")
         db.users.update_one(
             {"_id": user["_id"]}, 
             {"$set": {"credentials_valid": False, "last_validated": datetime.utcnow()}}
         )
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+        # SECURITY: Do not leak internal exception details
+        return JSONResponse({"ok": False, "error": "Validation failed. Please check your credentials."}, status_code=400)
 
 @app.post("/api/campaign/toggle")
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 async def api_campaign_toggle(request: Request):
 
     user = current_session_user(request)
@@ -822,13 +1121,21 @@ async def api_campaign_toggle(request: Request):
     body = await request.json()
     active = body.get("active", False)
     
-    # If starting, ensure credentials are valid AND payment logic if enabled
+    # If starting, create a snapshot of current assets
     if active:
-        # 1. Credentials Check
+        # 1. CV Check
+        if not user.get("cv_b2_key") or not user.get("cv_filename"):
+            return JSONResponse({"error": "Please upload your CV in the Dashboard before starting."}, status_code=400)
+        
+        # 2. Credentials Check
         if not user.get("credentials_valid"):
              return JSONResponse({"error": "Please validate your credentials in Settings before starting."}, status_code=400)
         
-        # 2. Payment Check
+        # 3. Template Check
+        if not user.get("subject_template") or not user.get("body_template"):
+            return JSONResponse({"error": "Please configure your email templates in Settings before starting."}, status_code=400)
+        
+        # 4. Payment Check
         settings = db.settings.find_one({"_id": "global"}) or {}
         if settings.get("payment_gateway_enabled", False):
              if user.get("role") != "admin":
@@ -836,89 +1143,73 @@ async def api_campaign_toggle(request: Request):
                  is_paid = user.get("is_paid")
                  if not is_paid or not expires_at or expires_at < datetime.utcnow():
                      return JSONResponse({"error": "Subscription required", "payment_required": True}, status_code=402)
+        
+        # 3. Snapshotting
+        snapshot = {
+            "cv_key": user.get("cv_b2_key"),
+            "cv_filename": user.get("cv_filename"),
+            "subject": user.get("subject_template"),
+            "body": user.get("body_template"),
+            "snapshot_at": datetime.utcnow()
+        }
+        db.users.update_one({"_id": user["_id"]}, {"$set": {"campaign_active": True, "campaign_snapshot": snapshot}})
+    else:
+        db.users.update_one({"_id": user["_id"]}, {"$set": {"campaign_active": False}})
     
-    db.users.update_one({"_id": user["_id"]}, {"$set": {"campaign_active": active}})
     return JSONResponse({"ok": True, "active": active})
 
 @app.get("/admin")
 def admin_dashboard(request: Request):
     user = current_session_user(request)
-    if not user:
-        return RedirectResponse(url="/login")
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if not user: return RedirectResponse(url="/login")
+    if user.get("role") != "admin": raise HTTPException(403, "Admin only")
     
-    users = list(db.users.find({}))
-    for u in users:
+    # 1. User Management Data
+    users = list(db.users.find({"is_deleted": {"$ne": True}}))
+    deleted_users = list(db.users.find({"is_deleted": True}))
+    for u in users + deleted_users:
         u["_id_str"] = str(u["_id"])
-        u["assigned_count"] = db.recipients.count_documents({"assigned_to": u["_id"]})
-        u["pending_capacity"] = max(0, u.get("daily_limit", 240) - u.get("daily_sent", 0))
+        if not u.get("is_deleted"):
+            u["assigned_count"] = db.recipients.count_documents({"assigned_to": u["_id"]})
+            u["pending_capacity"] = max(0, u.get("daily_limit", 240) - u.get("daily_sent", 0))
 
+    # 2. System Wide Stats
     pending_pool = db.recipients.count_documents({"status": "Pending"})
-    
-    # 24h Stats
     day_ago = datetime.utcnow() - timedelta(days=1)
     sent_24h = db.recipients.count_documents({"status": "Sent", "sent_at": {"$gte": day_ago}})
     failed_24h = db.recipients.count_documents({"status": "Failed", "sent_at": {"$gte": day_ago}})
-
+    
     active_users = [u for u in users if u.get("campaign_active") and u.get("credentials_valid")]
     total_capacity = sum(u.get("daily_limit", 240) for u in active_users)
 
-
-    # Infrastructure Status
-    b2_status = get_b2_status()
-    server_ips = get_server_ips()
+    # 3. Recruiter & Deliverability Quick Stats
+    total_recruiters = db.recruiters.count_documents({})
+    dead_recruiters = db.recruiters.count_documents({"health": "dead"})
+    suppressed_count = db.suppression.count_documents({})
     
-    # Check global settings
     settings = db.settings.find_one({"_id": "global"}) or {}
     payment_active = settings.get("payment_gateway_enabled", False)
-    
-    mongo_status = {"ok": False}
-
-    try:
-        db.command("ping")
-        stats = db.command("dbstats")
-        
-        # Try serverStatus for more details (might fail on some Atlas tiers, so handle gracefully)
-        try:
-            srv_status = db.command("serverStatus")
-            conns = srv_status.get("connections", {})
-        except Exception:
-            srv_status = {}
-            conns = {}
-
-        mongo_status = {
-            "ok": True, 
-            "collections": stats.get("collections", 0),
-            "objects": stats.get("objects", 0),
-            "data_size": round(stats.get("dataSize", 0) / (1024*1024), 2),  # MB
-            "index_size": round(stats.get("indexSize", 0) / (1024*1024), 2),  # MB
-            "avg_obj_size": round(stats.get("avgObjSize", 0), 2), # Bytes
-            "active_conns": conns.get("current", "N/A"),
-            "available_conns": conns.get("available", "N/A"),
-            "version": srv_status.get("version", "N/A")
-        }
-    except Exception as e:
-        mongo_status["error"] = str(e)
 
     ctx = {
         **template_ctx(request),
+        "title": "Admin Dashboard",
         "users": users,
+        "deleted_users": deleted_users,
         "pending_pool": pending_pool,
         "sent_24h": sent_24h,
         "failed_24h": failed_24h,
-        "active_users_count": len(active_users),
         "total_capacity": total_capacity,
-        "b2_status": b2_status,
-        "mongo_status": mongo_status,
-        "server_ips": server_ips,
+        "active_users_count": len(active_users),
+        "total_recruiters": total_recruiters,
+        "dead_recruiters": dead_recruiters,
+        "suppressed_count": suppressed_count,
         "payment_active": payment_active
-
     }
     return templates.TemplateResponse("premium/admin.html", ctx)
 
 
 @app.post("/admin/sync_pool")
+@limiter.limit("5/minute")
 async def admin_sync_pool(request: Request, csrf: str = Form(None)):
     user = current_session_user(request)
     if not user:
@@ -940,6 +1231,7 @@ async def admin_sync_pool(request: Request, csrf: str = Form(None)):
     return RedirectResponse(url="/admin", status_code=303)
 
 @app.post("/admin/assign")
+@limiter.limit("5/minute")
 async def admin_assign(request: Request, csrf: str = Form(None)):
     user = current_session_user(request)
     if not user:
@@ -993,7 +1285,7 @@ def payment_page(request: Request):
 
     # Generate Order ID and Payload for the form
     order_id = f"SUB-{uuid.uuid4().hex[:8].upper()}"
-    amount = 5.00
+    amount = 10.00
     currency = "USD" # Webxpay currency
     
     payload = generate_webxpay_payload(
@@ -1006,7 +1298,7 @@ def payment_page(request: Request):
         customer_phone="0000000000", # Placeholder if not collected
         custom_1=str(user["_id"]),
         custom_2="subscription",
-        return_url=f"{APP_URL}/payment/callback"
+        return_url=f"{str(request.base_url).rstrip('/')}/payment/callback"
     )
     
     # Store order attempt?
@@ -1044,6 +1336,16 @@ async def payment_callback(request: Request):
     order_id = params.get("order_id") or params.get("order_reference_number")
     
     # Basic verification (In prod, verify hash signature!)
+    signature = params.get("signature")
+    if not signature:
+         LOG.warning("Payment callback missing signature")
+         return RedirectResponse(url="/payment?error=invalid_signature", status_code=303)
+
+    from .webxpay import verify_payment_return
+    if not verify_payment_return(order_id, status, signature):
+         LOG.warning("Payment callback invalid signature for order %s", order_id)
+         return RedirectResponse(url="/payment?error=invalid_signature", status_code=303)
+
     if status == "success" and order_id:
         # Find payment
         payment = db.payments.find_one({"order_id": order_id})
@@ -1075,29 +1377,14 @@ async def payment_callback(request: Request):
 
 
 
-# --- Admin API ---
-@app.get("/api/admin/users")
-def api_admin_list_users(request: Request):
-    if not is_admin_request(request):
-        return JSONResponse({"error": "Admin access required"}, status_code=403)
-    
-    users = list(db.users.find({}, {"credentials_base64": 0, "token_base64": 0}))
-    for u in users:
-        u["_id"] = str(u["_id"])
-        # Handle datetime serialization
-        for key, value in u.items():
-            if isinstance(value, datetime):
-                u[key] = value.isoformat()
-                
-    return JSONResponse(users)
-
+# --- Admin API (Supplemental) ---
+# Note: Core admin routes (list, update, delete, stats) are handled by app.routers.admin
 
 @app.post("/api/admin/users")
 async def api_admin_create_user(request: Request):
     if not is_admin_request(request):
          return JSONResponse({"error": "Admin access required"}, status_code=403)
 
-    
     body = await request.json()
     email = body.get("email")
     password = body.get("password")
@@ -1112,8 +1399,6 @@ async def api_admin_create_user(request: Request):
         supabase_id = resp.get("id") or resp.get("user", {}).get("id")
         
         if not supabase_id:
-             # Try signin to see if they exist?
-             # For now, just rely on error or success
              pass
              
         # Create local user record if successful
@@ -1132,89 +1417,61 @@ async def api_admin_create_user(request: Request):
             return JSONResponse({"ok": True, "id": str(local["_id"]), "message": "User already existed locally"})
             
     except Exception as e:
-        LOG.exception("Failed to create user via Admin API")
-        return JSONResponse({"error": str(e)}, status_code=500)
+        LOG.error("Failed to create user via Admin API: %s", e)
+        return JSONResponse({"error": "Failed to create user. Check server logs."}, status_code=500)
     
-    return JSONResponse({"error": "Could not create user"}, status_code=400)
+    return JSONResponse({"error": "Could not create user. No ID returned from auth provider."}, status_code=400)
 
-@app.patch("/api/admin/users/{user_id}")
-async def api_admin_update_user(user_id: str, request: Request):
+@app.post("/api/admin/users/{user_id}/restore")
+async def api_admin_restore_user(user_id: str, request: Request):
     if not is_admin_request(request):
         return JSONResponse({"error": "Admin access required"}, status_code=403)
     
-    body = await request.json()
-    # Fields that admin is allowed to update via API
-    allowed_updates = ["daily_limit", "role", "is_paid", "username", "campaign_active", "subscription_expires_at"]
-    updates = {k: v for k, v in body.items() if k in allowed_updates}
-    
-    if not updates:
-        return JSONResponse({"error": "No valid update fields provided"}, status_code=400)
-    
-    # Data type conversion/normalization
-    if "daily_limit" in updates:
-        try:
-            updates["daily_limit"] = int(updates["daily_limit"])
-        except ValueError:
-            return JSONResponse({"error": "daily_limit must be an integer"}, status_code=400)
-            
-    if "is_paid" in updates:
-        updates["is_paid"] = bool(updates["is_paid"])
-        # If setting to true and no expiry provided, default to +30 days
-        if updates["is_paid"] and "subscription_expires_at" not in updates:
-             updates["subscription_expires_at"] = datetime.utcnow() + timedelta(days=30)
-    
-    if "subscription_expires_at" in updates and isinstance(updates["subscription_expires_at"], str):
-        try:
-            updates["subscription_expires_at"] = datetime.fromisoformat(updates["subscription_expires_at"].replace("Z", "+00:00"))
-        except ValueError:
-            return JSONResponse({"error": "Invalid date format for subscription_expires_at. Use ISO format."}, status_code=400)
-
     try:
-        res = db.users.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
+        res = db.users.update_one(
+            {"_id": ObjectId(user_id)}, 
+            {"$set": {"is_deleted": False, "deleted_at": None}}
+        )
         if res.matched_count == 0:
             return JSONResponse({"error": "User not found"}, status_code=404)
-        return JSONResponse({"ok": True, "updated_fields": list(updates.keys())})
+        return JSONResponse({"ok": True, "message": "User restored"})
     except Exception as e:
-        LOG.error("Admin update user failed: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
+        LOG.error("Admin restore user failed: %s", e)
+        return JSONResponse({"error": "Failed to restore user. Check server logs."}, status_code=500)
 
-@app.delete("/api/admin/users/{user_id}")
-async def api_admin_delete_user(user_id: str, request: Request):
+@app.get("/api/admin/export_users")
+def api_admin_export_users(request: Request):
     if not is_admin_request(request):
         return JSONResponse({"error": "Admin access required"}, status_code=403)
     
-    try:
-        # Note: This only deletes from local MongoDB. 
-        # To delete from Supabase, a Service Role Key would be required.
-        res = db.users.delete_one({"_id": ObjectId(user_id)})
-        if res.deleted_count == 0:
-            return JSONResponse({"error": "User not found"}, status_code=404)
-        return JSONResponse({"ok": True, "message": "User deleted from local database"})
-    except Exception as e:
-        LOG.error("Admin delete user failed: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-@app.get("/api/admin/stats")
-def api_admin_stats(request: Request):
-    if not is_admin_request(request):
-        return JSONResponse({"error": "Admin access required"}, status_code=403)
+    import csv
+    import io
+    from fastapi.responses import StreamingResponse
     
-    total_users = db.users.count_documents({})
-    active_campaigns = db.users.count_documents({"campaign_active": True})
-    paid_users = db.users.count_documents({"is_paid": True})
-    total_recipients = db.recipients.count_documents({})
-    pending_recipients = db.recipients.count_documents({"status": "Pending"})
+    users = list(db.users.find({}, {"credentials_base64": 0, "token_base64": 0}))
     
-    return JSONResponse({
-        "total_users": total_users,
-        "active_campaigns": active_campaigns,
-        "paid_users": paid_users,
-        "recipients": {
-            "total": total_recipients,
-            "pending": pending_recipients
-        },
-        "system": {
-            "environment": APP_ENV,
-            "now": datetime.utcnow().isoformat()
-        }
-    })
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Headers
+    writer.writerow(["ID", "Email", "Username", "Role", "Is Paid", "Expiry", "Campaign Active", "Daily Limit", "Created At"])
+    
+    for u in users:
+        writer.writerow([
+            str(u.get("_id")),
+            u.get("email"),
+            u.get("username"),
+            u.get("role"),
+            u.get("is_paid"),
+            u.get("subscription_expires_at").isoformat() if u.get("subscription_expires_at") else "N/A",
+            u.get("campaign_active"),
+            u.get("daily_limit"),
+            u.get("created_at").isoformat() if u.get("created_at") else "N/A"
+        ])
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=users_export.csv"}
+    )

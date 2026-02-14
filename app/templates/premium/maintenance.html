@@ -1,0 +1,37 @@
+{% extends "premium/base.html" %}
+
+{% block content %}
+<div class="max-w-xl mx-auto py-20 text-center animate-fade-in">
+    <div class="mb-10 flex justify-center">
+        <div
+            class="h-24 w-24 bg-amber-500/10 rounded-3xl flex items-center justify-center border border-amber-500/20 shadow-2xl shadow-amber-500/10">
+            <svg class="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+        </div>
+    </div>
+
+    <h1 class="text-4xl font-black text-white mb-6 uppercase tracking-tighter">Under Maintenance</h1>
+
+    <div class="p-8 bg-slate-900/60 border border-white/5 rounded-3xl backdrop-blur-xl mb-10">
+        <p class="text-slate-400 text-lg leading-relaxed font-medium italic">
+            "{{ maintenance_message|default('We are currently performing scheduled maintenance to improve your
+            experience. Please check back shortly.') }}"
+        </p>
+    </div>
+
+    <div class="flex flex-col items-center gap-4">
+        <div class="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/5">
+            <span class="relative flex h-2 w-2">
+                <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Expected back soon</span>
+        </div>
+
+        <p class="text-[10px] text-slate-600 font-bold uppercase tracking-widest mt-4">Thank you for your patience</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Completing Sign In...</title>
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .loader {
+            text-align: center;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="loader">
+        <div class="spinner"></div>
+        <p>Completing sign in...</p>
+    </div>
+    <script nonce="{{ csp_nonce }}">
+        // Extract tokens from URL fragment (#access_token=...)
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const error = params.get('error');
+
+        if (error) {
+            window.location.href = '/login?error=oauth_failed';
+        } else if (accessToken) {
+            // Send tokens to server via query params
+            const queryParams = new URLSearchParams({
+                access_token: accessToken,
+                ...(refreshToken && { refresh_token: refreshToken })
+            });
+            window.location.href = `/auth/callback?${queryParams.toString()}`;
+        } else {
+            // No tokens found
+            window.location.href = '/login?error=no_tokens';
+        }
+    </script>
+</body>
+
+</html>

@@ -60,7 +60,7 @@ def generate_csrf_token(session_id: str) -> str:
     """
     return _serializer.dumps(session_id, salt="csrf-token")
 
-def validate_csrf_token(token: str, session_id: str, max_age: int = 3600) -> bool:
+def validate_csrf_token(token: str, session_id: str, max_age: int = 900) -> bool:
     """
     Validate a CSRF token produced by generate_csrf_token.
     """

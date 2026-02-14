@@ -63,9 +63,12 @@ def get_gmail_service_for_user(user_id):
         token_info = {"token": token_info_raw}
 
     # client_info may have keys under 'installed' or 'web'
+    if client_info.get("type") == "service_account":
+        raise ValueError("Service Account keys are not supported. Please use an OAuth 2.0 Client ID (JSON) for a User application.")
+        
     client_section = client_info.get("installed") or client_info.get("web")
     if not client_section:
-        raise ValueError("Invalid credentials JSON structure")
+        raise ValueError("Invalid credentials JSON structure. key 'installed' or 'web' not found.")
         
     client_id = client_section.get("client_id")
     client_secret = client_section.get("client_secret")

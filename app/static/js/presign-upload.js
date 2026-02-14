@@ -1,20 +1,38 @@
-// Minimal helper for presigned PUT + progress.
-window.presignedUpload = async function (file, presignEndpoint, completeEndpoint, metadata = {}) {
+window.presignedUpload = async function (file, presignEndpoint, completeEndpoint) {
+  // CLIENT-SIDE VALIDATION
+  if (!file) throw new Error("No file selected");
+
+  if (file.type !== "application/pdf") {
+    throw new Error("Only PDF files are allowed.");
+  }
+
+  const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+  if (file.size > MAX_SIZE) {
+    throw new Error("File size exceeds the 2MB limit.");
+  }
+
   // 1) request presigned URL
   const form = new FormData();
   form.append("filename", file.name);
-  form.append("content_type", file.type || "application/pdf");
-  for (const k in metadata) form.append(k, metadata[k]);
+  form.append("content_type", "application/pdf");
 
-  const presignResp = await fetch(presignEndpoint, { method: "POST", body: form });
-  if (!presignResp.ok) throw new Error("Failed to get presigned URL");
+  const presignResp = await fetch(presignEndpoint, {
+    method: "POST",
+    body: form
+  });
+
+  if (!presignResp.ok) {
+    const err = await presignResp.json();
+    throw new Error(err.error || "Failed to get presigned URL");
+  }
+
   const { upload_url, key } = await presignResp.json();
 
   // 2) PUT file with progress
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", upload_url, true);
-    xhr.setRequestHeader("Content-Type", file.type || "application/pdf");
+    xhr.setRequestHeader("Content-Type", "application/pdf");
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
         const pct = Math.round((e.loaded / e.total) * 100);
@@ -30,7 +48,8 @@ window.presignedUpload = async function (file, presignEndpoint, completeEndpoint
           body: JSON.stringify({ key, filename: file.name })
         });
         if (!completeResp.ok) {
-          reject(new Error("Upload completed but server finalize failed"));
+          const err = await completeResp.json();
+          reject(new Error(err.error || "Upload completed but server finalize failed"));
           return;
         }
         resolve(await completeResp.json());

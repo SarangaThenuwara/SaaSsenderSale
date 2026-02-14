@@ -72,6 +72,15 @@ Updates specific user fields such as `daily_limit`, `is_paid`, or `role`.
 `DELETE /api/admin/users/{user_id}`
 Deletes the user record from the local database.
 
+#### **Global Outreach Report**
+`GET /api/admin/global_report`
+Returns the last 100 outreach activities across the entire system.
+
+#### **Export Users**
+`GET /api/admin/export_users`
+Returns a CSV file containing all user account details (excluding credentials).
+
+
 ---
 
 ## **4. System Statistics**

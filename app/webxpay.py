@@ -1,25 +1,63 @@
 import base64
 import hashlib
 import uuid
+import hmac
+from urllib.parse import urlencode, quote_plus
 from .config import WEBXPAY_SECRET_KEY, WEBXPAY_PUBLIC_KEY, APP_URL
+
+def sign_params(params):
+    """
+    Sign a dictionary of parameters using HMAC-SHA256.
+    Returns the signature string.
+    """
+    # Sort keys to ensure deterministic output
+    sorted_keys = sorted(params.keys())
+    # Create string to sign: key=value&key2=value2...
+    query_parts = []
+    for k in sorted_keys:
+        val = str(params[k])
+        query_parts.append(f"{k}={val}")
+        
+    query_string = "&".join(query_parts)
+    
+    signature = hmac.new(
+        WEBXPAY_SECRET_KEY.encode(),
+        query_string.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return signature
+
+def verify_payment_return(order_id, status, signatures):
+    """
+    Verify the signature for order_id and status.
+    signatures: The signature string received.
+    """
+    params = {"order_id": order_id, "status": status}
+    expected_sig = sign_params(params)
+    return hmac.compare_digest(signatures, expected_sig)
 
 def generate_webxpay_payload(order_id, amount, currency, customer_email, customer_first_name, customer_last_name, customer_phone, custom_1, custom_2, return_url):
     """
-    Generates the payload and hash for Webxpay.
-    Based on common redirect integration.
-    Need to double check official hashing algorithm, assuming common pattern:
-    Upper case hash of (secret + fields...). But since I don't have official docs, 
-    I will prepare a standard payload and assume the frontend form handles it or redirect.
-    Wait, usually redirect gateways POST data.
+    Generates the payload for Webxpay.
     """
-    # Webxpay usually requires specific fields for checkout
+    
+    # Generate signatures for success/fail URLs
+    # We explicitly sign ONLY status and order_id so verification is robust against extra params
+    success_params = {"status": "success", "order_id": order_id}
+    success_sig = sign_params(success_params)
+    url_success = f"{return_url}?{urlencode(success_params)}&signature={success_sig}"
+    
+    fail_params = {"status": "failed", "order_id": order_id}
+    fail_sig = sign_params(fail_params)
+    url_fail = f"{return_url}?{urlencode(fail_params)}&signature={fail_sig}"
+
+    # SECURITY: Never send secret_key to external services - only use for server-side signing
     payload = {
-        "secret_key": WEBXPAY_SECRET_KEY, # Sometimes used, sometimes only for hash
         "public_key": WEBXPAY_PUBLIC_KEY,
         "process_currency": currency,
         "cms": "PYTHON",
-        "enc_method": "JHASD", # Example method or just plain params
-        "ip_address": "127.0.0.1", # Request IP
+        "enc_method": "JHASD", 
+        "ip_address": "127.0.0.1", 
         "customer_email": customer_email,
         "customer_first_name": customer_first_name,
         "customer_last_name": customer_last_name,
@@ -29,17 +67,8 @@ def generate_webxpay_payload(order_id, amount, currency, customer_email, custome
         "order_reference_number": order_id,
         "items": "Email Service Subscription - 1 Month",
         "custom_fields": f"{custom_1}|{custom_2}",
-        "url_success": f"{return_url}?status=success&order_id={order_id}",
-        "url_fail": f"{return_url}?status=failed&order_id={order_id}",
+        "url_success": url_success,
+        "url_fail": url_fail,
     }
     
-    # Hashing logic typically: plain string concatenation of specific fields + secret, then base64 encoded?
-    # Without specific docs, I will construct basic form data.
-    # The standard "Webxpay" usually gives a "public key" to put in the form.
-    # I'll create a helper to just format the redirect URL if it's GET or form fields if POST.
-    
     return payload
-
-def verify_signature(data):
-    # Verify logic
-    return True

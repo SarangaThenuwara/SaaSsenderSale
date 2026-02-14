@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import sys
 
 load_dotenv()
 
@@ -12,6 +13,29 @@ FERNET_KEY = os.getenv("FERNET_KEY")  # optional, required if you want token enc
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "admin-secret-key")
+
+# SECURITY: Enforce strong secrets in production
+if APP_ENV == "production":
+    weak_secrets = []
+    
+    if SECRET_KEY == "change-me" or len(SECRET_KEY) < 32:
+        weak_secrets.append("SECRET_KEY must be at least 32 characters")
+    
+    if not FERNET_KEY or len(FERNET_KEY) < 32:
+        weak_secrets.append("FERNET_KEY is required in production and must be at least 32 characters")
+    
+    if ADMIN_PASSWORD == "admin" or len(ADMIN_PASSWORD) < 12:
+        weak_secrets.append("ADMIN_PASSWORD must be at least 12 characters and not 'admin'")
+    
+    if ADMIN_API_KEY == "admin-secret-key" or len(ADMIN_API_KEY) < 32:
+        weak_secrets.append("ADMIN_API_KEY must be at least 32 characters and not default")
+    
+    if weak_secrets:
+        print("🚨 SECURITY ERROR: Weak secrets detected in production mode!")
+        for error in weak_secrets:
+            print(f"   ❌ {error}")
+        print("\n💡 Generate strong secrets with: python -c 'import secrets; print(secrets.token_urlsafe(32))'")
+        sys.exit(1)
 
 # MongoDB
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
@@ -44,3 +68,7 @@ WEBXPAY_SECRET_KEY = os.getenv("WEBXPAY_SECRET_KEY", "your-webxpay-secret")
 WEBXPAY_PUBLIC_KEY = os.getenv("WEBXPAY_PUBLIC_KEY", "your-webxpay-public")
 WEBXPAY_DOMAIN = os.getenv("WEBXPAY_DOMAIN", "https://cms.webxpay.com/payments/checkout")  # Sandbox/Production URL
 APP_URL = os.getenv("APP_URL", "http://localhost:8000")
+
+# Session Security
+SESSION_IDLE_TIMEOUT = 30 * 60  # 30 minutes in seconds
+SESSION_ABSOLUTE_TIMEOUT = 24 * 60 * 60  # 24 hours in seconds
