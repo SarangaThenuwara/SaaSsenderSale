@@ -1,0 +1,43 @@
+<h2>The "Invisible" Rejection</h2>
+<p>You have the perfect CV. You have a great cover letter. But your emails are being deleted before an HR manager even
+    sees them. Why? In 2026, most corporate email servers in the UAE use automated authentication checks. If your domain
+    fails these, you are invisible.</p>
+
+<h3>What is SPF (Sender Policy Framework)?</h3>
+<p>SPF is a simple text record in your DNS. It tells the recipient's server: "These are the only IP addresses allowed to
+    send mail on behalf of my domain." For <strong>BYOK Gmail</strong> users, your SPF record must include Google's
+    servers.</p>
+<pre class="bg-slate-900 p-4 rounded-xl text-xs text-primary-300">v=spf1 include:_spf.google.com ~all</pre>
+
+<h3>What is DKIM (DomainKeys Identified Mail)?</h3>
+<p>Think of DKIM as a wax seal on an ancient envelope. It provides a cryptographic signature that proves the email was
+    not tampered with after it left your "outbox." Without DKIM, your job application looks like "spoofed" spam.</p>
+
+<h2>DMARC: The Final Shield</h2>
+<p>DMARC (Domain-based Message Authentication, Reporting, and Conformance) tells the world what to do if your SPF or
+    DKIM fails. For professional outreach, you should at least have a "p=none" policy to monitor your reputation.</p>
+
+<h3>How it affects your UAE Job Search</h3>
+<ul>
+    <li><strong>Large Employers:</strong> Multinationals in Dubai (like Emirates, DP World, or Google) have strict
+        incoming mail policies. No authentication = No delivery.</li>
+    <li><strong>Sender Reputation:</strong> BYOK works because you use your own reputation. If your domain is configured
+        correctly, your "Open Rate" will be significantly higher than those using generic <code>@gmail.com</code>
+        addresses.</li>
+</ul>
+
+<h2>Professional Domain vs. Generic Gmail</h2>
+<div class="card-glass p-6 my-8 border-primary-500/20">
+    <h4 class="text-white font-bold mb-4">Pro Tip for Job Seekers</h4>
+    <p class="text-sm text-slate-400">Avoid using <code>myjobsearch2026@gmail.com</code>. Instead, buy
+        <code>firstname@lastname.com</code>. It costs $10/year but increases your perceived "Seniority" by 40% according
+        to regional recruitment data.</p>
+</div>
+
+<h3>Checklist for Production-Ready Outreach</h3>
+<ol>
+    <li>Verify your DNS records in your domain registrar (GoDaddy, Namecheap, etc.).</li>
+    <li>Wait 24 hours for "Propagation" before starting your SaaS Sender campaign.</li>
+    <li>Use a tool like <a href="https://mxtoolbox.com" target="_blank" class="text-primary-400 underline">MXToolbox</a>
+        to verify your setup.</li>
+</ol>

@@ -1,0 +1,138 @@
+{% extends "premium/base.html" %}
+
+{% block content %}
+<article class="max-w-4xl mx-auto py-12 px-4 shadow-text">
+    <!-- Header -->
+    <header class="mb-16 text-center">
+        <div
+            class="flex items-center justify-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">
+            <span>{{ guide.category }}</span>
+            <span>&bull;</span>
+            <span>{{ guide.reading_time }} Read</span>
+        </div>
+        <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-black text-white leading-tight mb-8">
+            {{ guide.title }}
+        </h1>
+        <div class="flex items-center justify-center gap-3">
+            <div
+                class="h-10 w-10 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold border border-primary-500/30">
+                S
+            </div>
+            <div class="text-left">
+                <p class="text-sm font-bold text-white">{{ guide.author }}</p>
+                <p class="text-[10px] text-slate-500">{{ guide.publish_date }}</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <div class="card-glass p-8 md:p-16 prose prose-invert prose-primary max-w-none">
+        <p class="text-xl text-slate-300 font-medium leading-relaxed mb-10 border-l-4 border-primary-500 pl-6 italic">
+            {{ guide.excerpt }}
+        </p>
+
+        <!-- Dynamic Content Injected Here -->
+        <div class="knowledge-content text-slate-400 leading-8 space-y-8 text-lg">
+            {% include "premium/guides/" + guide.slug + ".html" ignore missing %}
+
+            {% if not guide.slug %}
+            <p>Content for this resource is being finalized. Check back shortly for the full technical breakdown.</p>
+            {% endif %}
+        </div>
+
+        <!-- Call to action inside content -->
+        <div
+            class="mt-20 p-8 rounded-2xl bg-gradient-to-br from-primary-600/20 to-accent-600/10 border border-primary-500/20 text-center">
+            <h3 class="text-2xl font-bold text-white mb-4">Start Scaling Securely</h3>
+            <p class="text-slate-400 mb-8">Take control of your data with our privacy-first outreach infrastructure.</p>
+            <a href="/signup"
+                class="btn-primary px-8 py-3 rounded-xl text-sm font-bold shadow-lg shadow-primary-500/20">Get Started
+                Free</a>
+        </div>
+    </div>
+
+    <!-- Related / Back -->
+    <footer class="mt-16 flex flex-col items-center gap-12">
+        <!-- Share Toolbar -->
+        <div class="flex items-center gap-4 p-2 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md">
+            <span
+                class="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4 border-r border-white/5">Share
+                Hub</span>
+            <button onclick="copyCurrentUrl()"
+                class="p-3 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white transition-all flex items-center gap-2"
+                title="Copy Link">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+            </button>
+            <a href="https://twitter.com/intent/tweet?text=Reading%20'{{ guide.title }}'%20on%20SaaS%20Sender."
+                target="_blank"
+                class="p-3 rounded-xl hover:bg-primary-500/10 text-slate-400 hover:text-primary-400 transition-all">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                        d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+            </a>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url }}" target="_blank"
+                class="p-3 rounded-xl hover:bg-blue-600/10 text-slate-400 hover:text-blue-500 transition-all">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                        d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                </svg>
+            </a>
+        </div>
+
+        <a href="/resources"
+            class="inline-flex items-center gap-3 text-slate-500 hover:text-white transition-colors group">
+            <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+            </svg>
+            Back to Knowledge Hub
+        </a>
+    </footer>
+</article>
+
+<style>
+    .prose-primary h2 {
+        font-size: 2rem;
+        color: #fff;
+        font-weight: 800;
+        margin-top: 3rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .prose-primary h3 {
+        font-size: 1.5rem;
+        color: #fff;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .prose-primary strong {
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .shadow-text {
+        text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+</style>
+
+<script>
+    function copyCurrentUrl() {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            const btn = document.querySelector('button[onclick="copyCurrentUrl()"]');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<span class="text-[10px] font-bold">Copied!</span>';
+            btn.classList.add('bg-emerald-500/20', 'text-emerald-400');
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('bg-emerald-500/20', 'text-emerald-400');
+            }, 2000);
+        });
+    }
+</script>
+{% endblock %}

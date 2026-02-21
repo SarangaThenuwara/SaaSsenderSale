@@ -9,6 +9,7 @@ from .db import db
 from .user_helpers import get_cv_bytes_for_user, get_user, get_user_daily_limit
 from .gmail_helpers import get_gmail_service_for_user
 from .create_message import create_message
+from .utils import parse_spintax
 from pymongo import ReturnDocument
 from googleapiclient.errors import HttpError
 
@@ -109,18 +110,36 @@ def send_batch_for_user(self, user_id, batch_size=10):
         # 3. Preparation (Prioritize snapshot for locked assets)
         snapshot = user.get("campaign_snapshot")
         if snapshot:
-            subject_template = snapshot.get("subject", "Regarding the job opening")
-            body_template = snapshot.get("body", "<p>Hi,</p><p>I'm interested in the position.</p>")
             cv_key = snapshot.get("cv_key")
             cv_name = snapshot.get("cv_filename")
+            # Randomly select from snapshot email templates
+            snap_templates = snapshot.get("email_templates", [])
+            if snap_templates:
+                chosen = random.choice(snap_templates)
+                subject = chosen.get("subject", "[Job Title] - {first_name}")
+                body = chosen.get("body", "<p>{Dear|Hi} [Recruiter Name],</p><p>I am writing to express my interest in the [Job Title] role.</p>")
+            else:
+                # Backward compat: use old single subject/body
+                subject = snapshot.get("subject", "Regarding the job opening")
+                body = snapshot.get("body", "<p>Hi,</p><p>I'm interested in the position.</p>")
         else:
-            subject_template = user.get("subject_template", "Regarding the job opening")
-            body_template = user.get("body_template", "<p>Hi,</p><p>I'm interested in the position.</p>")
             cv_key = user.get("cv_b2_key")
             cv_name = user.get("cv_filename")
+            # Randomly select from user email templates
+            user_templates = user.get("email_templates", [])
+            if user_templates:
+                chosen = random.choice(user_templates)
+                subject = chosen.get("subject", "[Job Title] - {first_name}")
+                body = chosen.get("body", "<p>{Dear|Hi} [Recruiter Name],</p><p>I am writing to express my interest in the [Job Title] role.</p>")
+            else:
+                # Backward compat: use old single subject/body
+                subject = user.get("subject_template", "[Job Title] - {first_name}")
+                body = user.get("body_template", "<p>{Dear|Hi} [Recruiter Name],</p><p>I am writing to express my interest in the [Job Title] role.</p>")
 
-        subject = subject_template
-        body = body_template
+        # 3.1. Apply Spintax and Placeholders
+        first_name = (user.get("username") or "User").split()[0].capitalize()
+        subject = parse_spintax(subject).format(first_name=first_name)
+        body = parse_spintax(body).format(first_name=first_name)
 
         # Fetch CV bytes using the key from snapshot (or user current if no snapshot)
         cv_info = get_cv_bytes_for_user(user_id, key=cv_key, filename=cv_name)
@@ -206,10 +225,13 @@ def send_single_message_for_user(user_id, to_email, subject_override=None, body_
 
     # Build subject and body from overrides or user templates
     first_name = (user.get("username") or "User").split()[0].capitalize()
-    subject_template = user.get("subject_template", "Hi {first_name}")
-    body_template = user.get("body_template", "<p>Hi {first_name}</p>")
-    subject = subject_override if subject_override is not None else subject_template.format(first_name=first_name)
-    body = body_override if body_override is not None else body_template.format(first_name=first_name)
+    
+    subject = subject_override if subject_override is not None else user.get("subject_template", "Hi {first_name}")
+    body = body_override if body_override is not None else user.get("body_template", "<p>Hi {first_name}</p>")
+
+    # Apply Spintax first, then placeholders
+    subject = parse_spintax(subject).format(first_name=first_name)
+    body = parse_spintax(body).format(first_name=first_name)
 
     cv_info = get_cv_bytes_for_user(user_id)
     attachment_bytes = None

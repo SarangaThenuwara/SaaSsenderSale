@@ -1,0 +1,104 @@
+{% extends "premium/base.html" %}
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center px-4">
+    <div class="max-w-2xl w-full text-center animate-fade-in">
+
+        <!-- Error Code -->
+        <div class="relative inline-block mb-8">
+            <div class="text-[9rem] md:text-[12rem] font-black leading-none select-none" style="
+                background: linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(234,88,12,0.08) 100%);
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+                text-shadow: 0 0 80px rgba(245,158,11,0.2);
+                font-family: 'Lexend', sans-serif;
+            ">429</div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="h-px w-full bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
+            </div>
+        </div>
+
+        <!-- Icon -->
+        <div class="flex justify-center mb-8">
+            <div
+                class="relative h-20 w-20 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shadow-2xl shadow-amber-500/10">
+                <svg class="w-10 h-10 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="absolute inset-0 rounded-3xl animate-ping border border-amber-500/30 opacity-40"></span>
+            </div>
+        </div>
+
+        <h1 class="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight">Too Many Requests</h1>
+        <p class="text-slate-400 text-lg mb-8 max-w-md mx-auto leading-relaxed">
+            You've exceeded the permitted request rate for this endpoint. Our rate limiter has temporarily paused your
+            access.
+        </p>
+
+        <!-- Warning Banner -->
+        <div class="p-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl mb-8 text-left">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 animate-pulse" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                    <p class="text-sm font-bold text-amber-300 mb-1">Rate Limit Enforced</p>
+                    <p class="text-xs text-amber-400/80">
+                        This is a security measure to protect infrastructure integrity.
+                        Please wait before retrying. Repeated violations may result in a temporary IP-level block.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Countdown -->
+        <div class="flex items-center justify-center gap-3 mb-10">
+            <div class="flex items-center gap-2 px-5 py-3 bg-white/5 border border-white/10 rounded-2xl">
+                <svg class="w-4 h-4 text-amber-400 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span class="text-xs font-mono text-slate-400">Retry in <span id="rate-countdown"
+                        class="text-amber-400 font-bold">60</span>s</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button id="retry-btn" disabled
+                class="px-6 py-3 bg-amber-500/10 border border-amber-500/20 text-amber-500/50 rounded-2xl text-sm font-bold cursor-not-allowed transition-all"
+                onclick="location.reload()">
+                Retry Request
+            </button>
+            <a href="/"
+                class="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white rounded-2xl text-sm font-bold transition-all">
+                Return Home
+            </a>
+        </div>
+
+        <p class="mt-12 text-[10px] font-mono text-slate-700 uppercase tracking-widest">
+            ERR_RATE_LIMIT_EXCEEDED · HTTP/1.1 429
+        </p>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+    let seconds = 60;
+    const countdownEl = document.getElementById('rate-countdown');
+    const retryBtn = document.getElementById('retry-btn');
+
+    const timer = setInterval(() => {
+        seconds--;
+        countdownEl.textContent = seconds;
+        if (seconds <= 0) {
+            clearInterval(timer);
+            countdownEl.textContent = '0';
+            retryBtn.disabled = false;
+            retryBtn.classList.remove('text-amber-500/50', 'cursor-not-allowed');
+            retryBtn.classList.add('text-amber-400', 'hover:bg-amber-500/20', 'hover:text-amber-300', 'cursor-pointer');
+        }
+    }, 1000);
+</script>
+{% endblock %}

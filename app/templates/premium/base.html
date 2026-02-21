@@ -5,18 +5,41 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
 
-  <!-- SEO Meta Tags -->
-  <title>{{ title or "Secure Email Outreach Automation | Privacy-First SaaS Sender" }}</title>
+  <!-- SEO / AEO Meta Tags -->
+  <title>{{ title or "BYOK Email Infrastructure | Secure SaaS Outreach Sender" }}</title>
   <meta name="description"
-    content="Privacy-focused email automation platform. OAuth2 integration keeps your Gmail credentials secure. Smart queuing, personalized templates, and transparent data handling.">
+    content="The world's first BYOK (Bring Your Own Key) email automation platform. Zero-knowledge architecture ensures your Gmail API credentials never leave your control. Enterprise-grade encryption for privacy-conscious professionals.">
   <meta name="keywords"
-    content="email automation, privacy-first, OAuth2, Gmail automation, secure email sender, GDPR compliant, email outreach">
+    content="BYOK email, Bring Your Own Key, secure email automation, privacy-first SaaS, Gmail API outreach, zero-knowledge email, enterprise email security">
 
   <!-- Open Graph / Social Media -->
-  <meta property="og:title" content="Secure Email Outreach Automation | Privacy-First">
+  <meta property="og:title" content="{{ title or 'Secure Email Outreach Automation | Privacy-First' }}">
   <meta property="og:description"
-    content="Privacy-focused email automation with OAuth2 security. Your credentials stay in your control.">
+    content="The world's first BYOK email automation platform. Secure your outreach with zero-knowledge encryption.">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ request.url }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ title or 'Secure Email Outreach Automation' }}">
+  <meta name="twitter:description" content="Privacy-focused email automation with OAuth2 security.">
+
+  <!-- Breadcrumb Schema for search engine hierarchy -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [{
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "{{ APP_URL }}/"
+      },{
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Knowledge Hub",
+        "item": "{{ APP_URL }}/resources"
+      }]
+    }
+  </script>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,61 +48,147 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lexend:wght@400;500;600;700&display=swap"
     rel="stylesheet" crossorigin="anonymous">
 
-  <!-- Styles & Scripts -->
+  <style nonce="{{ csp_nonce }}">
+    :root {
+      --brand-primary: #3b82f6;
+      --brand-accent: #8b5cf6;
+      --brand-success: #10b981;
+      --brand-danger: #ef4444;
+      --bg-deep: #020617;
+      --bg-surface: rgba(15, 23, 42, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-dim: #94a3b8;
+      --font-display: 'Lexend', 'Inter', sans-serif;
+    }
+
+    /* Silk Smooth Scrolling */
+    html {
+      scroll-behavior: smooth;
+      scrollbar-gutter: stable;
+    }
+
+    body {
+      overflow-x: hidden;
+      font-feature-settings: "cv02", "cv05", "cv11", "ss01";
+    }
+
+    .card-glass {
+      background: var(--bg-surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .card-glass:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-4px) scale(1.005);
+      box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    .input-glass {
+      background: rgba(255, 255, 255, 0.03) !important;
+      border: 1px solid rgba(255, 255, 255, 0.05) !important;
+      transition: all 0.3s ease !important;
+    }
+
+    .input-glass:focus {
+      background: rgba(255, 255, 255, 0.06) !important;
+      border-color: var(--brand-primary) !important;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)) !important;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4) !important;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0) scale(1);
+      }
+
+      50% {
+        transform: translateY(-20px) scale(1.05);
+      }
+    }
+
+    .animate-float {
+      animation: float 10s ease-in-out infinite;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-deep);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+    }
+  </style>
+
+  <!-- External Styles & PWA -->
   <link rel="stylesheet" href="/static/dist/styles.css">
   <script defer src="/static/js/presign-upload.js"></script>
-
-  <!-- Structured Data for SEO -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "SaaS Email Sender",
-    "applicationCategory": "BusinessApplication",
-    "description": "Privacy-first email automation platform with OAuth2 security",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "featureList": "OAuth2 Authentication, Smart Rate Limiting, Email Personalization, Privacy-First Architecture"
-  }
-  </script>
-
-  <!-- PWA & Icons -->
   <link rel="icon" type="image/svg+xml" href="/static/img/icon.svg">
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="apple-touch-icon" href="/static/img/icon.svg">
 
   <script nonce="{{ csp_nonce }}">
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-
-          console.log('SW registered:', reg);
-        }).catch(err => {
-          console.log('SW registration failed:', err);
-        });
+        navigator.serviceWorker.register('/sw.js').catch(() => { });
       });
     }
   </script>
-
 </head>
 
-<body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-primary-500/30">
+<body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-primary-500/30 font-sans">
   {% if is_maintenance %}
   <div
-    class="bg-amber-500 text-slate-950 py-1.5 px-4 text-center text-[10px] font-black uppercase tracking-[0.2em] sticky top-0 z-[100] animate-pulse">
-    System Policy: Maintenance Mode Active &mdash; {{ maintenance_message|default('Intermittent availability expected')
+    class="bg-gradient-to-r from-amber-600 to-amber-400 text-slate-950 py-1.5 px-4 text-center text-[10px] font-black uppercase tracking-[0.2em] sticky top-0 z-[100] shadow-xl">
+    System Priority: Maintenance &mdash; {{ maintenance_message|default('Core infrastructure optimizations in progress')
     }}
   </div>
   {% endif %}
 
-  <!-- Background Glow Effects -->
-  <div class="fixed inset-0 z-0 pointer-events-none">
-    <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary-600/20 rounded-full blur-[128px]"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-accent-glow/20 rounded-full blur-[128px]">
+  {% if broadcast_message %}
+  <div id="broadcast-banner"
+    class="bg-gradient-to-r from-primary-700 to-primary-500 text-white py-1.5 px-4 text-center text-[11px] font-semibold sticky top-0 z-[99] shadow-lg flex items-center justify-center gap-3">
+    <svg class="w-3.5 h-3.5 flex-shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+    </svg>
+    <span>{{ broadcast_message }}</span>
+    <button onclick="document.getElementById('broadcast-banner').remove()"
+      class="ml-2 text-white/60 hover:text-white text-lg leading-none font-bold transition-colors"
+      title="Dismiss">&times;</button>
+  </div>
+  {% endif %}
+
+  <!-- Hero Gradient Mesh -->
+  <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+    <div
+      class="absolute top-[-20%] left-[-10%] w-[80vw] h-[80vw] bg-blue-600/10 rounded-full blur-[160px] animate-float"
+      style="animation-duration: 25s;"></div>
+    <div
+      class="absolute bottom-[-20%] right-[-10%] w-[70vw] h-[70vw] bg-violet-600/10 rounded-full blur-[160px] animate-float"
+      style="animation-duration: 18s; animation-delay: -5s;"></div>
+    <div
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay">
     </div>
   </div>
 
@@ -106,13 +215,16 @@
               <span class="text-sm text-slate-400">Hello, <span class="text-white">{{ session_user.username
                   }}</span></span>
               <a href="/user/{{ session_user._id_str }}/dashboard" class="btn-secondary text-sm px-4 py-2">Dashboard</a>
+              <a href="/resources"
+                class="text-sm font-medium text-slate-400 hover:text-white transition-colors">Resources</a>
               <a href="/settings"
                 class="text-sm font-medium text-white hover:text-primary-400 transition-colors">Settings</a>
               <a href="/logout" class="text-sm font-medium link-hover">Logout</a>
             </div>
             {% else %}
+            <a href="/resources" class="text-sm font-medium link-hover">Resources</a>
             <a href="/login" class="text-sm font-medium link-hover">Login</a>
-            <a href="/signup" class="btn-primary text-sm px-5 py-2 rounded-lg">Get started</a>
+            <a href="/signup" class="btn-primary text-sm px-5 py-2 rounded-lg font-bold">Get started</a>
             {% endif %}
           </nav>
 
@@ -136,10 +248,14 @@
         </div>
         <a href="/user/{{ session_user._id_str }}/dashboard"
           class="block px-3 py-3 rounded-xl bg-primary-500/10 text-primary-400 font-bold">Dashboard</a>
+        <a href="/resources"
+          class="block px-3 py-3 rounded-xl hover:bg-white/5 text-slate-200 transition-colors">Knowledge Hub</a>
         <a href="/settings"
           class="block px-3 py-3 rounded-xl hover:bg-white/5 text-white transition-colors">Settings</a>
         <a href="/logout" class="block px-3 py-3 rounded-xl hover:bg-white/5 text-red-400 transition-colors">Logout</a>
         {% else %}
+        <a href="/resources"
+          class="block px-3 py-3 rounded-xl hover:bg-white/5 text-slate-200 transition-colors text-center">Resources</a>
         <a href="/login"
           class="block px-3 py-3 rounded-xl hover:bg-white/5 text-white transition-colors text-center">Login</a>
         <a href="/signup" class="block px-3 py-3 rounded-xl bg-primary-500 text-white font-bold text-center">Get
@@ -170,13 +286,74 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="relative z-10 border-t border-white/5 bg-slate-950/50 backdrop-blur-sm">
-    <div class="max-w-7xl mx-auto px-6 py-12">
-      <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-        <p class="text-slate-500 text-sm">© 2026 SaaS Email Sender. Secure by design.</p>
-        <div class="flex gap-6">
-          <a href="/privacy" class="link-hover text-sm">Privacy Policy</a>
-          <a href="/terms" class="link-hover text-sm">Terms of Service</a>
+  <footer class="relative z-10 border-t border-white/5 bg-slate-950/80 backdrop-blur-xl mt-20">
+    <div class="max-w-7xl mx-auto px-6 pt-16 pb-12">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
+        <!-- Logo & Mission -->
+        <div class="col-span-2 md:col-span-1">
+          <div class="flex items-center gap-2 mb-6">
+            <div class="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center font-black text-white">S
+            </div>
+            <span class="text-white font-bold tracking-tight">SaaS Sender</span>
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed mb-6">
+            The world's first BYOK (Bring Your Own Key) outreach infrastructure. Privacy-first automation for
+            high-integrity professionals.
+          </p>
+        </div>
+
+        <!-- Knowledge Hub -->
+        <div>
+          <h4 class="text-white text-xs font-black uppercase tracking-widest mb-6">Knowledge Hub</h4>
+          <ul class="space-y-4 text-xs text-slate-400">
+            <li><a href="/resources/gmail-api-vs-smtp" class="hover:text-primary-400 transition-colors">API vs SMTP</a>
+            </li>
+            <li><a href="/resources/avoid-spam-filters-with-spintax"
+                class="hover:text-primary-400 transition-colors">Deliverability Guide</a></li>
+            <li><a href="/resources/byok-gmail-api-setup" class="hover:text-primary-400 transition-colors">Setup
+                Documentation</a></li>
+            <li><a href="/resources/outreach-infrastructure-faq"
+                class="hover:text-primary-400 transition-colors">Structured FAQ</a></li>
+          </ul>
+        </div>
+
+        <!-- Interactive Tools -->
+        <div>
+          <h4 class="text-white text-xs font-black uppercase tracking-widest mb-6">Free Utilities</h4>
+          <ul class="space-y-4 text-xs text-slate-400">
+            <li><a href="/resources/tools/spintax-tester"
+                class="hover:text-emerald-400 transition-colors flex items-center gap-2">
+                <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
+                Spintax Tester
+              </a></li>
+            <li><a href="/signup" class="hover:text-primary-400 transition-colors">Campaign ROI Calc</a></li>
+            <li><a href="/signup" class="hover:text-primary-400 transition-colors">Deliverability Audit</a></li>
+          </ul>
+        </div>
+
+        <!-- Company -->
+        <div>
+          <h4 class="text-white text-xs font-black uppercase tracking-widest mb-6">Legal & Security</h4>
+          <ul class="space-y-4 text-xs text-slate-400">
+            <li><a href="/privacy" class="hover:text-white transition-colors">Privacy Shield</a></li>
+            <li><a href="/terms" class="hover:text-white transition-colors">Terms of Service</a></li>
+            <li><a href="/resources/privacy-first-outreach-strategy" class="hover:text-white transition-colors">GDPR
+                Transparency</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+        <p class="text-slate-500 text-[10px]">&copy; 2026 SaaS Email Sender. Engineered with zero-knowledge security.
+        </p>
+        <div class="flex gap-4">
+          <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
+            class="h-8 w-8 rounded-full border border-white/5 flex items-center justify-center text-slate-500 hover:text-white hover:border-white/20 transition-all group">
+            <svg class="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

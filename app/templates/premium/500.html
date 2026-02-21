@@ -1,0 +1,75 @@
+{% extends "premium/base.html" %}
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center px-4">
+    <div class="max-w-2xl w-full text-center animate-fade-in">
+
+        <!-- Error Code -->
+        <div class="relative inline-block mb-8">
+            <div class="text-[9rem] md:text-[12rem] font-black leading-none select-none" style="
+                background: linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(245,158,11,0.08) 100%);
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+                text-shadow: 0 0 80px rgba(239,68,68,0.15);
+                font-family: 'Lexend', sans-serif;
+            ">500</div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="h-px w-full bg-gradient-to-r from-transparent via-red-500/40 to-transparent"></div>
+            </div>
+        </div>
+
+        <!-- Icon -->
+        <div class="flex justify-center mb-8">
+            <div
+                class="relative h-20 w-20 rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shadow-2xl shadow-red-500/10">
+                <svg class="w-10 h-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <!-- Pulse ring -->
+                <span class="absolute inset-0 rounded-3xl animate-ping border border-red-500/20 opacity-30"></span>
+            </div>
+        </div>
+
+        <h1 class="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight">Internal Server Error</h1>
+        <p class="text-slate-400 text-lg mb-8 max-w-md mx-auto leading-relaxed">
+            Something went wrong on our side. Our team has been notified. Please wait a moment and try again.
+        </p>
+
+        <!-- Warning Banner -->
+        <div class="p-5 bg-red-500/10 border border-red-500/20 rounded-2xl mb-8 text-left">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <p class="text-sm font-bold text-red-300 mb-1">Server-Side Exception</p>
+                    {% if detail %}
+                    <p class="text-xs text-red-400/80 font-mono">{{ detail }}</p>
+                    {% else %}
+                    <p class="text-xs text-red-400/80">An unexpected error occurred while processing your request. No
+                        action is required on your part.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button onclick="location.reload()"
+                class="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 rounded-2xl text-sm font-bold transition-all">
+                Try Again
+            </button>
+            <a href="/"
+                class="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white rounded-2xl text-sm font-bold transition-all">
+                Return Home
+            </a>
+        </div>
+
+        <p class="mt-12 text-[10px] font-mono text-slate-700 uppercase tracking-widest">
+            ERR_INTERNAL_EXCEPTION · HTTP/1.1 500
+        </p>
+    </div>
+</div>
+{% endblock %}

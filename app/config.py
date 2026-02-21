@@ -14,6 +14,12 @@ ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "admin-secret-key")
 
+# SECURITY: Key Enforcement
+if not FERNET_KEY:
+    print("🚨 CRITICAL ERROR: FERNET_KEY is missing!")
+    print("💡 Generate one with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'")
+    sys.exit(1)
+
 # SECURITY: Enforce strong secrets in production
 if APP_ENV == "production":
     weak_secrets = []
@@ -21,8 +27,8 @@ if APP_ENV == "production":
     if SECRET_KEY == "change-me" or len(SECRET_KEY) < 32:
         weak_secrets.append("SECRET_KEY must be at least 32 characters")
     
-    if not FERNET_KEY or len(FERNET_KEY) < 32:
-        weak_secrets.append("FERNET_KEY is required in production and must be at least 32 characters")
+    if len(FERNET_KEY) < 32:
+        weak_secrets.append("FERNET_KEY must be a valid 32-byte Fernet key (use the generator above)")
     
     if ADMIN_PASSWORD == "admin" or len(ADMIN_PASSWORD) < 12:
         weak_secrets.append("ADMIN_PASSWORD must be at least 12 characters and not 'admin'")

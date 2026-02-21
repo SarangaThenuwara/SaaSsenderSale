@@ -1,0 +1,64 @@
+<h2>The Great Email Debate: REST API vs. SMTP Relay</h2>
+<p>If you have ever set up a cold outreach campaign, you've likely encountered the choice between SMTP and API. While
+    SMTP is the "old school" method that has powered email since the 1980s, the <strong>Google REST API</strong> is the
+    modern, secure alternative designed specifically for high-integrity integrations.</p>
+
+<h3>What is SMTP?</h3>
+<p>Simple Mail Transfer Protocol (SMTP) is a "push" protocol. Your application connects to a mail server, authenticates
+    with a username and password, and "pushes" the message through. It is universal, but it is also very "loud." Every
+    mail server in the chain can see your headers, and if your password is compromised, your entire account is at risk.
+</p>
+
+<h3>What is the Gmail API?</h3>
+<p>The Gmail API is a RESTful interface. Instead of a permanent password, it uses <strong>OAuth2 Access Tokens</strong>.
+    These tokens are temporary and specific to your application. Communication is encrypted via standard HTTPS, making
+    it indistinguishable from regular web traffic at the network level.</p>
+
+<h2>3 Reasons why API Wins for Outreach</h2>
+
+<ol>
+    <li><strong>Granular Permissions (Scopes):</strong> With SMTP, if you give an app your password, it can delete your
+        emails, read your chats, and change your recovery phone number. With the Gmail API via SaaS Sender, you only
+        grant the <code>gmail.send</code> scope. The app <em>cannot</em> read your private messages.</li>
+    <li><strong>Superior Authentication:</strong> SMTP relies on "Less Secure App" access, which Google has been
+        deprecating for years. The API uses enterprise-grade OAuth2, which is the gold standard for security in 2026.
+    </li>
+    <li><strong>Deliverability Signals:</strong> Because the API is the "native" way to talk to Google's servers, your
+        messages carry stronger authentication signatures. Outgoing mail sent via API is less likely to be flagged as
+        "suspicious relay traffic" by internal Gmail filters.</li>
+</ol>
+
+<h2>Comparison Summary</h2>
+<div class="overflow-x-auto my-8">
+    <table class="w-full text-left border-collapse bg-white/5 rounded-xl">
+        <thead>
+            <tr class="border-b border-white/10">
+                <th class="p-4 text-white">Feature</th>
+                <th class="p-4 text-white">SMTP Relay</th>
+                <th class="p-4 text-primary-400">Gmail API (REST)</th>
+            </tr>
+        </thead>
+        <tbody class="text-sm">
+            <tr class="border-b border-white/5">
+                <td class="p-4 font-bold">Security</td>
+                <td class="p-4 text-slate-500">Static Passwords</td>
+                <td class="p-4 text-slate-300">Temporary OAuth2 Tokens</td>
+            </tr>
+            <tr class="border-b border-white/5">
+                <td class="p-4 font-bold">Privacy</td>
+                <td class="p-4 text-slate-500">Full Account Access</td>
+                <td class="p-4 text-slate-300">Scoped (Send Only)</td>
+            </tr>
+            <tr class="border-b border-white/5">
+                <td class="p-4 font-bold">Protocol</td>
+                <td class="p-4 text-slate-500">TCP (Easy to flag)</td>
+                <td class="p-4 text-slate-300">HTTPS (Web Standard)</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>The SaaS Sender Verdict</h3>
+<p>While SMTP still has its place for transactional alerts, <strong>API-based outreach</strong> is the only choice for
+    professionals who value account safety and deliverability. By "Bringing Your Own Key" to our API engine, you get the
+    best of both worlds: automation power and absolute security.</p>

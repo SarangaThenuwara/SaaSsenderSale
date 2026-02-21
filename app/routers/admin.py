@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Body
 import requests
 from app.db import db
 from app.config import ADMIN_API_KEY
+from app.security import csrf_protect, parse_oid
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(csrf_protect)])
 
 def get_admin_user(request: Request):
     """
@@ -40,22 +41,25 @@ def get_users(_admin=Depends(get_admin_user)):
 
 @router.post("/users/{user_id}/block")
 def block_user(user_id: str, _admin=Depends(get_admin_user)):
+    target_id = parse_oid(user_id)
     res = db.users.update_one(
-        {"_id": ObjectId(user_id)}, 
+        {"_id": target_id}, 
         {"$set": {"is_blocked": True, "campaign_active": False}}
     )
     return {"modified": res.modified_count}
 
 @router.post("/users/{user_id}/unblock")
 def unblock_user(user_id: str, _admin=Depends(get_admin_user)):
-    res = db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"is_blocked": False}})
+    target_id = parse_oid(user_id)
+    res = db.users.update_one({"_id": target_id}, {"$set": {"is_blocked": False}})
     return {"modified": res.modified_count}
 
 @router.post("/users/{user_id}/unlock")
 def unlock_user(user_id: str, _admin=Depends(get_admin_user)):
     """Manually unlocks a user account locked by brute-force protection."""
+    target_id = parse_oid(user_id)
     res = db.users.update_one(
-        {"_id": ObjectId(user_id)}, 
+        {"_id": target_id}, 
         {"$set": {"locked_until": None, "failed_login_attempts": 0}}
     )
     return {"modified": res.modified_count}
@@ -88,7 +92,8 @@ def update_user(user_id: str, payload: dict = Body(...), _admin=Depends(get_admi
         except ValueError:
             raise HTTPException(400, "Invalid date format for subscription_expires_at. Use ISO format.")
 
-    res = db.users.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
+    target_id = parse_oid(user_id)
+    res = db.users.update_one({"_id": target_id}, {"$set": updates})
     if res.matched_count == 0:
         raise HTTPException(404, "User not found")
         
@@ -98,8 +103,9 @@ def update_user(user_id: str, payload: dict = Body(...), _admin=Depends(get_admi
 @router.delete("/users/{user_id}")
 def delete_user(user_id: str, _admin=Depends(get_admin_user)):
     # Soft delete (90 day window)
+    target_id = parse_oid(user_id)
     res = db.users.update_one(
-        {"_id": ObjectId(user_id)}, 
+        {"_id": target_id}, 
         {"$set": {"is_deleted": True, "deleted_at": datetime.utcnow(), "campaign_active": False}}
     )
     log_admin_action(_admin["username"], "soft_delete", f"Deleted user {user_id}")
@@ -282,8 +288,9 @@ def override_country(recruiter_id: str, payload: dict = Body(...), _admin=Depend
     if not country:
         raise HTTPException(400, "Country required")
         
+    target_id = parse_oid(recruiter_id)
     res = db.recruiters.update_one(
-        {"_id": ObjectId(recruiter_id)},
+        {"_id": target_id},
         {"$set": {"detectedCountry": country, "confidence": 1.0, "manual_override": True}}
     )
     return {"modified": res.modified_count}
@@ -386,7 +393,8 @@ def update_recruiter(recruiter_id: str, payload: dict = Body(...), _admin=Depend
     if "manual_override" in updates and updates["manual_override"]:
         updates["confidence"] = 1.0 # Auto-set confidence if manually overridden
         
-    res = db.recruiters.update_one({"_id": ObjectId(recruiter_id)}, {"$set": updates})
+    target_id = parse_oid(recruiter_id)
+    res = db.recruiters.update_one({"_id": target_id}, {"$set": updates})
     
     if res.matched_count == 0:
         raise HTTPException(404, "Recruiter not found")
@@ -472,12 +480,20 @@ def add_suppression(payload: dict = Body(...), _admin=Depends(get_admin_user)):
             {"$set": {"reason": reason, "created_at": datetime.utcnow()}},
             upsert=True
         )
-        # Also mark recruiter as dead if exists
+        # 1. Mark global recruiter record as dead
         db.recruiters.update_one({"email": email}, {"$set": {"health": "dead"}})
+        
+        # 2. Skip all pending/sending entries in all user ledgers
+        skipped = db.user_recruiter_ledger.update_many(
+            {"email": email, "status": {"$in": ["pending", "sending"]}},
+            {"$set": {"status": "skipped", "error": "suppressed_by_admin"}}
+        )
+        
+        log_admin_action(_admin["username"], "add_suppression", f"Suppressed {email}. Skipped {skipped.modified_count} ledger jobs.")
     except Exception as e:
         raise HTTPException(500, str(e))
         
-    return {"ok": True, "email": email}
+    return {"ok": True, "email": email, "skipped_jobs": skipped.modified_count}
 
 # --- Worker Management ---
 from app.celery_app import celery_app
@@ -525,6 +541,53 @@ def resume_worker(payload: dict = Body(...), _admin=Depends(get_admin_user)):
         celery_app.control.add_consumer(q, destination=[worker])
         
     return {"ok": True, "action": "resumed", "worker": worker}
+
+@router.post("/broadcast")
+def broadcast_notification(payload: dict = Body(...), _admin=Depends(get_admin_user)):
+    """Store a system-wide notification banner for all users to see."""
+    message = payload.get("message", "").strip()
+    if not message:
+        raise HTTPException(400, "Message cannot be empty")
+    if len(message) > 500:
+        raise HTTPException(400, "Message too long (max 500 chars)")
+
+    db.settings.update_one(
+        {"_id": "global"},
+        {"$set": {
+            "broadcast_message": message,
+            "broadcast_at": datetime.utcnow(),
+            "broadcast_by": _admin.get("username", "admin")
+        }},
+        upsert=True
+    )
+    log_admin_action(_admin["username"], "broadcast", f"Sent system notification: {message[:80]}")
+    return {"ok": True, "message": message}
+
+@router.delete("/broadcast")
+def clear_broadcast(_admin=Depends(get_admin_user)):
+    """Clear the active system-wide notification banner."""
+    db.settings.update_one(
+        {"_id": "global"},
+        {"$unset": {"broadcast_message": "", "broadcast_at": "", "broadcast_by": ""}}
+    )
+    log_admin_action(_admin["username"], "broadcast_clear", "Cleared system notification banner")
+    return {"ok": True}
+
+@router.post("/optimize_indexes")
+def optimize_indexes(_admin=Depends(get_admin_user)):
+    """Re-index all major MongoDB collections for performance."""
+    results = {}
+    collections_to_optimize = ["users", "recruiters", "user_recruiter_ledger", "recipients", "suppression"]
+    for col_name in collections_to_optimize:
+        try:
+            col = db[col_name]
+            col.reindex()
+            results[col_name] = "ok"
+        except Exception as e:
+            results[col_name] = f"error: {str(e)}"
+
+    log_admin_action(_admin["username"], "optimize_indexes", f"Ran reIndex on {len(collections_to_optimize)} collections")
+    return {"ok": True, "results": results}
 
 @router.get("/global_report")
 def global_report(_admin=Depends(get_admin_user)):

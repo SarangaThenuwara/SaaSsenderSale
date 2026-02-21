@@ -1,0 +1,223 @@
+<div class="prose prose-invert max-w-none">
+
+    <p class="lead text-xl text-slate-300 mb-8">
+        SaaS Sender gives you a <strong>Gmail-powered, automated outreach engine</strong> that sends your CV directly
+        to recruiters&rsquo; inboxes. This guide explains how to write templates that get responses &mdash; built
+        specifically around how this platform works.
+    </p>
+
+    <!-- How the platform sends emails -->
+    <div class="card-glass p-8 my-8 border-l-4 border-emerald-500 bg-emerald-500/5">
+        <h3 class="text-white font-bold text-lg mb-2 flex items-center gap-2">
+            <svg class="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            How SaaS Sender Sends Your Emails
+        </h3>
+        <p class="text-slate-400 text-sm mb-0 leading-relaxed">
+            Each email is dispatched through <strong class="text-white">your own Gmail API credentials</strong>,
+            meaning it arrives from your personal Gmail address &mdash; not a shared sender pool. Your CV (PDF) is
+            automatically attached to every email. The platform queues up to <strong class="text-white">240 recruiter
+                contacts per day</strong> and randomly rotates between your active templates (A, B, C) to avoid spam
+            pattern detection.
+        </p>
+    </div>
+
+    <!-- Template A/B/C Rotation -->
+    <h3 class="text-2xl font-bold text-white mb-4">Understanding Template Rotation (A / B / C)</h3>
+    <p class="text-slate-400 text-sm leading-relaxed mb-6">
+        In <a href="/settings" class="text-primary-400 hover:text-primary-300 underline">Settings &rarr; Email
+            Templates</a>, you configure up to three distinct templates. When a campaign is
+        active, the platform selects one at random for each email sent. This is your primary anti-spam lever &mdash;
+        no two consecutive emails are identical. Use this to your strategic advantage:
+    </p>
+
+    <div class="grid md:grid-cols-3 gap-4 mb-10">
+        <div class="bg-slate-900 border border-white/10 rounded-2xl p-5">
+            <p class="text-[10px] font-black uppercase tracking-widest text-primary-400 mb-2">Template A
+                &nbsp;&mdash;&nbsp; Direct</p>
+            <p class="text-slate-400 text-xs leading-relaxed">Lead with the role you&rsquo;re applying for. Brief,
+                formal, factual. Ideal for corporate or banking recruiters. State your years of experience and attach
+                your CV in the first two lines.</p>
+        </div>
+        <div class="bg-slate-900 border border-white/10 rounded-2xl p-5">
+            <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-2">Template B
+                &nbsp;&mdash;&nbsp; Value-Led</p>
+            <p class="text-slate-400 text-xs leading-relaxed">Open with your most measurable achievement or skill.
+                This performs better with tech and startup recruiters. Avoid job-title-first openers; focus on what
+                you&rsquo;ve delivered.</p>
+        </div>
+        <div class="bg-slate-900 border border-white/10 rounded-2xl p-5">
+            <p class="text-[10px] font-black uppercase tracking-widest text-violet-400 mb-2">Template C
+                &nbsp;&mdash;&nbsp; Curiosity</p>
+            <p class="text-slate-400 text-xs leading-relaxed">Ask a short, relevant question as the subject line. Keep
+                the body to 2 sentences. Works best for creative or consulting roles where engagement matters more
+                than credentials.</p>
+        </div>
+    </div>
+
+    <!-- Spintax -->
+    <h3 class="text-2xl font-bold text-white mb-4">Using Spintax in Your Templates</h3>
+    <p class="text-slate-400 text-sm leading-relaxed mb-5">
+        The platform&rsquo;s template engine supports <strong class="text-white">spintax</strong> &mdash; a syntax
+        that picks a random phrase variant each time an email is sent. Combined with template rotation, this makes
+        every single email unique. Use the <a href="/resources/tools/spintax-tester"
+            class="text-primary-400 hover:text-primary-300 underline">free Spintax Tester</a> to preview your
+        randomization before launching.
+    </p>
+
+    <!-- Spintax visual block -->
+    <div class="bg-slate-950 border border-white/10 rounded-2xl p-6 font-mono text-sm overflow-x-auto mb-10 relative">
+        <div class="absolute top-4 right-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold">Spintax
+            Preview</div>
+        <div class="space-y-5">
+            <div>
+                <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Subject (paste into Template A
+                    subject field)</p>
+                <p class="text-slate-300">{Application|Interest|Enquiry} for [Role] &mdash; [Your Name]</p>
+                <p class="text-emerald-400 text-xs mt-1">&rarr; Resolves to one of: &ldquo;Application
+                    for&hellip;&rdquo;, &ldquo;Interest for&hellip;&rdquo;, &ldquo;Enquiry for&hellip;&rdquo;</p>
+            </div>
+            <div>
+                <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Opening line (paste into the Body
+                    field)</p>
+                <p class="text-slate-300">{Dear|Hi|Hello} [Recruiter Name],</p>
+                <p class="text-emerald-400 text-xs mt-1">&rarr; Varies the greeting per email automatically</p>
+            </div>
+            <div>
+                <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Body sentence</p>
+                <p class="text-slate-300">I {noticed|came across|saw} your {posting|listing|ad} and would love to
+                    {connect|discuss|explore} an opportunity.</p>
+                <p class="text-emerald-400 text-xs mt-1">&rarr; 12 unique combinations from one line</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommended template structure -->
+    <h3 class="text-2xl font-bold text-white mb-4">Recommended Email Structure (Platform-Optimised)</h3>
+    <p class="text-slate-400 text-sm leading-relaxed mb-5">
+        Because your CV is <strong class="text-white">always auto-attached</strong> by the platform, your email body
+        should be short &mdash; its only job is to earn a click-to-open, not to narrate your career history.
+        Aim for under 80 words. Here is the structure that performs best:
+    </p>
+
+    <div class="bg-slate-950 border border-white/10 rounded-2xl p-6 font-mono text-sm overflow-hidden relative mb-10">
+        <div class="absolute top-4 right-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold">Blueprint
+            v2.0 &mdash; Platform Tuned</div>
+        <div class="space-y-4">
+            <div>
+                <span class="text-slate-500">Subject:&nbsp;</span>
+                <span class="text-primary-400">{Application|Expression of Interest} for [Role] &mdash; [Your
+                    Name]</span>
+            </div>
+            <div>
+                <span class="text-slate-500">Line 1:&nbsp;</span>
+                <span class="text-white">{Dear|Hi} [Recruiter Name],</span>
+            </div>
+            <div>
+                <span class="text-slate-500">Line 2:&nbsp;</span>
+                <span class="text-slate-300">I am {reaching out|writing} regarding the [Role] {position|opportunity} at
+                    [Company].</span>
+            </div>
+            <div>
+                <span class="text-slate-500">Line 3:&nbsp;</span>
+                <span class="text-slate-300">With [X] years in [Field], I {bring|offer} a strong background in [Key
+                    Skill].</span>
+            </div>
+            <div>
+                <span class="text-slate-500">Line 4:&nbsp;</span>
+                <span class="text-slate-300">My CV is attached &mdash; I would welcome a brief {call|introduction} at
+                    your convenience.</span>
+            </div>
+            <div>
+                <span class="text-white">Best regards, [Your Name].</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subject line section -->
+    <h3 class="text-2xl font-bold text-white mb-4">Subject Line Rules (Critical for Inbox Delivery)</h3>
+    <p class="text-slate-400 text-sm leading-relaxed mb-5">
+        The platform sends through the Gmail API, which means deliverability is high by default &mdash; but a
+        poorly-written subject line can still trigger Gmail&rsquo;s promotions or spam tab. Follow these rules when
+        filling in the <strong class="text-white">Subject Line</strong> field in Settings:
+    </p>
+
+    <div class="card-glass p-8 my-4 border-l-4 border-primary-500 bg-white/5">
+        <ul class="space-y-4">
+            <li class="flex gap-3">
+                <span class="text-green-400 font-bold flex-shrink-0">✓ DO:</span>
+                <span class="text-slate-400">Include your name and a specific role. <code
+                        class="text-primary-300 bg-slate-900 px-1 rounded text-xs">{Application|Interest} for Finance Manager &mdash; John Smith</code></span>
+            </li>
+            <li class="flex gap-3">
+                <span class="text-green-400 font-bold flex-shrink-0">✓ DO:</span>
+                <span class="text-slate-400">Use spintax to vary the first word. Gmail flags repeated patterns from the
+                    same sender.</span>
+            </li>
+            <li class="flex gap-3">
+                <span class="text-red-400 font-bold flex-shrink-0">✗ DON&rsquo;T:</span>
+                <span class="text-slate-400">Use ALL CAPS, exclamation marks, or words like &ldquo;URGENT&rdquo;,
+                    &ldquo;FREE&rdquo;, &ldquo;OPPORTUNITY&rdquo; &mdash; these trigger spam filters.</span>
+            </li>
+            <li class="flex gap-3">
+                <span class="text-red-400 font-bold flex-shrink-0">✗ DON&rsquo;T:</span>
+                <span class="text-slate-400">Use the same subject across all three templates (A, B, C). Each should have
+                    a distinct subject format to maximise variation.</span>
+            </li>
+            <li class="flex gap-3">
+                <span class="text-amber-400 font-bold flex-shrink-0">⚠ NOTE:</span>
+                <span class="text-slate-400">Subjects are applied at send time. Changing them in Settings takes effect
+                    only on the <strong class="text-white">next campaign activation</strong> (a new snapshot is created
+                    when you press Start).</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- CV Upload reminder -->
+    <h3 class="text-2xl font-bold text-white mt-10 mb-4">Your CV: The Platform Does the Heavy Lifting</h3>
+    <p class="text-slate-400 text-sm leading-relaxed mb-5">
+        Go to your <a href="/user/dashboard" class="text-primary-400 hover:text-primary-300 underline">Dashboard</a>
+        to upload your CV as a PDF. Once uploaded and a campaign is started, the platform attaches it to
+        <strong class="text-white">every outbound email automatically &mdash; you never need to reference the
+            attachment in your body text manually</strong>. Keep your body copy short and let the CV do the talking.
+    </p>
+    <div class="grid md:grid-cols-2 gap-4 mb-10">
+        <div class="bg-slate-900 border border-white/10 rounded-2xl p-5 space-y-2">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Good body closing</p>
+            <p class="text-sm text-emerald-300 italic">&ldquo;Please find my CV attached. I would welcome a brief call
+                at your convenience.&rdquo;</p>
+        </div>
+        <div class="bg-slate-900 border border-red-500/20 rounded-2xl p-5 space-y-2">
+            <p class="text-[10px] font-black uppercase tracking-widest text-red-400 mb-1">Redundant (avoid)</p>
+            <p class="text-sm text-slate-500 italic line-through">&ldquo;I am attaching my resume, which you can find
+                attached below as a PDF attachment&hellip;&rdquo;</p>
+        </div>
+    </div>
+
+    <!-- Daily quota tip -->
+    <div class="p-6 bg-amber-500/10 border border-amber-500/20 rounded-2xl mb-10">
+        <p class="text-sm text-amber-300">
+            <strong>Daily Quota:</strong> The platform sends up to <strong>240 emails per day</strong> by default,
+            spread across your assigned recruiter pool. Do not attempt to rush placements by inflating your template
+            count &mdash; quality and variation already handled by the engine. Consistency over days beats volume
+            spikes that Google throttles.
+        </p>
+    </div>
+
+    <!-- Settings CTA -->
+    <div
+        class="mt-8 p-6 bg-primary-500/10 border border-primary-500/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+            <p class="text-white font-bold mb-1">Ready to configure your templates?</p>
+            <p class="text-slate-400 text-sm">Head to Settings to write your three email variants, set your subject
+                lines, and validate your Gmail credentials.</p>
+        </div>
+        <a href="/settings"
+            class="btn-primary inline-flex px-6 py-3 rounded-xl text-xs font-bold shadow-lg shadow-primary-500/20 whitespace-nowrap flex-shrink-0">
+            Open Settings &rarr;
+        </a>
+    </div>
+
+</div>

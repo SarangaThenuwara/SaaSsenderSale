@@ -8,9 +8,9 @@ services:
       - .env
     ports:
       - "8000:8000"
-    depends_on:
-      - redis
-      - mongo
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     volumes:
       - ./:/app
 
@@ -20,9 +20,9 @@ services:
       dockerfile: Dockerfile.worker
     env_file:
       - .env
-    depends_on:
-      - redis
-      - mongo
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     volumes:
       - ./:/app
 
@@ -33,23 +33,8 @@ services:
     command: celery -A app.celery_app beat --loglevel=info
     env_file:
       - .env
-    depends_on:
-      - redis
-      - mongo
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     volumes:
       - ./:/app
-
-  redis:
-    image: redis:6
-    ports:
-      - "6379:6379"
-
-  mongo:
-    image: mongo:6
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-
-volumes:
-  mongo-data:

@@ -1,0 +1,84 @@
+<div class="space-y-12">
+    <section>
+        <h2 class="text-white">Security & Encryption</h2>
+        <div class="space-y-6">
+            <div class="faq-item">
+                <h3 class="text-primary-400 font-bold mb-2">How are my Google API credentials stored?</h3>
+                <p>We use a multi-layered, zero-knowledge encryption architecture. Your JSON credentials are encrypted
+                    before they ever reach our persistent database using a <strong>Fernet (AES-128 in CBC mode)</strong>
+                    key that is unique to your user session. We provide the automation logic, but you maintain the
+                    cryptographic key.</p>
+            </div>
+            <div class="faq-item">
+                <h3 class="text-primary-400 font-bold mb-2">Can SaaS Sender read my personal emails?</h3>
+                <p>No. When you configure your Google Cloud Project, our guides instruct you to only enable the
+                    <code>https://www.googleapis.com/auth/gmail.send</code> scope. This is a "write-only" permission
+                    that allows the engine to send mail, but does not grant permission to read, list, or delete existing
+                    messages.</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="text-white">Compliance & Ethics</h2>
+        <div class="space-y-6">
+            <div class="faq-item">
+                <h3 class="text-primary-400 font-bold mb-2">Is automated cold outreach legal under GDPR?</h3>
+                <p>Yes, provided you are contacting professional email addresses for "Legitimate Interest" and providing
+                    a clear way to opt-out. Our platform encourages ethical outreach by allowing you to instantly pause
+                    campaigns and manage your lead database with data sovereignty.</p>
+            </div>
+            <div class="faq-item">
+                <h3 class="text-primary-400 font-bold mb-2">What is the BYOK (Bring Your Own Key) model?</h3>
+                <p>BYOK is a paradigm shift in SaaS. Instead of us providing the email accounts (which creates shared
+                    risk), you Bring Your Own Key (your Gmail API credentials). This ensures that your sender reputation
+                    is 100% yours and is never affected by the actions of other users on the platform.</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="text-white">Technical Operation</h2>
+        <div class="space-y-6">
+            <div class="faq-item">
+                <h3 class="text-primary-400 font-bold mb-2">What happens if a background worker fails?</h3>
+                <p>Our system uses <strong>Celery and Redis</strong> for task durability. If a specific email send
+                    attempt fails (e.g., due to a temporary Google API outage), the task is automatically retried with
+                    exponential backoff, ensuring your campaign eventually reaches every lead in your snapshot.</p>
+            </div>
+            <div class="faq-item">
+                <h3 class="text-primary-400 font-bold mb-2">How does randomized template rotation work?</h3>
+                <p>When you start a campaign, the engine creates a "Frozen Snapshot" of your current settings. For every
+                    recipient, the worker randomly selects one of your three variations and applies any spintax. This
+                    keeps the output fresh and prevents "pattern-matching" spam filters from identifying your
+                    automation.</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Structured Schema for AEO (JSON-LD) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How are my Google API credentials stored?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "SaaS Sender uses zero-knowledge Fernet encryption to protect credentials. Keys are unique to user sessions and never stored in plain text."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is automated cold outreach legal under GDPR?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, outreach is legal under the 'Legitimate Interest' clause for B2B professionals, providing valid opt-out paths are maintained."
+      }
+    }
+  ]
+}
+</script>

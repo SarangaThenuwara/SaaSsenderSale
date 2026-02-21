@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /resources/
+Allow: /resources/tools/
+Disallow: /admin/
+Disallow: /api/admin/
+Disallow: /user/
+Disallow: /settings/
+
+Sitemap: {{ APP_URL }}/sitemap.xml

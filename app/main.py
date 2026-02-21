@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
@@ -44,17 +44,62 @@ LOG = logging.getLogger(__name__)
 
 # create app BEFORE any route decorators or middleware usage
 app = FastAPI(title="SaaS Email Sender - Premium")
-from app.routers import admin, campaigns
+from app.routers import admin, campaigns, knowledge
 app.include_router(admin.router)
 app.include_router(campaigns.router)
+app.include_router(knowledge.router)
 
 # --- Security: Rate Limiting ---
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
+
+# --- Global Exception Handlers ---
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import HTMLResponse as _HTMLResponse
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Renders branded error pages for common HTTP status codes."""
+    csp_nonce = getattr(request.state, "csp_nonce", "")
+    ctx = {
+        "request": request,
+        "csp_nonce": csp_nonce,
+        "detail": str(exc.detail) if exc.detail else None,
+        "title": f"{exc.status_code} Error | SaaS Sender"
+    }
+    if exc.status_code == 404:
+        return templates.TemplateResponse("premium/404.html", ctx, status_code=404)
+    if exc.status_code == 429:
+        return templates.TemplateResponse("premium/429.html", ctx, status_code=429)
+    # Generic fallback for other 4xx/5xx
+    return templates.TemplateResponse("premium/500.html", ctx, status_code=exc.status_code)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """Renders the branded 429 page for rate-limited requests."""
+    csp_nonce = getattr(request.state, "csp_nonce", "")
+    return templates.TemplateResponse("premium/429.html", {
+        "request": request,
+        "csp_nonce": csp_nonce,
+        "detail": str(exc.detail) if hasattr(exc, "detail") else "Rate limit exceeded. Please slow down.",
+        "title": "429 Too Many Requests | SaaS Sender"
+    }, status_code=429)
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Catches all unhandled server-side exceptions and renders the branded 500 page."""
+    LOG.exception("Unhandled exception for request %s: %s", request.url, exc)
+    csp_nonce = getattr(request.state, "csp_nonce", "")
+    return templates.TemplateResponse("premium/500.html", {
+        "request": request,
+        "csp_nonce": csp_nonce,
+        "detail": None,  # Never expose raw exception details to end users
+        "title": "500 Server Error | SaaS Sender"
+    }, status_code=500)
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -210,6 +255,7 @@ async def session_security_middleware(request: Request, call_next):
             global_settings = db.settings.find_one({"_id": "global"}) or {}
             request.state.is_maintenance = global_settings.get("maintenance_mode", False)
             request.state.maintenance_message = global_settings.get("maintenance_message", m_msg)
+            request.state.broadcast_message = global_settings.get("broadcast_message", "")
             
             if request.state.is_maintenance:
                 is_maintenance = True
@@ -217,6 +263,7 @@ async def session_security_middleware(request: Request, call_next):
         else:
             request.state.is_maintenance = False
             request.state.maintenance_message = ""
+            request.state.broadcast_message = ""
 
         if not session:
             # Re-fetch session dict in case it was cleared above
@@ -361,6 +408,7 @@ def template_ctx(request: Request):
         "csrf_token": getattr(request.state, "csrf_token", ""),
         "is_maintenance": getattr(request.state, "is_maintenance", False),
         "maintenance_message": getattr(request.state, "maintenance_message", ""),
+        "broadcast_message": getattr(request.state, "broadcast_message", ""),
         "now": datetime.utcnow(),
         "youtube_guide_url": YOUTUBE_GUIDE_URL,
         "colab_generator_url": COLAB_GENERATOR_URL,

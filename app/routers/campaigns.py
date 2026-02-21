@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from app.db import db
+from app.security import csrf_protect, parse_oid
 from bson.objectid import ObjectId
 from datetime import datetime
 
-router = APIRouter(prefix="/api/campaigns", tags=["campaigns"])
+router = APIRouter(prefix="/api/campaigns", tags=["campaigns"], dependencies=[Depends(csrf_protect)])
 
 def get_current_user(request: Request):
     user = getattr(request.state, "session_user", None)
@@ -124,7 +125,8 @@ def start_campaign(campaign_id: str, user=Depends(get_current_user)):
     """
     # Verify ownership
     if campaign_id != "default":
-        camp = db.campaigns.find_one({"_id": ObjectId(campaign_id), "userId": ObjectId(user["_id"])})
+        target_id = parse_oid(campaign_id)
+        camp = db.campaigns.find_one({"_id": target_id, "userId": ObjectId(user["_id"])})
         if not camp:
             raise HTTPException(404, "Campaign not found")
 
@@ -134,6 +136,7 @@ def start_campaign(campaign_id: str, user=Depends(get_current_user)):
         "cv_filename": user.get("cv_filename"),
         "subject": user.get("subject_template"),
         "body": user.get("body_template"),
+        "email_templates": user.get("email_templates", []), # CRITICAL: Snapshot the randomized list
         "snapshot_at": datetime.utcnow(),
         "campaign_id": campaign_id
     }

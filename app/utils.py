@@ -5,51 +5,54 @@ from cryptography.fernet import Fernet
 
 from .config import FERNET_KEY, SECRET_KEY
 
-# Initialize Fernet if key provided
+# Initialize Fernet - Enterprise Requirement: KEY MUST BE PRESENT
 _f: Optional[Fernet] = None
 if FERNET_KEY:
-    key = FERNET_KEY.encode() if isinstance(FERNET_KEY, str) else FERNET_KEY
-    _f = Fernet(key)
+    try:
+        key = FERNET_KEY.encode() if isinstance(FERNET_KEY, str) else FERNET_KEY
+        _f = Fernet(key)
+    except Exception as e:
+        # In production this will be caught by config.py validation, but we handle it here too
+        pass
 
 def encrypt_bytes(b: bytes) -> bytes:
     """
-    Backwards-compatible: encrypt bytes with Fernet if configured,
-    otherwise return original bytes.
+    Encrypt bytes with Fernet. 
+    Enterprise Policy: Fails if encryption is not configured.
     """
     if not _f:
-        return b
+        raise RuntimeError("ENCRYPTION_FAILURE: Fernet key not configured.")
     return _f.encrypt(b)
 
 def decrypt_bytes(b: bytes) -> bytes:
     """
-    Backwards-compatible: decrypt bytes with Fernet if configured,
-    otherwise return original bytes.
-    Accepts either bytes or (if callers stored base64 text) a str encoded to bytes.
+    Decrypt bytes with Fernet.
+    Enterprise Policy: Fails if encryption is not configured.
     """
     if not _f:
-        return b
+        raise RuntimeError("DECRYPTION_FAILURE: Fernet key not configured.")
     if isinstance(b, str):
         b = b.encode()
     return _f.decrypt(b)
 
-# Helpers that encode to/from base64 strings (useful for storing in JSON/DB)
 def encrypt_bytes_to_b64(b: bytes) -> str:
     """
-    Return encrypted bytes as a base64-encoded string if Fernet configured,
-    otherwise return plain base64-encoded string of original bytes.
+    Return encrypted bytes as a base64-encoded string.
+    Enterprise Policy: Fails if encryption is not configured.
     """
-    if _f:
-        token = _f.encrypt(b)
-        return token.decode()
-    return base64.b64encode(b).decode()
+    if not _f:
+        raise RuntimeError("ENCRYPTION_FAILURE: Fernet key not configured. Sensitive data cannot be stored.")
+    token = _f.encrypt(b)
+    return token.decode()
 
 def decrypt_b64_to_bytes(s: str) -> bytes:
     """
     Inverse of encrypt_bytes_to_b64.
+    Enterprise Policy: Fails if encryption is not configured.
     """
-    if _f:
-        return _f.decrypt(s.encode())
-    return base64.b64decode(s.encode())
+    if not _f:
+        raise RuntimeError("DECRYPTION_FAILURE: Fernet key not configured.")
+    return _f.decrypt(s.encode())
 
 # CSRF helpers using itsdangerous, tied to SECRET_KEY
 _serializer = URLSafeTimedSerializer(SECRET_KEY)
@@ -63,9 +66,58 @@ def generate_csrf_token(session_id: str) -> str:
 def validate_csrf_token(token: str, session_id: str, max_age: int = 900) -> bool:
     """
     Validate a CSRF token produced by generate_csrf_token.
+    Supports both literal tokens and serialized objects if needed.
     """
+    if not token or not session_id:
+        return False
     try:
         val = _serializer.loads(token, salt="csrf-token", max_age=max_age)
         return val == session_id
     except Exception:
         return False
+
+async def get_csrf_token_from_request(request):
+    """
+    Extracts CSRF token from Form field OR X-CSRF-Token header.
+    """
+    # 1. Check Header (Preferred for AJAX)
+    header_token = request.headers.get("X-CSRF-Token")
+    if header_token:
+        return header_token
+    
+    # 2. Check Form Data
+    try:
+        form = await request.form()
+        return form.get("csrf")
+    except Exception:
+        pass
+        
+    # 3. Check JSON Body (Fallback)
+    try:
+        body = await request.json()
+        return body.get("csrf")
+    except Exception:
+        pass
+        
+    return None
+
+def parse_spintax(text: str) -> str:
+    """
+    Randomly selects variations in curly braces {Hi|Hello|Hey} to provide 
+    natural text variation and avoid spam fingerprinting.
+    Only triggers if at least one '|' is present to avoid breaking {placeholders}.
+    """
+    import re
+    import random
+    if not text:
+        return ""
+        
+    # Pattern looks for { ... | ... }
+    pattern = re.compile(r"\{([^{}]*\|[^{}]*)\}")
+    while True:
+        match = pattern.search(text)
+        if not match:
+            break
+        options = match.group(1).split('|')
+        text = text[:match.start()] + random.choice(options) + text[match.end():]
+    return text

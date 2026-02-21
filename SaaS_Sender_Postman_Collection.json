@@ -1,0 +1,1159 @@
+{
+    "info": {
+        "_postman_id": "e4b5d2e0-1c3a-4a8b-9e6f-7d8c9b0a1f2e",
+        "name": "SaaS Sender API - Enterprise Complete",
+        "description": "The complete API documentation for SaaS Sender. Includes 50+ endpoints covering the full lifecycle of User and Administrative operations. Security Hardened with CSRF validation and response tests.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "email",
+                                    "value": "{{email}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "password",
+                                    "value": "{{password}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "csrf",
+                                    "value": "{{csrf_token}}",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Signup",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "email",
+                                    "value": "{{email}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "password",
+                                    "value": "{{password}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "csrf",
+                                    "value": "{{csrf_token}}",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/signup",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "signup"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Forgot Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "email",
+                                    "value": "{{email}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "csrf",
+                                    "value": "{{csrf_token}}",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/forgot-password",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "forgot-password"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Google Login (Initiate)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/google",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "google"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/logout",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "logout"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "User: Campaign Mgmt (v2)",
+            "item": [
+                {
+                    "name": "Get Filter Options (Geo/Provider)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/campaigns/filters",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "campaigns",
+                                "filters"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List All Campaigns",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/campaigns/",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "campaigns",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Filtered Campaign",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-CSRF-Token",
+                                "value": "{{csrf_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"UK Corporate Outreach\",\n    \"filters\": {\n        \"country\": \"United Kingdom\",\n        \"provider\": \"corporate\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/campaigns/",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "campaigns",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Start/Activate Campaign",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-CSRF-Token",
+                                "value": "{{csrf_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/campaigns/{{campaign_id}}/start",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "campaigns",
+                                "{{campaign_id}}",
+                                "start"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Pause Campaign",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-CSRF-Token",
+                                "value": "{{csrf_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/campaigns/{{campaign_id}}/pause",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "campaigns",
+                                "{{campaign_id}}",
+                                "pause"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "User: Assets & Settings",
+            "item": [
+                {
+                    "name": "Presign CV Upload",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-CSRF-Token",
+                                "value": "{{csrf_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "filename",
+                                    "value": "resume.pdf",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "content_type",
+                                    "value": "application/pdf",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/presign_upload",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "presign_upload"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Complete CV Upload",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-CSRF-Token",
+                                "value": "{{csrf_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"key\": \"cvs/user_id/uuid_resume.pdf\",\n    \"filename\": \"resume.pdf\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/presign_complete",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "presign_complete"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Validate Gmail Credentials",
+                    "request": {
+                        "method": "POST",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/validate_credentials",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "validate_credentials"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Test Send (Self)",
+                    "request": {
+                        "method": "POST",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"test@example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/test_send",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "test_send"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Live Activity Feed (Report)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/user/report",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "user",
+                                "report"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin: User Management",
+            "item": [
+                {
+                    "name": "List All Users",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/users",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "users"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create User Admin-Side",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"newuser@example.com\",\n    \"password\": \"securePass123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/users",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "users"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Block User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/users/{{user_id}}/block",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "users",
+                                "{{user_id}}",
+                                "block"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Unblock User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/users/{{user_id}}/unblock",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "users",
+                                "{{user_id}}",
+                                "unblock"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Unlock Account (Brute Force)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/users/{{user_id}}/unlock",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "users",
+                                "{{user_id}}",
+                                "unlock"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update User (Role/Limit/Paid)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"role\": \"admin\",\n    \"daily_limit\": 500,\n    \"is_paid\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/users/{{user_id}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "users",
+                                "{{user_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Soft Delete User",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/users/{{user_id}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "users",
+                                "{{user_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Restore Deleted User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/users/{{user_id}}/restore",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "users",
+                                "{{user_id}}",
+                                "restore"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Export All Users (CSV)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/export_users",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "export_users"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin: System & Infra",
+            "item": [
+                {
+                    "name": "Infrastructure Metrics",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/infra",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "infra"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Global Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/settings",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "settings"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Global Settings",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"maintenance_mode\": false,\n    \"signup_enabled\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/settings",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "settings"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Queue Lengths (Redis)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/queues",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "queues"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Global Stats Dashboard",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/stats",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "stats"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Audit Logs",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/audit_logs",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "audit_logs"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Revenue Reporting",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/revenue",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "revenue"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin: Deliverability",
+            "item": [
+                {
+                    "name": "Bounce & Failure Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/bounces/stats",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "bounces",
+                                "stats"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Suppression List",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/suppression",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "suppression"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Add to Suppression (Blacklist)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"spam-trap@example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/suppression",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "suppression"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Quick DNS Check (MX/SPF/DMARC)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/dns_check?domain=gmail.com",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "dns_check"
+                            ],
+                            "query": [
+                                {
+                                    "key": "domain",
+                                    "value": "gmail.com"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin: Recruiter Pool",
+            "item": [
+                {
+                    "name": "List Recruiters (Master)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/recruiters",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "recruiters"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Review Low-Confidence Data",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/recruiters/review",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "recruiters",
+                                "review"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Recruiter Details",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"health\": \"good\",\n    \"is_dead\": false\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/recruiters/{{recruiter_id}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "recruiters",
+                                "{{recruiter_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Override Country Mapping",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"country\": \"United Kingdom\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/recruiters/{{recruiter_id}}/override_country",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "recruiters",
+                                "{{recruiter_id}}",
+                                "override_country"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin: Worker Mgmt",
+            "item": [
+                {
+                    "name": "List Background Workers",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/workers",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "workers"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Pause Worker (Emergency)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"worker_id\": \"worker@host\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/workers/pause",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "workers",
+                                "pause"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Resume Worker",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"worker_id\": \"worker@host\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/workers/resume",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "workers",
+                                "resume"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Emergency Global Queue Reset",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Admin-API-Key",
+                                "value": "{{admin_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/admin/queue/reset",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "admin",
+                                "queue",
+                                "reset"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8000",
+            "type": "string"
+        },
+        {
+            "key": "email",
+            "value": "user@example.com",
+            "type": "string"
+        },
+        {
+            "key": "password",
+            "value": "securePassword123",
+            "type": "string"
+        },
+        {
+            "key": "csrf_token",
+            "value": "manually_get_from_cookie_or_form",
+            "type": "string"
+        },
+        {
+            "key": "admin_api_key",
+            "value": "7e9c2b4d8a1f6e3c09b5a8f2d1e7b4a6",
+            "type": "string"
+        },
+        {
+            "key": "user_id",
+            "value": "651a...",
+            "type": "string"
+        },
+        {
+            "key": "campaign_id",
+            "value": "default",
+            "type": "string"
+        },
+        {
+            "key": "recruiter_id",
+            "value": "0000...",
+            "type": "string"
+        }
+    ]
+}

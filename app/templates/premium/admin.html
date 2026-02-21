@@ -412,6 +412,9 @@
                             <button onclick="if(confirm('Send a system-wide notification?')) broadcastMessage()"
                                 class="w-full py-2 bg-primary-500/10 hover:bg-primary-500/20 text-primary-400 text-[10px] font-bold rounded-lg border border-primary-500/20 transition-all">BROADCAST
                                 NOTIFICATION</button>
+                            <button onclick="clearBroadcast()"
+                                class="w-full py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-500 hover:text-slate-300 text-[10px] font-bold rounded-lg border border-white/5 transition-all">CLEAR
+                                BROADCAST</button>
                             <button
                                 onclick="if(confirm('Optimize database indexes? This may briefly impact performance.')) optimizeIndexes()"
                                 class="w-full py-2 bg-white/5 hover:bg-white/10 text-slate-400 text-[10px] font-bold rounded-lg border border-white/10 transition-all">OPTIMIZE
@@ -1133,5 +1136,66 @@
             }
         });
     });
+
+    // --- Global Quick Action Helpers (defined outside DOMContentLoaded for inline onclick usage) ---
+    window.broadcastMessage = async () => {
+        const message = prompt('Enter the system-wide notification message to broadcast to all users:\n(max 500 characters)', '');
+        if (!message || !message.trim()) return;
+        if (message.trim().length > 500) {
+            alert('Message is too long. Please keep it under 500 characters.');
+            return;
+        }
+        try {
+            const res = await fetch('/api/admin/broadcast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message.trim() })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                alert(`✅ Broadcast sent successfully!\n\nMessage: "${data.message}"\n\nThis will be shown to all users on their next page load.`);
+            } else {
+                alert(`❌ Broadcast failed: ${data.detail || 'Unknown error'}`);
+            }
+        } catch (err) {
+            alert(`❌ Request failed: ${err.message}`);
+        }
+    };
+
+    window.optimizeIndexes = async () => {
+        const btn = event?.currentTarget;
+        const originalText = btn ? btn.innerText : '';
+        try {
+            if (btn) { btn.innerText = 'OPTIMIZING...'; btn.disabled = true; }
+            const res = await fetch('/api/admin/optimize_indexes', { method: 'POST' });
+            const data = await res.json();
+            if (data.ok) {
+                const results = Object.entries(data.results)
+                    .map(([col, status]) => `  • ${col}: ${status}`)
+                    .join('\n');
+                alert(`✅ Index optimization complete!\n\n${results}`);
+            } else {
+                alert(`❌ Optimization failed: ${data.detail || 'Unknown error'}`);
+            }
+        } catch (err) {
+            alert(`❌ Request failed: ${err.message}`);
+        } finally {
+            if (btn) { btn.innerText = originalText; btn.disabled = false; }
+        }
+    };
+
+    window.clearBroadcast = async () => {
+        try {
+            const res = await fetch('/api/admin/broadcast', { method: 'DELETE' });
+            const data = await res.json();
+            if (data.ok) {
+                alert('✅ Broadcast notification cleared. Users will no longer see the banner.');
+            } else {
+                alert(`❌ Could not clear broadcast: ${data.detail || 'Unknown error'}`);
+            }
+        } catch (err) {
+            alert(`❌ Request failed: ${err.message}`);
+        }
+    };
 </script>
 {% endblock %}

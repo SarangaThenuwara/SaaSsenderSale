@@ -36,4 +36,25 @@ def weekly_recruiter_update_trigger():
     # data = fetch_new_recruiters()
     # for batch in chunks(data, 1000):
     #     task_process_new_recruiter_batch.delay(batch)
-    return {"status": "placeholder_executed"}
+@celery_app.task
+def purge_deleted_accounts():
+    """
+    Permanently purges accounts that have been soft-deleted for > 90 days.
+    """
+    from datetime import datetime, timedelta
+    cutoff = datetime.utcnow() - timedelta(days=90)
+    
+    # 1. Find targets
+    targets = list(db.users.find({"is_deleted": True, "deleted_at": {"$lt": cutoff}}, {"_id": 1}))
+    target_ids = [t["_id"] for t in targets]
+    
+    if not target_ids:
+        return {"purged_count": 0}
+        
+    # 2. Cascade delete (Ledger, recipients)
+    # We keep it simple: Wipe the core records.
+    res_users = db.users.delete_many({"_id": {"$in": target_ids}})
+    res_ledger = db.user_recruiter_ledger.delete_many({"user_id": {"$in": target_ids}})
+    
+    LOG.info(f"PURGE: Permanently deleted {res_users.deleted_count} stale accounts and cleaned up ledgers.")
+    return {"purged_count": res_users.deleted_count}

@@ -1,0 +1,32 @@
+<h2>Phase 1: Creating the Google Cloud Project</h2>
+<p>To begin using SaaS Sender, you must first create a dedicated project within the <a
+        href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a>. This project acts as the
+    secure bridge between our automation engine and your mailbox.</p>
+
+<h3>Step-by-Step Configuration</h3>
+<ul>
+    <li>Navigate to <strong>IAM & Admin</strong> > <strong>Create a Project</strong>.</li>
+    <li>Name your project "Outreach-Infrastructure" to keep it distinct from personal data.</li>
+    <li>Go to <strong>APIs & Services</strong> > <strong>Library</strong> and search for the <strong>Gmail API</strong>.
+        Click Enable.</li>
+</ul>
+
+<h2>Phase 2: Defining the OAuth Consent Screen</h2>
+<p>Since you are bringing your own keys, you are effectively the "Developer" and "User" of your own application. This is
+    why you must configure the internal consent screen.</p>
+<ol>
+    <li>Select <strong>External</strong> User Type (or Internal if you have a Google Workspace).</li>
+    <li>Provide your primary support email and a developer contact address.</li>
+    <li><strong>Critical:</strong> Add the <code>https://www.googleapis.com/auth/gmail.send</code> scope. This is the
+        only permission the platform needs to dispatch your outreach.</li>
+</ol>
+
+<h2>Phase 3: Generating the JSON Credentials</h2>
+<p>Once the consent screen is active, go to <strong>Credentials</strong> > <strong>Create Credentials</strong> >
+    <strong>OAuth Client ID</strong>.</p>
+<p>Select <strong>Desktop App</strong> as the application type. This is requested by our security architecture because
+    it allows you to maintain full control over the refresh tokens without requiring a server-side redirect
+    vulnerability.</p>
+
+<p>Download the resulting JSON file and upload it to your SaaS Sender dashboard. We never store the plain-text version;
+    it is instantly encrypted using your session-specific key.</p>

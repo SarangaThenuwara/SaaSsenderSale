@@ -42,7 +42,7 @@ The application has been upgraded to a scalable SaaS platform with the following
     *   `POST /api/campaigns`: Create new campaign, applying filters to default pending leads.
     *   `GET /api/campaigns`: List user campaigns with real-time stats.
     *   `POST /api/campaigns/{id}/start`: Activate a specific campaign for the worker.
-*   **UI**: Added "Campaign Segments" to user dashboard with Create Modal and Toggle functionality.
+*   **UI**: [REMOVED] Campaign Segments feature retracted per user request. Simplified outreach back to global toggle.
 
 ## 7. Storage (`app/storage_b2.py`)
 *   Updated to use `userId` based paths for organized CV storage.
