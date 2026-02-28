@@ -1,0 +1,136 @@
+{% extends "premium/base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-20 px-4">
+    <div class="text-center mb-16 animate-slide-up">
+        <div
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 mb-6 font-semibold text-primary-400 text-sm">
+            <span class="w-2 h-2 rounded-full bg-primary-400 animate-pulse"></span>
+            Transparent Pricing
+        </div>
+        <h1 class="text-5xl md:text-6xl font-display font-bold text-white tracking-tight mb-6">Simple pricing, no
+            surprises.</h1>
+        <p class="text-xl text-slate-400 max-w-2xl mx-auto">One plan. Everything you need to scale your secure,
+            privacy-first email outreach.</p>
+    </div>
+
+    <div class="max-w-4xl mx-auto bg-slate-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row relative animate-slide-up"
+        style="animation-delay: 100ms;">
+        <!-- Glowing effect -->
+        <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary-500 to-transparent">
+        </div>
+        <div class="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-transparent via-primary-500 to-transparent">
+        </div>
+
+        <!-- Left side: Pricing block -->
+        <div
+            class="w-full md:w-5/12 p-8 md:p-12 border-b md:border-b-0 md:border-r border-white/5 bg-slate-950/50 flex flex-col justify-center">
+            <h3 class="text-2xl font-bold text-white mb-2">Premium Unlimited</h3>
+            <p class="text-slate-400 text-sm mb-8 leading-relaxed">Everything included to run campaigns responsibly on
+                your own infrastructure.</p>
+
+            <div class="flex items-end gap-2 mb-8">
+                <span class="text-6xl font-display font-black text-white tracking-tighter">$10</span>
+                <span class="text-slate-400 font-medium pb-2">/ month</span>
+            </div>
+
+            <a href="/signup"
+                class="btn-primary w-full py-4 rounded-xl font-bold text-lg text-center shadow-lg shadow-primary-500/20 hover:-translate-y-1 transition-all">Start
+                Sending Today</a>
+            <p class="text-center text-xs text-slate-500 mt-4">Cancel anytime. <a href="/terms"
+                    class="hover:text-primary-400 transition-colors">Non-refundable.</a></p>
+        </div>
+
+        <!-- Right side: Features block -->
+        <div class="w-full md:w-7/12 p-8 md:p-12 relative">
+            <div class="absolute inset-0 bg-primary-900/5 pointer-events-none"></div>
+
+            <p class="font-bold text-white uppercase tracking-widest text-sm mb-6">What's included</p>
+            <ul class="space-y-5">
+                <li class="flex items-start gap-4">
+                    <div
+                        class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <div>
+                        <strong class="text-white block">Intelligent Spintax Engine</strong>
+                        <span class="text-slate-400 text-sm">A/B test infinite variations of subject lines and copy to
+                            dramatically bypass spam filters.</span>
+                    </div>
+                </li>
+
+                <li class="flex items-start gap-4">
+                    <div
+                        class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <div>
+                        <strong class="text-white block">BYOK Architecture</strong>
+                        <span class="text-slate-400 text-sm">Send through your own native Gmail API via OAuth2. Your
+                            domain, your IP, your reputation.</span>
+                    </div>
+                </li>
+
+                <li class="flex items-start gap-4">
+                    <div
+                        class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <div>
+                        <strong class="text-white block">Dynamic Rate Limiting</strong>
+                        <span class="text-slate-400 text-sm">We process up to 240 emails daily per account to mimic
+                            human sending velocities automatically.</span>
+                    </div>
+                </li>
+
+                <li class="flex items-start gap-4">
+                    <div
+                        class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <div>
+                        <strong class="text-white block">Encrypted CV Attachments</strong>
+                        <span class="text-slate-400 text-sm">Automatically append your resume as a pristine PDF
+                            attachment directly to warm leads.</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- FAQ Schema included for Pricing Logic too -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [{
+    "@type": "Question",
+    "name": "Are there any hidden fees?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "No. SaaS Sender operates on a flat $10/mo transparent subscription model, covering all database usage, queue management, and CV file storage."
+    }
+  }, {
+    "@type": "Question",
+    "name": "Do you offer refunds or prorated amounts?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "For security and operational reasons with our Zero-Knowledge architecture, all automated subscription renewals are strictly non-refundable."
+    }
+  }]
+}
+</script>
+{% endblock %}

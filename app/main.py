@@ -449,6 +449,11 @@ async def security(request: Request):
     ctx = template_ctx(request)
     return templates.TemplateResponse("premium/security.html", ctx)
 
+@app.get("/pricing")
+async def pricing(request: Request):
+    ctx = template_ctx(request)
+    return templates.TemplateResponse("premium/pricing.html", ctx)
+
 @app.get("/robots.txt")
 async def robots_txt():
     content = """User-agent: *
