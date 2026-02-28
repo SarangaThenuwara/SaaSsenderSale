@@ -18,9 +18,15 @@
     content="The world's first BYOK email automation platform. Secure your outreach with zero-knowledge encryption.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="{{ request.url }}">
+  <meta property="og:image"
+    content="{{ request.url.components.scheme }}://{{ request.url.components.netloc }}/static/img/icon.svg">
+
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ title or 'Secure Email Outreach Automation' }}">
   <meta name="twitter:description" content="Privacy-focused email automation with OAuth2 security.">
+  <meta name="twitter:image"
+    content="{{ request.url.components.scheme }}://{{ request.url.components.netloc }}/static/img/icon.svg">
+  <meta name="twitter:url" content="{{ request.url }}">
 
   <!-- Structured Data (JSON-LD) -->
   <script type="application/ld+json">
@@ -245,6 +251,7 @@
               <a href="/logout" class="text-sm font-medium link-hover">Logout</a>
             </div>
             {% else %}
+            <a href="/pricing" class="text-sm font-medium link-hover">Pricing</a>
             <a href="/resources" class="text-sm font-medium link-hover">Resources</a>
             <a href="/login" class="text-sm font-medium link-hover">Login</a>
             <a href="/signup" class="btn-primary text-sm px-5 py-2 rounded-lg font-bold">Get started</a>
@@ -262,7 +269,8 @@
     </div>
 
     <!-- Mobile Menu Overlay -->
-    <div id="mobile-menu" class="hidden md:hidden border-t border-white/5 bg-slate-950/95 backdrop-blur-xl">
+    <div id="mobile-menu" class="hidden md:hidden border-t border-white/5 bg-slate-950/95 backdrop-blur-xl"
+      aria-hidden="true">
       <div class="px-4 pt-2 pb-6 space-y-3">
         {% if session_user %}
         <div class="py-3 border-b border-white/5 px-2">
@@ -277,6 +285,8 @@
           class="block px-3 py-3 rounded-xl hover:bg-white/5 text-white transition-colors">Settings</a>
         <a href="/logout" class="block px-3 py-3 rounded-xl hover:bg-white/5 text-red-400 transition-colors">Logout</a>
         {% else %}
+        <a href="/pricing"
+          class="block px-3 py-3 rounded-xl hover:bg-white/5 text-slate-200 transition-colors text-center">Pricing</a>
         <a href="/resources"
           class="block px-3 py-3 rounded-xl hover:bg-white/5 text-slate-200 transition-colors text-center">Resources</a>
         <a href="/login"
@@ -296,9 +306,11 @@
         const isHidden = mobileMenu.classList.contains('hidden');
         if (isHidden) {
           mobileMenu.classList.remove('hidden');
+          mobileMenu.setAttribute('aria-hidden', 'false');
           menuIcon.setAttribute('d', 'M6 18L18 6M6 6l12 12'); // X icon
         } else {
           mobileMenu.classList.add('hidden');
+          mobileMenu.setAttribute('aria-hidden', 'true');
           menuIcon.setAttribute('d', 'M4 6h16M4 12h16M4 18h16'); // Hamburger icon
         }
       });
