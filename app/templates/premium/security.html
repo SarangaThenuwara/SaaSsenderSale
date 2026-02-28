@@ -1,0 +1,53 @@
+{% extends "premium/base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-12 px-4 animate-fade-in">
+    <div class="text-center mb-16">
+        <h1 class="text-5xl font-bold text-white font-display mb-4">Security & Trust Center</h1>
+        <p class="text-xl text-slate-400 max-w-2xl mx-auto">Discover how SaaS Sender utilizes Zero-Knowledge encryption
+            and infrastructure segregation to protect your mission-critical outreach data.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8 mb-16">
+        <!-- Card 1 -->
+        <div class="card-glass p-8 group hover:-translate-y-1 transition-transform border-t-4 border-t-emerald-500">
+            <h3 class="text-2xl font-bold text-white mb-4">Bring Your Own Key (BYOK)</h3>
+            <p class="text-slate-400 leading-relaxed mb-6">
+                Our revolutionary architecture shifts control back to you. We act strictly as an orchestration engine,
+                while your native Google Workspace API tokens serve as the ignition key. We never mandate shared IP
+                relays, fully isolating your sender reputation from our broader user base.
+            </p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="card-glass p-8 group hover:-translate-y-1 transition-transform border-t-4 border-t-primary-500">
+            <h3 class="text-2xl font-bold text-white mb-4">OAuth2 Authorization Only</h3>
+            <p class="text-slate-400 leading-relaxed mb-6">
+                SaaS Sender never views, stores, or requests your underlying Gmail password. The industry-standard
+                OAuth2 flow grants granular, scoped access specifically for automated drafting and sending—nothing else.
+                You can unilaterally revoke this access at any time from your Google Dashboard.
+            </p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="card-glass p-8 group hover:-translate-y-1 transition-transform border-t-4 border-t-accent-500">
+            <h3 class="text-2xl font-bold text-white mb-4">Rate Limiting & Abuse Prevention</h3>
+            <p class="text-slate-400 leading-relaxed mb-6">
+                A core vector for SPAM classification is erratic sending velocity. Our decentralized worker clusters
+                employ deeply integrated Rate Limiters and intelligent queuing to emulate organic human drafting
+                patterns, effectively shielding domains against algorithmic bans or soft bounces.
+            </p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="card-glass p-8 group hover:-translate-y-1 transition-transform border-t-4 border-t-rose-500">
+            <h3 class="text-2xl font-bold text-white mb-4">Incident Response & Recovery</h3>
+            <p class="text-slate-400 leading-relaxed mb-6">
+                Our infrastructure natively supports point-in-time recovery with continuous snapshots hosted in
+                immutable storage buckets. In the unlikely event of an anomaly or data intrusion attempt, our automated
+                tripwires trigger instantaneous environment lockdowns and alert our internal SecOps team sub-minute.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

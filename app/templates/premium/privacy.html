@@ -7,7 +7,7 @@
     <div class="space-y-8 text-slate-300 leading-relaxed">
         <section>
             <h2 class="text-2xl font-bold text-white mb-4">Our Privacy Commitment</h2>
-            <p>At SaaS Email Sender, your privacy is our top priority. We built this platform with a privacy-first
+            <p>At SaaS Sender, your privacy is our top priority. We built this platform with a privacy-first
                 architecture to ensure your data remains secure and under your control at all times.</p>
         </section>
 
@@ -97,11 +97,55 @@
         </section>
 
         <section>
-            <h2 class="text-2xl font-bold text-white mb-4">Contact Us</h2>
-            <p>If you have any questions about this Privacy Policy, please contact us through your account dashboard or
-                email us directly.</p>
+            <h2 class="text-2xl font-bold text-white mb-4">U.S. State Privacy Rights (CCPA/CPRA)</h2>
+            <p class="mb-4">If you are a resident of California or another US state with applicable privacy laws, you
+                have specific rights regarding your personal information:</p>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong class="text-white">Right to Know:</strong> You may request disclosure of the specific pieces
+                    of personal data we have collected.</li>
+                <li><strong class="text-white">Right to Delete:</strong> You can request the deletion of your personal
+                    data.</li>
+                <li><strong class="text-white">Right to Opt-Out:</strong> We do not sell or share your personal
+                    information for cross-context behavioral advertising.</li>
+                <li><strong class="text-white">Non-Discrimination:</strong> We will not discriminate against you for
+                    exercising your privacy rights.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">Children's Privacy (COPPA)</h2>
+            <p>Our service is intended strictly for professional and business use. We do not knowingly collect personal
+                information from individuals under the age of 18. If you become aware that a minor has provided us with
+                personal data, please contact us immediately so we can delete their information.</p>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4">Contact & Legal Entity</h2>
+            <p class="mb-4">SaaS Sender is operated by SaaS Sender LLC, registered in the United States.</p>
+            <p class="mb-2"><strong class="text-white">Mailing Address:</strong><br>
+                SaaS Sender LLC<br>
+                123 Privacy Way, Suite 400<br>
+                San Francisco, CA 94107</p>
+            <p>If you have any questions about this Privacy Policy or wish to exercise your data rights, please contact
+                our Data Protection Officer at: <a href="mailto:privacy@saassender.com"
+                    class="text-primary-400 hover:underline">privacy@saassender.com</a></p>
         </section>
     </div>
+
+    <!-- LegalPage JSON-LD -->
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "LegalPage",
+            "name": "SaaS Sender Privacy Policy",
+            "url": "{{ APP_URL }}/privacy",
+            "publisher": {
+                "@type": "Organization",
+                "name": "SaaS Sender LLC"
+            },
+            "lastReviewed": "{{ now.strftime('%Y-%m-%d') }}"
+        }
+    </script>
 
     <div class="mt-12 pt-8 border-t border-white/10">
         <a href="/" class="text-primary-400 hover:text-primary-300 font-bold">← Back to Home</a>

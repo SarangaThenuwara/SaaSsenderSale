@@ -22,22 +22,45 @@
   <meta name="twitter:title" content="{{ title or 'Secure Email Outreach Automation' }}">
   <meta name="twitter:description" content="Privacy-focused email automation with OAuth2 security.">
 
-  <!-- Breadcrumb Schema for search engine hierarchy -->
+  <!-- Structured Data (JSON-LD) -->
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": [{
-        "@type": "ListItem",
-        "position": 1,
-        "name": "Home",
-        "item": "{{ APP_URL }}/"
-      },{
-        "@type": "ListItem",
-        "position": 2,
-        "name": "Knowledge Hub",
-        "item": "{{ APP_URL }}/resources"
-      }]
+      "@graph": [
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [{
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "{{ APP_URL }}/"
+          },{
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Knowledge Hub",
+            "item": "{{ APP_URL }}/resources"
+          }]
+        },
+        {
+          "@type": "Organization",
+          "name": "SaaS Sender",
+          "url": "{{ APP_URL }}",
+          "logo": "{{ APP_URL }}/static/img/icon.svg",
+          "sameAs": []
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "SaaS Sender",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "offers": {
+            "@type": "Offer",
+            "price": "10.00",
+            "priceCurrency": "USD"
+          },
+          "description": "Zero-knowledge email automation platform utilizing a Bring Your Own Key (BYOK) architecture for secure, privacy-first outreach."
+        }
+      ]
     }
   </script>
 
@@ -335,16 +358,17 @@
         <div>
           <h4 class="text-white text-xs font-black uppercase tracking-widest mb-6">Legal & Security</h4>
           <ul class="space-y-4 text-xs text-slate-400">
+            <li><a href="/security" class="hover:text-white transition-colors">Trust & Security</a></li>
             <li><a href="/privacy" class="hover:text-white transition-colors">Privacy Shield</a></li>
+            <li><a href="/dpa" class="hover:text-white transition-colors">Data Processing (DPA)</a></li>
             <li><a href="/terms" class="hover:text-white transition-colors">Terms of Service</a></li>
-            <li><a href="/resources/privacy-first-outreach-strategy" class="hover:text-white transition-colors">GDPR
-                Transparency</a></li>
+            <li><a href="/cookies" class="hover:text-white transition-colors">Cookie Policy</a></li>
           </ul>
         </div>
       </div>
 
       <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-        <p class="text-slate-500 text-[10px]">&copy; 2026 SaaS Email Sender. Engineered with zero-knowledge security.
+        <p class="text-slate-500 text-[10px]">&copy; 2026 SaaS Sender. Engineered with zero-knowledge security.
         </p>
         <div class="flex gap-4">
           <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
@@ -420,6 +444,36 @@
       installBtn.classList.add('hidden');
       installBtn.classList.remove('flex');
     });
+  </script>
+
+  <!-- Cookie Consent Banner -->
+  <div id="cookie-banner"
+    class="fixed bottom-0 left-0 right-0 z-[100] bg-slate-900/95 backdrop-blur-xl border-t border-white/10 p-4 transform translate-y-full transition-transform duration-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="text-sm text-slate-300 max-w-4xl">
+      We use strictly necessary cookies to keep your session secure. We do not use third-party tracking or advertising
+      cookies.
+      By continuing to use our site, you agree to our <a href="/cookies"
+        class="text-primary-400 hover:text-primary-300 underline">Cookie Policy</a> and <a href="/privacy"
+        class="text-primary-400 hover:text-primary-300 underline">Privacy Policy</a>.
+    </div>
+    <div class="flex gap-3 shrink-0">
+      <button onclick="acceptCookies()"
+        class="btn-primary px-6 py-2 text-sm font-bold shadow-lg shadow-primary-500/20 whitespace-nowrap">Got it,
+        thanks</button>
+    </div>
+  </div>
+
+  <script nonce="{{ csp_nonce }}">
+    function acceptCookies() {
+      localStorage.setItem('cookieConsent', 'accepted');
+      document.getElementById('cookie-banner').classList.add('translate-y-full');
+    }
+
+    if (!localStorage.getItem('cookieConsent')) {
+      setTimeout(() => {
+        document.getElementById('cookie-banner').classList.remove('translate-y-full');
+      }, 1000);
+    }
   </script>
 </body>
 

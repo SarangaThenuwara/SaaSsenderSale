@@ -337,6 +337,70 @@
   </div>
 </section>
 
+<!-- About & FAQ (AEO & SEO) -->
+<section class="py-24 bg-slate-950/50 border-y border-white/5">
+  <div class="max-w-4xl mx-auto px-4">
+    <div class="mb-16">
+      <h2 class="text-3xl font-bold text-white mb-4">About SaaS Sender</h2>
+      <p class="text-slate-400 leading-relaxed mb-6">
+        SaaS Sender is a <strong>BYOK (Bring Your Own Key) email outreach platform</strong>. We provide secure,
+        zero-knowledge automation for professionals who need to scale their email campaigns without compromising their
+        sender reputation or trusting third-party SMTP relays. By connecting directly to your Google Workspace via
+        OAuth2, we ensure your outreach runs locally on your credentials with built-in rate limiting and intelligent
+        rotating templates (Spintax) to avoid spam filters.
+      </p>
+
+      <h3 class="text-xl font-bold text-white mb-3">Glossary of Terms</h3>
+      <dl class="space-y-4 text-sm">
+        <div>
+          <dt class="font-bold text-primary-400">BYOK (Bring Your Own Key)</dt>
+          <dd class="text-slate-400">An architecture where you provide the core infrastructure key (in this case, your
+            Gmail API credentials), preventing us or any middleman from independently sending mail on your behalf.</dd>
+        </div>
+        <div>
+          <dt class="font-bold text-primary-400">Zero-Knowledge Architecture</dt>
+          <dd class="text-slate-400">A security model where your sensitive data (email content, recipient lists) is
+            encrypted. The platform processes it mechanically but does not access, read, or mine the contents.</dd>
+        </div>
+        <div>
+          <dt class="font-bold text-primary-400">Deliverability Velocity</dt>
+          <dd class="text-slate-400">The carefully calculated rate at which our engine sends emails (avoiding bursts) to
+            mimic human behavior and satisfy Google's algorithmic spam checks.</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [{
+        "@type": "Question",
+        "name": "What is BYOK email automation?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Bring Your Own Key (BYOK) email automation means you connect your own Gmail API credentials. We process the queue, but the actual sending happens directly through your authorized Google account, ensuring maximum privacy and deliverability."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Are my contacts and emails secure?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. We use zero-knowledge architecture. Your contacts and email templates are stored dynamically and are not mined, sold, or shared with third parties."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Do you use shared IP ranges?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Because SaaS Sender connects via your native Gmail OAuth token, emails leave via Google's trusted infrastructure, completely avoiding the reputation risks of shared SMTP platforms."
+        }
+      }]
+    }
+  </script>
+</section>
+
 <!-- Final CTA -->
 <section class="py-32 px-4 relative overflow-hidden">
   <div class="absolute inset-0 bg-gradient-to-b from-transparent to-primary-900/20 pointer-events-none"></div>

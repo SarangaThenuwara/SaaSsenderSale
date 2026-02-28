@@ -41,26 +41,62 @@
         </div>
     </div>
 
-    {% if not user.credentials_base64 or not user.token_base64 or not user.cv_uploaded_at or not user.credentials_valid
-    %}
-    <div
-        class="bg-primary-500/10 border border-primary-500/20 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div class="flex items-start sm:items-center gap-4 text-left">
-            <div class="p-3 rounded-xl bg-primary-500/20 text-primary-400 flex-shrink-0">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+    <!-- Onboarding Flow -->
+    {% set has_cv = user.cv_uploaded_at is not none %}
+    {% set has_gmail = user.credentials_base64 and user.token_base64 and user.credentials_valid %}
+    {% set all_setup = has_cv and has_gmail %}
+
+    {% if not all_setup %}
+    <div class="card-glass p-6 md:p-8 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+        <h3 class="font-bold text-xl text-white mb-2">Complete Your Setup</h3>
+        <p class="text-slate-400 text-sm mb-8 max-w-2xl">Follow these steps to configure your zero-knowledge outreach engine. Once both are complete, your campaign will be ready to start.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+            <!-- Step 1: CV -->
+            <div class="border {{ 'border-emerald-500/30 bg-emerald-500/5' if has_cv else 'border-white/10 bg-white/5' }} rounded-2xl p-6 transition-colors">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm {{ 'bg-emerald-500 text-white' if has_cv else 'bg-slate-800 text-slate-400' }}">1</div>
+                    {% if has_cv %}
+                    <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wide flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Done
+                    </span>
+                    {% else %}
+                    <span class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide">Pending</span>
+                    {% endif %}
+                </div>
+                <h4 class="font-bold text-white mb-1">Upload Resume (CV)</h4>
+                <p class="text-slate-400 text-xs mb-4">Provide the PDF resume that will be attached to your outreach emails.</p>
+                {% if not has_cv %}
+                <button onclick="document.getElementById('cv_file').click()" class="text-primary-400 hover:text-primary-300 text-sm font-semibold link-hover">Upload Below &rarr;</button>
+                {% else %}
+                <p class="text-xs text-emerald-400/80 font-medium truncate">{{ user.cv_filename }}</p>
+                {% endif %}
             </div>
-            <div>
-                <h4 class="font-bold text-white">Setup Incomplete</h4>
-                <p class="text-sm text-slate-400">Please upload your CV and validate your Gmail credentials in Settings
-                    to start sending.</p>
+
+            <!-- Step 2: Gmail -->
+            <div class="border {{ 'border-emerald-500/30 bg-emerald-500/5' if has_gmail else 'border-white/10 bg-white/5' }} rounded-2xl p-6 transition-colors">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm {{ 'bg-emerald-500 text-white' if has_gmail else 'bg-slate-800 text-slate-400' }}">2</div>
+                    {% if has_gmail %}
+                    <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wide flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Connected
+                    </span>
+                    {% else %}
+                    <span class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide">Pending</span>
+                    {% endif %}
+                </div>
+                <h4 class="font-bold text-white mb-1">Connect Gmail Securely</h4>
+                <p class="text-slate-400 text-xs mb-4">Link your Gmail account using OAuth2. Your credentials are zero-knowledge encrypted.</p>
+                {% if not has_gmail %}
+                <a href="/settings" class="text-primary-400 hover:text-primary-300 text-sm font-semibold link-hover">Configure in Settings &rarr;</a>
+                {% else %}
+                <p class="text-xs text-emerald-400/80 font-medium">OAuth2 Configured & Valid</p>
+                {% endif %}
             </div>
         </div>
-        <a href="/settings"
-            class="btn-primary w-full sm:w-auto px-6 py-2 rounded-xl text-sm whitespace-nowrap text-center">Configure
-            Now</a>
     </div>
     {% endif %}
 
@@ -160,12 +196,15 @@
             <h3 class="font-bold text-white mb-4">Account Usage</h3>
             <div class="space-y-4">
                 <div class="space-y-2">
-                    <div class="flex justify-between text-xs">
-                        <span class="text-slate-400">Daily Quota</span>
+                    <div class="flex justify-between items-start text-xs">
+                        <div>
+                            <span class="text-slate-400 block">Daily Quota</span>
+                            <span class="text-[10px] text-slate-500 block mt-0.5">Resets midnight UTC</span>
+                        </div>
                         <span class="text-white font-medium">{{ user.daily_sent|default(0) }} / {{
                             user.daily_limit|default(240) }}</span>
                     </div>
-                    <div class="w-full bg-slate-800 rounded-full h-1.5">
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
                         {% set daily_sent = user.daily_sent|default(0) %}
                         {% set daily_limit = user.daily_limit|default(240) %}
                         {% set progress = (daily_sent / daily_limit * 100) if daily_limit > 0 else 0 %}

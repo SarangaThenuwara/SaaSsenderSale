@@ -434,6 +434,21 @@ async def terms(request: Request):
     except Exception:
         return templates.TemplateResponse("index.html", ctx)
 
+@app.get("/cookies")
+async def cookies(request: Request):
+    ctx = template_ctx(request)
+    return templates.TemplateResponse("premium/cookie.html", ctx)
+
+@app.get("/dpa")
+async def dpa(request: Request):
+    ctx = template_ctx(request)
+    return templates.TemplateResponse("premium/dpa.html", ctx)
+
+@app.get("/security")
+async def security(request: Request):
+    ctx = template_ctx(request)
+    return templates.TemplateResponse("premium/security.html", ctx)
+
 @app.get("/robots.txt")
 async def robots_txt():
     content = """User-agent: *

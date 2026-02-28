@@ -7,7 +7,7 @@
     <div class="space-y-8 text-slate-300 leading-relaxed">
         <section>
             <h2 class="text-2xl font-bold text-white mb-4">1. Acceptance of Terms</h2>
-            <p>By accessing and using SaaS Email Sender ("the Service"), you accept and agree to be bound by the terms
+            <p>By accessing and using SaaS Sender ("the Service"), you accept and agree to be bound by the terms
                 and provisions of this agreement. <strong>Please note that all subscriptions are non-refundable as
                     detailed
                     in Section 9.</strong> If you do not agree to these terms, please do not use the Service.</p>
@@ -15,7 +15,7 @@
 
         <section>
             <h2 class="text-2xl font-bold text-white mb-4">2. Service Description</h2>
-            <p class="mb-4">SaaS Email Sender provides an email automation platform that:</p>
+            <p class="mb-4">SaaS Sender provides an email automation platform that:</p>
             <ul class="list-disc list-inside space-y-2">
                 <li>Connects to your Gmail account via OAuth2</li>
                 <li>Automates personalized email outreach campaigns</li>
@@ -147,6 +147,21 @@
             <p>For questions about these Terms of Service, please contact us through your account dashboard.</p>
         </section>
     </div>
+
+    <!-- LegalPage JSON-LD -->
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "LegalPage",
+            "name": "SaaS Sender Terms of Service",
+            "url": "{{ APP_URL }}/terms",
+            "publisher": {
+                "@type": "Organization",
+                "name": "SaaS Sender LLC"
+            },
+            "lastReviewed": "{{ now.strftime('%Y-%m-%d') }}"
+        }
+    </script>
 
     <div class="mt-12 pt-8 border-t border-white/10">
         <a href="/" class="text-primary-400 hover:text-primary-300 font-bold">← Back to Home</a>
