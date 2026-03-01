@@ -95,6 +95,17 @@ GUIDES = [
         "reading_time": "5 min",
         "content_template": "guides/effective-recruiter-outreach.html",
         "meta_desc": "Master the art of emailing recruiters. Learn about subject line optimization, personalization techniques, and effective call-to-actions for job seekers."
+    },
+    {
+        "slug": "email-warmup-guide",
+        "title": "Email Warmup: The Secret to Long-Term Inbox Deliverability",
+        "excerpt": "Why a slow start is better than a fast failure. Learn how our automated warmup system protects your Gmail account from being flagged.",
+        "category": "Deliverability",
+        "author": "Deliverability Experts",
+        "publish_date": "2026-03-01",
+        "reading_time": "4 min",
+        "content_template": "guides/email_warmup.html",
+        "meta_desc": "Understand the importance of email warmup for new outreach campaigns. Learn how SaaS Sender's progressive daily limits protect your sender reputation."
     }
 ]
 

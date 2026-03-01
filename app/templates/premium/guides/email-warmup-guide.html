@@ -1,0 +1,86 @@
+<div class="space-y-8">
+    <p>When you start a new email outreach campaign, your excitement is at an all-time high. You want to reach hundreds
+        of recruiters or potential clients immediately. However, if you're using a relatively new account or haven't
+        sent high volumes recently, jumping straight to 240 emails a day is the fastest way to get your account flagged,
+        throttled, or permanently suspended by Gmail.</p>
+
+    <h2 id="what-is-warmup">What is Email Warmup?</h2>
+    <p>Email warmup is the process of gradually increasing the volume of emails sent from a specific account. This
+        "signals" to automated spam filters (like Gmail's AI) that you are a legitimate human sender and not a bot or a
+        malicious actor launching a massive spam blast.</p>
+    <p>By mimicking natural human behavior—starting small and scaling up—you build what is known as <strong>Sender
+            Reputation</strong>. A strong reputation ensures your emails land in the <strong>Primary Inbox</strong>
+        instead of the "Promotions" tab or, worse, the Spam folder.</p>
+
+    <div class="bg-primary-500/10 border-l-4 border-primary-500 p-6 my-8 italic">
+        "Sender reputation is like a credit score for your email address. You have to earn the trust of the providers
+        before they allow you to handle high-volume outreach."
+    </div>
+
+    <h2 id="how-it-works">How Our Automated Warmup Works</h2>
+    <p>To protect your account, SaaS Sender implements a mandatory <strong>Progressive Warmup Phase</strong> for all new
+        enrollments. You don't have to manage this yourself; our system calculates your safe daily limit automatically
+        based on your account's age in our system.</p>
+
+    <div class="overflow-x-auto my-8">
+        <table class="w-full text-left border-collapse bg-white/2 rounded-xl border border-white/5">
+            <thead>
+                <tr class="text-[10px] text-slate-500 uppercase tracking-widest border-b border-white/10">
+                    <th class="p-4">Day</th>
+                    <th class="p-4">Daily Quota</th>
+                    <th class="p-4">Safe Status</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm divide-y divide-white/5">
+                <tr>
+                    <td class="p-4">Day 1</td>
+                    <td class="p-4 font-bold text-white">20 Emails</td>
+                    <td class="p-4"><span
+                            class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px]">Secure
+                            Start</span></td>
+                </tr>
+                <tr>
+                    <td class="p-4">Day 3</td>
+                    <td class="p-4 font-bold text-white">60 Emails</td>
+                    <td class="p-4"><span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[10px]">Active
+                            Scaling</span></td>
+                </tr>
+                <tr>
+                    <td class="p-4">Day 7</td>
+                    <td class="p-4 font-bold text-white">140 Emails</td>
+                    <td class="p-4"><span
+                            class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 text-[10px]">Trusted
+                            Sender</span></td>
+                </tr>
+                <tr>
+                    <td class="p-4">Day 12+</td>
+                    <td class="p-4 font-bold text-white">240 Emails</td>
+                    <td class="p-4"><span class="px-2 py-0.5 rounded bg-primary-500/20 text-white text-[10px]">Full
+                            Capacity</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="why-240">Why is the cap 240?</h2>
+    <p>Even after the warmup phase, we cap outreach at 240 emails per day for private Gmail accounts. While Gmail allows
+        higher technical limits, our data shows that exceeding 250 automated "personalized" messages in a 24-hour window
+        dramatically increases the risk of manual review. We prioritize your account security over raw volume.</p>
+
+    <h2 id="best-practices">Best Practices During Warmup</h2>
+    <ul class="list-disc list-inside space-y-4 marker:text-primary-500">
+        <li><strong>Use Spintax:</strong> Use our {Hi|Hello} syntax to ensure no two emails are identical. Identical
+            emails sent in batches are a major red flag.</li>
+        <li><strong>Don't Stop/Start Constantly:</strong> Frequent pausing and resuming can look erratic to filters. Let
+            the warmup run its course.</li>
+        <li><strong>Quality Content:</strong> Ensure your templates provide value. High reporting/spam rates from
+            recipients will override even the best warmup strategy.</li>
+    </ul>
+
+    <div class="mt-12 p-6 bg-slate-800/50 rounded-2xl border border-white/5">
+        <h4 class="text-white font-bold mb-2">Notice a delay in your quota?</h4>
+        <p class="text-xs text-slate-400">If your dashboard shows a "Warmup Active" badge, it means our safety protocols
+            are currently protecting your account. Your limit will automatically increase every 24 hours at Midnight
+            UTC.</p>
+    </div>
+</div>
