@@ -965,11 +965,13 @@ def user_dashboard(request: Request, user_id: str):
     pending = db.recipients.count_documents({"status": "Pending"})
     current_daily_limit = get_user_daily_limit(me)
     # Billing / Plan Status
+    is_paid = bool(me.get("is_paid"))
     plan_info = {
-        "status": "Active" if me.get("is_paid") else "Inactive",
-        "renewal_date": me.get("subscription_expires_at").strftime("%b %d, %Y") if me.get("subscription_expires_at") else "N/A",
+        "name": "Outreach Pro (BYOK)" if is_paid else "Free Tier (Warmup Only)",
+        "status": "Active" if is_paid else "Inactive",
+        "renewal_date": me.get("subscription_expires_at").strftime("%b %d, %Y") if (is_paid and me.get("subscription_expires_at")) else "None",
         "daily_limit": current_daily_limit,
-        "is_paid": bool(me.get("is_paid"))
+        "is_paid": is_paid
     }
     
     ctx = {**template_ctx(request), "user": me, "assigned": assigned, "pending": pending, "daily_limit": current_daily_limit, "plan": plan_info}
@@ -1028,20 +1030,49 @@ async def api_user_report(request: Request):
 
 
 @app.get("/settings")
-def settings_get(request: Request):
+async def settings_get(request: Request):
     user = current_session_user(request)
     if not user:
         return RedirectResponse(url="/login")
     
     # Create a shadow copy for rendering to mask sensitive data
-    display_user = dict(user)
-    mask = "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]"
-    if display_user.get("credentials_base64"):
-        display_user["credentials_base64"] = mask
-    if display_user.get("token_base64"):
-        display_user["token_base64"] = mask
+    me = db.users.find_one({"_id": user["_id"]})
+    me["_id_str"] = str(me["_id"])
+    
+    ctx = {**template_ctx(request), "user": me}
+    return templates.TemplateResponse("premium/settings.html", ctx)
 
-    return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "user": display_user})
+
+# --- Payment Routes ---
+
+@app.get("/payment")
+def payment_page(request: Request):
+    user = current_session_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    # Check if payment is enabled globally
+    settings = db.settings.find_one({"_id": "global"}) or {}
+    if not settings.get("payment_gateway_enabled", False) and user.get("role") != "admin":
+        return RedirectResponse(url=f"/user/{user['_id']}/dashboard?error=gateway_disabled")
+
+    # Double check Stripe configuration
+    from .config import STRIPE_SECRET_KEY
+    if not STRIPE_SECRET_KEY or STRIPE_SECRET_KEY.startswith("sk_test_51..."):
+        LOG.error("Stripe Secret Key is missing or default in .env")
+        return RedirectResponse(url=f"/user/{user['_id']}/dashboard?error=payment_config_missing")
+
+    # Create Stripe Checkout Session
+    session = create_checkout_session(
+        user_id=user["_id"],
+        user_email=user.get("email"),
+        price_amount=10.00
+    )
+    
+    if not session:
+        return RedirectResponse(url=f"/user/{user['_id']}/dashboard?error=payment_init_failed")
+    
+    return RedirectResponse(url=session.url, status_code=303)
 
 @app.post("/settings")
 @limiter.limit("5/minute")

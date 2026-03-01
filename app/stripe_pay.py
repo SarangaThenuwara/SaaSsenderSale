@@ -9,13 +9,19 @@ def create_checkout_session(user_id, user_email, price_amount=10.00, product_nam
     """
     Creates a Stripe Checkout Session for the user.
     """
+    from .config import STRIPE_SECRET_KEY
+    if not STRIPE_SECRET_KEY or STRIPE_SECRET_KEY.startswith("sk_test_51..."):
+        LOG.error("Cannot create session: STRIPE_SECRET_KEY is invalid or default")
+        return None
+        
+    stripe.api_key = STRIPE_SECRET_KEY
     try:
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             customer_email=user_email,
             line_items=[{
                 'price_data': {
-                    'currency': STRIPE_CURRENCY,
+                    'currency': STRIPE_CURRENCY or 'usd',
                     'product_data': {
                         'name': product_name,
                     },
@@ -33,7 +39,7 @@ def create_checkout_session(user_id, user_email, price_amount=10.00, product_nam
         )
         return session
     except Exception as e:
-        LOG.error(f"Error creating Stripe checkout session: {e}")
+        LOG.error(f"Error creating Stripe checkout session for user {user_id}: {e}")
         return None
 
 def verify_webhook_signature(payload, sig_header, webhook_secret):

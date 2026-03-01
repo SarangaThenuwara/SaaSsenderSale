@@ -4,6 +4,55 @@
 
 <div class="max-w-7xl mx-auto space-y-8 animate-fade-in">
 
+    {% if request.query_params.get('error') %}
+    <div class="bg-red-500/10 border border-red-500/50 rounded-xl p-4 flex items-center gap-4 animate-bounce">
+        <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+        </div>
+        <div>
+            <h4 class="text-sm font-bold text-white">System Notification: Activation Interrupted</h4>
+            <p class="text-xs text-red-400 mt-0.5">
+                {% if request.query_params.get('error') == 'payment_init_failed' %}
+                We couldn't initialize your secure checkout session. This usually happens if the payment provider is
+                temporarily down or keys are misconfigured. Please try again or contact support.
+                {% elif request.query_params.get('error') == 'gateway_disabled' %}
+                The payment gateway is currently under maintenance. New subscriptions are paused temporarily.
+                {% elif request.query_params.get('error') == 'payment_config_missing' %}
+                Server Configuration Alert: Stripe credentials are missing. Please check your .env environment
+                variables.
+                {% else %}
+                An unexpected error occurred during your request: {{ request.query_params.get('error') }}
+                {% endif %}
+            </p>
+        </div>
+        <button onclick="window.history.replaceState({}, document.title, window.location.pathname);"
+            class="ml-auto text-slate-500 hover:text-white transition-colors">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+    {% endif %}
+
+    {% if request.query_params.get('payment') == 'cancelled' %}
+    <div class="bg-amber-500/10 border border-amber-500/50 rounded-xl p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
+        <div>
+            <h4 class="text-sm font-bold text-white">Payment Cancelled</h4>
+            <p class="text-xs text-amber-400 mt-0.5">Your subscription was not activated because the checkout was
+                cancelled. No charges were made.</p>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Top Bar: Welcome & Stats -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
@@ -242,7 +291,9 @@
                 <div class="space-y-4">
                     <div class="flex justify-between items-center text-xs">
                         <span class="text-slate-500">Current Plan</span>
-                        <span class="text-white font-medium">Outreach Pro (BYOK)</span>
+                        <span
+                            class="{{ 'text-emerald-400 font-bold' if plan.is_paid else 'text-white font-medium' }}">{{
+                            plan.name }}</span>
                     </div>
                     <div class="flex justify-between items-center text-xs">
                         <span class="text-slate-500">Renewal Date</span>
