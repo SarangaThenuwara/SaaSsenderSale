@@ -28,8 +28,12 @@ from .supabase_auth import signup as supabase_signup, signin as supabase_signin,
 from .send_worker import send_single_message_for_user
 from .assigner import assign_pending_recipients
 from .sync_pool import sync_from_main_database
-from .webxpay import generate_webxpay_payload
-from .config import WEBXPAY_DOMAIN, APP_URL
+from .stripe_pay import create_checkout_session, verify_webhook_signature
+from .config import (
+    STRIPE_PUBLIC_KEY, STRIPE_WEBHOOK_SECRET, APP_URL
+)
+import stripe
+
 import socket
 import requests
 import json
@@ -359,17 +363,18 @@ async def add_security_headers(request: Request, call_next):
         nonce = secrets.token_hex(16)
         request.state.csp_nonce = nonce
         
-    # allow webxpay in frame-ancestors or form-action if needed
+    # allow stripe/etc in CSP
     csp_policy = (
         f"default-src 'self'; "
-        f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net; "
+        f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://js.stripe.com; "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         f"font-src 'self' https://fonts.gstatic.com; "
         f"img-src 'self' data: https:; "
         f"connect-src 'self' https://api.ipify.org; "
         f"frame-ancestors 'self'; "
+        f"frame-src 'self' https://checkout.stripe.com https://js.stripe.com; "
         f"base-uri 'self'; "
-        f"form-action 'self' {WEBXPAY_DOMAIN};"
+        f"form-action 'self' https://checkout.stripe.com;"
     )
     if APP_ENV == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
@@ -1351,97 +1356,86 @@ def payment_page(request: Request):
         # Or maybe just show onboard.
         return RedirectResponse(url=f"/user/{user['_id']}/dashboard")
 
-    # Generate Order ID and Payload for the form
-    order_id = f"SUB-{uuid.uuid4().hex[:8].upper()}"
-    amount = 10.00
-    currency = "USD" # Webxpay currency
-    
-    payload = generate_webxpay_payload(
-        order_id=order_id,
-        amount=amount,
-        currency=currency,
-        customer_email=user.get("email"),
-        customer_first_name=user.get("username").split()[0], # simplistic
-        customer_last_name="",
-        customer_phone="0000000000", # Placeholder if not collected
-        custom_1=str(user["_id"]),
-        custom_2="subscription",
-        return_url=f"{str(request.base_url).rstrip('/')}/payment/callback"
+    # Create Stripe Checkout Session
+    session = create_checkout_session(
+        user_id=user["_id"],
+        user_email=user.get("email"),
+        price_amount=10.00
     )
     
-    # Store order attempt?
+    if not session:
+        return RedirectResponse(url=f"/user/{user['_id']}/dashboard?error=payment_init_failed")
+
+    # Store order attempt
     db.payments.insert_one({
-        "order_id": order_id,
+        "order_id": session.id,
         "user_id": user["_id"],
-        "amount": amount,
-        "currency": currency,
+        "amount": 10.00,
+        "currency": "usd",
         "status": "Initiated",
         "created_at": datetime.utcnow()
     })
     
-    return templates.TemplateResponse("premium/payment.html", {
+    # Redirect to Stripe Checkout
+    return RedirectResponse(url=session.url, status_code=303)
+
+@app.get("/payment/success")
+async def payment_success(request: Request, session_id: str = None):
+    user = current_session_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    # Optional: Verify session_id with Stripe if needed immediately
+    return templates.TemplateResponse("premium/payment_success.html", {
         **template_ctx(request),
-        "user": user,
-        "payload": payload,
-        "webxpay_url": WEBXPAY_DOMAIN
+        "user": user
     })
 
-@app.api_route("/payment/callback", methods=["GET", "POST"])
-async def payment_callback(request: Request):
-    # Webxpay might send data via GET or POST depending on integration
-    # We accept both for safety.
-    params = {}
-    if request.method == "POST":
-         try:
-            form = await request.form()
-            params = dict(form)
-         except Exception:
-             pass
-    else:
-        params = dict(request.query_params)
-        
-    status = params.get("status")
-    order_id = params.get("order_id") or params.get("order_reference_number")
+@app.get("/payment/cancel")
+async def payment_cancel(request: Request):
+    user = current_session_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    return RedirectResponse(url=f"/user/{user['_id']}/dashboard?payment=cancelled")
+
+@app.post("/api/payment/webhook")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
     
-    # Basic verification (In prod, verify hash signature!)
-    signature = params.get("signature")
-    if not signature:
-         LOG.warning("Payment callback missing signature")
-         return RedirectResponse(url="/payment?error=invalid_signature", status_code=303)
-
-    from .webxpay import verify_payment_return
-    if not verify_payment_return(order_id, status, signature):
-         LOG.warning("Payment callback invalid signature for order %s", order_id)
-         return RedirectResponse(url="/payment?error=invalid_signature", status_code=303)
-
-    if status == "success" and order_id:
-        # Find payment
-        payment = db.payments.find_one({"order_id": order_id})
-        if payment:
-            if payment["status"] != "Completed":
-                db.payments.update_one({"_id": payment["_id"]}, {"$set": {"status": "Completed", "completed_at": datetime.utcnow(), "raw_response": str(params)}})
-                
-                # Activate subscription for 30 days
-                user_id = payment["user_id"]
-                expiry = datetime.utcnow() + datetime.timedelta(days=30)
-                
-                db.users.update_one({"_id": user_id}, {"$set": {
+    event = verify_webhook_signature(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    if not event:
+        return JSONResponse({"status": "invalid signature"}, status_code=400)
+    
+    # Handle the event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        user_id = session.get('metadata', {}).get('user_id')
+        
+        if user_id:
+            # Update payment record
+            db.payments.update_one(
+                {"order_id": session.id},
+                {"$set": {
+                    "status": "Completed", 
+                    "completed_at": datetime.utcnow(),
+                    "stripe_customer_id": session.get('customer')
+                }}
+            )
+            
+            # Activate subscription
+            expiry = datetime.utcnow() + timedelta(days=30)
+            db.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$set": {
                     "is_paid": True,
                     "subscription_expires_at": expiry
-                }})
-                LOG.info("Subscription activated for user %s until %s", user_id, expiry)
-        
-        # Redirect to Dashboard with success message
-        # We need to find the user from payment if not in session?
-        # Usually user is in session if browser redirect.
-        user = current_session_user(request)
-        if user:
-             return RedirectResponse(url=f"/user/{user['_id']}/dashboard?paid=true", status_code=303)
-        return RedirectResponse(url="/login", status_code=303)
-        
-    else:
-        LOG.warning("Payment failed or invalid: %s", params)
-        return RedirectResponse(url="/payment?error=failed", status_code=303)
+                }}
+            )
+            LOG.info(f"Subscription activated via webhook for user {user_id}")
+
+    return JSONResponse({"status": "success"})
+
 
 
 

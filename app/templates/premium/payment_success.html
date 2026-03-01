@@ -1,0 +1,22 @@
+{% extends "premium/base.html" %}
+{% block content %}
+<div class="max-w-md mx-auto py-12 px-4 text-center">
+    <div class="card-glass p-12">
+        <div
+            class="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/30">
+            <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+
+        <h1 class="text-3xl font-bold text-white mb-4">Payment Successful!</h1>
+        <p class="text-slate-400 mb-8">
+            Your premium subscription has been activated successfully. You can now access all premium features.
+        </p>
+
+        <a href="/user/{{ user._id }}/dashboard" class="btn-primary w-full py-3 inline-block font-bold">
+            Go to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

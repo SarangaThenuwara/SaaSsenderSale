@@ -17,3 +17,4 @@ slowapi
 itsdangerous
 cryptography
 psutil
+stripe

@@ -8,9 +8,9 @@
   <!-- SEO / AEO Meta Tags -->
   <title>{{ title or "BYOK Email Infrastructure | Secure SaaS Outreach Sender" }}</title>
   <meta name="description"
-    content="The world's first BYOK (Bring Your Own Key) email automation platform. Zero-knowledge architecture ensures your Gmail API credentials never leave your control. Enterprise-grade encryption for privacy-conscious professionals.">
+    content="The world's first BYOK (Bring Your Own Key) email automation platform. Secure your outreach with enterprise-grade encryption and Gmail API integration. Optimized for high-deliverability job outreach and business automation.">
   <meta name="keywords"
-    content="BYOK email, Bring Your Own Key, secure email automation, privacy-first SaaS, Gmail API outreach, zero-knowledge email, enterprise email security">
+    content="BYOK email, secure email automation, Gmail API outreach, job search automation, privacy-first SaaS, enterprise outreach security, SaaS Sender, secure recruiter outreach">
 
   <!-- Open Graph / Social Media -->
   <meta property="og:title" content="{{ title or 'Secure Email Outreach Automation | Privacy-First' }}">
@@ -64,18 +64,24 @@
             "price": "10.00",
             "priceCurrency": "USD"
           },
-          "description": "Zero-knowledge email automation platform utilizing a Bring Your Own Key (BYOK) architecture for secure, privacy-first outreach."
+          "description": "Zero-knowledge email automation platform utilizing a Bring Your Own Key (BYOK) architecture for secure, privacy-first outreach. Perfect for job seekers and sales professionals."
         }
       ]
     }
   </script>
+
+  <!-- Performance Optimization: Resource Hints -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lexend:wght@400;500;600;700&display=swap"
-    rel="stylesheet" crossorigin="anonymous">
+    rel="stylesheet">
 
   <style nonce="{{ csp_nonce }}">
     :root {
@@ -469,23 +475,36 @@
         class="text-primary-400 hover:text-primary-300 underline">Privacy Policy</a>.
     </div>
     <div class="flex gap-3 shrink-0">
-      <button onclick="acceptCookies()"
+      <button id="accept-cookies-btn"
         class="btn-primary px-6 py-2 text-sm font-bold shadow-lg shadow-primary-500/20 whitespace-nowrap">Got it,
         thanks</button>
     </div>
   </div>
 
   <script nonce="{{ csp_nonce }}">
-    function acceptCookies() {
-      localStorage.setItem('cookieConsent', 'accepted');
-      document.getElementById('cookie-banner').classList.add('translate-y-full');
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const banner = document.getElementById('cookie-banner');
+      const acceptBtn = document.getElementById('accept-cookies-btn');
 
-    if (!localStorage.getItem('cookieConsent')) {
-      setTimeout(() => {
-        document.getElementById('cookie-banner').classList.remove('translate-y-full');
-      }, 1000);
-    }
+      if (acceptBtn && banner) {
+        acceptBtn.addEventListener('click', () => {
+          localStorage.setItem('cookieConsent', 'accepted');
+          banner.style.transform = 'translateY(100%)';
+          setTimeout(() => {
+            banner.classList.add('hidden');
+          }, 500);
+        });
+      }
+
+      const hasConsent = localStorage.getItem('cookieConsent');
+      if (!hasConsent && banner) {
+        setTimeout(() => {
+          banner.style.transform = 'translateY(0)';
+        }, 1000);
+      } else if (banner) {
+        banner.classList.add('hidden');
+      }
+    });
   </script>
 </body>
 

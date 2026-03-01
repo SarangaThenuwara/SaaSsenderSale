@@ -13,19 +13,16 @@
             </div>
         </div>
 
-        <form action="{{ webxpay_url }}" method="POST">
-            {% for key, value in payload.items() %}
-            <input type="hidden" name="{{ key }}" value="{{ value }}">
-            {% endfor %}
-            <button type="submit" class="btn-primary w-full py-3 shadow-lg shadow-primary-500/20 text-lg font-bold">
-                Pay Securely via Webxpay
-            </button>
-        </form>
+        <div class="animate-pulse flex flex-col items-center">
+            <div class="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4">
+            </div>
+            <p class="text-white font-medium">Redirecting to Stripe Checkout...</p>
+        </div>
 
         <p class="text-xs text-slate-500 mt-6">
             By proceeding, you agree to our <a href="/terms" class="text-primary-400 hover:underline">Terms of
                 Service</a> and acknowledge that <strong>all payments are non-refundable</strong>.
-            <br>Secure payment processing provided by Webxpay.
+            <br>Secure payment processing provided by Stripe.
         </p>
     </div>
 </div>

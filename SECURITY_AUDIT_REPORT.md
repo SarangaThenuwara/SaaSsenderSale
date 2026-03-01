@@ -7,18 +7,10 @@
 
 ## 🚨 CRITICAL VULNERABILITIES
 
-### 1. **Payment Signature Verification Bypass** ⚠️ CRITICAL
-**File:** `app/webxpay.py` (Line 55)  
-**Issue:** Secret key is sent in payment payload to external gateway
-```python
-payload = {
-    "secret_key": WEBXPAY_SECRET_KEY,  # ❌ NEVER send secret to client/external service
-    "public_key": WEBXPAY_PUBLIC_KEY,
-    ...
-}
-```
-**Impact:** Attackers can forge payment confirmations  
-**Fix:** Remove `secret_key` from payload. Only use it server-side for signature verification.
+### 1. **Payment Gateway Migration** ✅ FIXED
+**Status:** Replaced Webxpay with Stripe (2026-03-01)  
+**Issue:** Original Webxpay implementation was insecurely passing secret keys.  
+**Resolution:** Migrated to Stripe Checkout with secure server-side session creation and webhook signature verification. Original `app/webxpay.py` has been removed.
 
 ---
 
@@ -288,7 +280,7 @@ except Exception as e:
 
 ## 🛠️ IMMEDIATE ACTION ITEMS (Priority Order)
 
-1. ✅ **Remove secret_key from payment payload** (webxpay.py)
+1. ✅ **Migrate to Stripe & Remove Webxpay** (Completed 2026-03-01)
 2. ✅ **Enforce strong admin credentials** (config.py)
 3. ✅ **Require FERNET_KEY in production** (utils.py)
 4. ✅ **Sanitize MongoDB regex queries** (admin.py)

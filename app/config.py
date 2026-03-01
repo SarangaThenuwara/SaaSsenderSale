@@ -69,10 +69,14 @@ GMAIL_SCOPES = os.getenv("GMAIL_SCOPES", "https://www.googleapis.com/auth/gmail.
 YOUTUBE_GUIDE_URL = os.getenv("YOUTUBE_GUIDE_URL", "#")
 COLAB_GENERATOR_URL = os.getenv("COLAB_GENERATOR_URL", "#")
 
-# Webxpay
-WEBXPAY_SECRET_KEY = os.getenv("WEBXPAY_SECRET_KEY", "your-webxpay-secret")
-WEBXPAY_PUBLIC_KEY = os.getenv("WEBXPAY_PUBLIC_KEY", "your-webxpay-public")
-WEBXPAY_DOMAIN = os.getenv("WEBXPAY_DOMAIN", "https://cms.webxpay.com/payments/checkout")  # Sandbox/Production URL
+# Stripe
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "sk_test_51...")
+STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY", "pk_test_51...")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "whsec_...")
+STRIPE_SUCCESS_URL = f"{os.getenv('APP_URL', 'http://localhost:8000')}/payment/success"
+STRIPE_CANCEL_URL = f"{os.getenv('APP_URL', 'http://localhost:8000')}/payment/cancel"
+STRIPE_CURRENCY = "usd"
+STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "price_...") # Optional: link to a specific price object if using Stripe products
 APP_URL = os.getenv("APP_URL", "http://localhost:8000")
 
 # Session Security

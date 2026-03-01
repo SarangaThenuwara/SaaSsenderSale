@@ -28,7 +28,7 @@ A professional email automation platform for job seekers to send personalized ap
 - **User Management** (block, delete, restore, set limits)
 - **CSV Export** of all users
 - **Infrastructure Monitoring** (MongoDB, B2, Celery)
-- **Payment Gateway Toggle** (Webxpay integration)
+- **Payment Gateway Toggle** (Stripe integration)
 
 ### 💾 Storage & Infrastructure
 - **Backblaze B2** for CV storage (S3-compatible)
@@ -106,10 +106,13 @@ SUPABASE_ANON_KEY=your-anon-key
 # Gmail API
 GMAIL_SCOPES=https://www.googleapis.com/auth/gmail.send
 
-# Webxpay (Payment Gateway)
-WEBXPAY_SECRET_KEY=your-webxpay-secret
-WEBXPAY_PUBLIC_KEY=your-webxpay-public
-WEBXPAY_DOMAIN=https://cms.webxpay.com/payments/checkout
+# Stripe (Payment Gateway)
+STRIPE_SECRET_KEY=your-stripe-secret
+STRIPE_PUBLIC_KEY=your-stripe-public
+STRIPE_WEBHOOK_SECRET=your-webhook-secret
+STRIPE_SUCCESS_URL=https://your-domain.com/payment/success
+STRIPE_CANCEL_URL=https://your-domain.com/payment/cancel
+STRIPE_CURRENCY=usd
 
 # Optional
 YOUTUBE_GUIDE_URL=https://youtube.com/your-guide
