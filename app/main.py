@@ -25,6 +25,7 @@ from .storage_b2 import presign_upload, get_b2_status, delete_cv
 import csv
 import io
 from .supabase_auth import signup as supabase_signup, signin as supabase_signin, get_user_from_token, get_google_auth_url
+from .user_helpers import get_user_daily_limit
 from .send_worker import send_single_message_for_user
 from .assigner import assign_pending_recipients
 from .sync_pool import sync_from_main_database
@@ -962,7 +963,8 @@ def user_dashboard(request: Request, user_id: str):
     
     assigned = db.recipients.count_documents({"assigned_to": me["_id"], "status": {"$in": ["Assigned", "InProgress"]}})
     pending = db.recipients.count_documents({"status": "Pending"})
-    ctx = {**template_ctx(request), "user": me, "assigned": assigned, "pending": pending}
+    current_daily_limit = get_user_daily_limit(me)
+    ctx = {**template_ctx(request), "user": me, "assigned": assigned, "pending": pending, "daily_limit": current_daily_limit}
     try:
         return templates.TemplateResponse("premium/dashboard.html", ctx)
     except Exception:

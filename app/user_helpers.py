@@ -88,11 +88,33 @@ def get_cv_bytes_for_user(user_id, key: Optional[str] = None, filename: Optional
 
 def get_user_daily_limit(user: dict) -> int:
     """
-    Determines the daily sending limit based on subscription status.
-    All users: 240 emails/day (no free tier)
+    Determines the daily sending limit based on email warmup and enrollment date.
+    All users: Up to 240 emails/day, starting with a warmup phase.
+    
+    Warmup Schedule (Linear):
+    Day 1: 20 emails
+    Day 2: 40 emails
+    ...
+    Day 12: 240 emails (Full capacity)
     """
     if not user:
-        return 240
+        return 20
     
-    # Return the user's configured daily limit, defaulting to 240
-    return user.get("daily_limit", 240)
+    # 1. Base potential limit from user record
+    max_limit = user.get("daily_limit", 240)
+    
+    # 2. Calculate Warmup Limit
+    created_at = user.get("created_at")
+    if not created_at:
+        # Fallback if created_at is missing for some reason
+        return max_limit
+        
+    now = datetime.datetime.utcnow()
+    # Days since signup (0-indexed, so today is day 0)
+    days_since_signup = (now - created_at).days
+    
+    # Warmup formula: 20 base + (20 * days_since_signup)
+    warmup_limit = 20 + (days_since_signup * 20)
+    
+    # 3. Return the lesser of the warmup limit or the user's max daily limit
+    return min(warmup_limit, max_limit)
