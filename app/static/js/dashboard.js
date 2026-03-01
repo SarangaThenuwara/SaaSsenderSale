@@ -97,8 +97,40 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
             // Success
-            progressBar.classList.add("bg-green-500");
+            progressBar.classList.add("bg-emerald-500");
             progressPercent.innerText = "Done!";
+
+            // Immediate Visual Confirmation
+            const area = document.getElementById("upload-area");
+            const icon = document.getElementById("upload-status-icon");
+            const text = document.getElementById("upload-area-text");
+            const subtext = document.getElementById("upload-area-subtext");
+
+            if (area) {
+                area.classList.remove("border-white/5", "bg-slate-800/20");
+                area.classList.add("border-emerald-500/50", "bg-emerald-500/5");
+            }
+            if (icon) {
+                icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+                icon.classList.remove("bg-primary-500/10", "text-primary-400");
+                icon.classList.add("bg-emerald-500/20", "text-emerald-400");
+            }
+            if (text) {
+                text.innerText = "Resume Active & Verified";
+                text.className = "text-sm text-emerald-400 font-bold mb-1 uppercase tracking-tight";
+            }
+            if (subtext) {
+                subtext.innerText = file.name;
+            }
+
+            if (area && !document.getElementById("upload-replace-text")) {
+                const replaceText = document.createElement("p");
+                replaceText.id = "upload-replace-text";
+                replaceText.className = "text-[9px] text-slate-400 mt-2 uppercase font-black animate-pulse";
+                replaceText.innerText = "Click to replace current file";
+                // Insert before the hidden inputs
+                area.insertBefore(replaceText, document.getElementById("csrf_token"));
+            }
 
             setTimeout(() => {
                 window.location.reload();
