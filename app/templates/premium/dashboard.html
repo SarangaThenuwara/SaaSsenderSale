@@ -135,10 +135,10 @@
             </h3>
 
             <div id="upload-area"
-                class="border-2 border-dashed {{ 'border-emerald-500/50 bg-emerald-500/5' if user.cv_filename else 'border-white/5 bg-slate-800/20' }} rounded-xl p-8 text-center hover:border-primary-500/30 transition-all cursor-pointer group px-4">
+                class="border-2 border-dashed {{ 'border-emerald-500/50 bg-emerald-500/5' if has_cv else 'border-white/5 bg-slate-800/20' }} rounded-xl p-8 text-center hover:border-primary-500/30 transition-all cursor-pointer group px-4">
                 <div id="upload-status-icon"
-                    class="mx-auto w-12 h-12 rounded-full {{ 'bg-emerald-500/20 text-emerald-400' if user.cv_filename else 'bg-primary-500/10 text-primary-400' }} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    {% if user.cv_filename %}
+                    class="mx-auto w-12 h-12 rounded-full {{ 'bg-emerald-500/20 text-emerald-400' if has_cv else 'bg-primary-500/10 text-primary-400' }} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    {% if has_cv %}
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
@@ -151,15 +151,16 @@
                 </div>
 
                 <p id="upload-area-text"
-                    class="text-sm {{ 'text-emerald-400 font-bold' if user.cv_filename else 'text-slate-300 font-medium' }} mb-1 uppercase tracking-tight">
-                    {{ 'Resume Active & Verified' if user.cv_filename else 'Click or drag PDF here' }}
+                    class="text-sm {{ 'text-emerald-400 font-bold' if has_cv else 'text-slate-300 font-medium' }} mb-1 uppercase tracking-tight">
+                    {{ 'Resume Active & Verified' if has_cv else 'Click or drag PDF here' }}
                 </p>
 
                 <p id="upload-area-subtext" class="text-xs text-slate-500 truncate max-w-full">
-                    {{ user.cv_filename if user.cv_filename else 'Recommended: 1-2 page PDF resume' }}
+                    {{ user.cv_filename if user.cv_filename else ('PDF Uploaded' if has_cv else 'Recommended: 1-2 page
+                    PDF resume') }}
                 </p>
 
-                {% if user.cv_filename %}
+                {% if has_cv %}
                 <p id="upload-replace-text"
                     class="text-[9px] text-slate-600 mt-2 uppercase font-black group-hover:text-primary-400 transition-colors">
                     Click to replace current file</p>
@@ -227,65 +228,125 @@
             </div>
         </div>
         {% else %}
-        <!-- Quick Info (Inactive) -->
-        <div class="card-glass p-6 lg:col-span-2">
-            <h3 class="font-bold text-white mb-4">Account Usage</h3>
-            <div class="space-y-4">
-                <div class="space-y-2">
-                    <div class="flex justify-between items-start text-xs">
-                        <div>
-                            <span class="text-slate-400 block">Daily Quota</span>
-                            <span class="text-[10px] text-slate-500 block mt-0.5">Resets midnight UTC</span>
-                        </div>
-                        <span class="text-white font-medium">{{ user.daily_sent|default(0) }} / {{ daily_limit }}</span>
-                    </div>
-                    {% if daily_limit < user.daily_limit|default(240) %} <div class="mb-2">
-                        <span
-                            class="text-[9px] px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400 font-bold uppercase tracking-tighter">Warmup
-                            Active</span>
+        <!-- Billing & Subscription Info -->
+        <div class="card-glass p-6 lg:col-span-2 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-white">Plan & Billing</h3>
+                    <span
+                        class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ 'bg-emerald-500/20 text-emerald-400' if plan.is_paid else 'bg-red-500/20 text-red-400' }}">
+                        {{ plan.status }}
+                    </span>
                 </div>
-                {% endif %}
-                <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-                    {% set daily_sent = user.daily_sent|default(0) %}
-                    {% set progress = (daily_sent / daily_limit * 100) if daily_limit > 0 else 0 %}
-                    <div class="bg-primary-500 h-1.5 rounded-full" style="width: {{ progress|round }}%">
+
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-500">Current Plan</span>
+                        <span class="text-white font-medium">Outreach Pro (BYOK)</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-500">Renewal Date</span>
+                        <span class="text-white font-medium">{{ plan.renewal_date }}</span>
                     </div>
                 </div>
             </div>
-            <a href="/settings" class="block text-center text-xs text-primary-400 hover:underline">Update
-                Settings & Templates</a>
+
+            <div class="mt-6 pt-6 border-t border-white/5 space-y-3">
+                {% if not plan.is_paid %}
+                <a href="/payment"
+                    class="block w-full py-2 text-center text-xs bg-primary-600 hover:bg-primary-500 text-white rounded-lg transition-colors font-bold">Activate
+                    Subscription</a>
+                {% else %}
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-500">Auto-Renew</span>
+                    <span class="text-emerald-400">Enabled</span>
+                </div>
+                <a href="#"
+                    onclick="alert('Manage subscription via Stripe portal coming soon. Please contact support for changes.')"
+                    class="block w-full py-2 text-center text-xs bg-white/5 hover:bg-white/10 text-slate-400 rounded-lg transition-all">Manage
+                    Billing</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Info (Usage) -->
+        <div class="card-glass p-6 lg:col-span-3">
+            <h3 class="font-bold text-white mb-4 flex items-center gap-2">
+                <svg class="w-4 h-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Real-Time Consumption
+            </h3>
+            <div class="space-y-6">
+                <div class="space-y-2">
+                    <div class="flex justify-between items-end text-xs">
+                        <div>
+                            <span class="text-slate-400 block font-medium">Daily Outreach Quota</span>
+                            <span class="text-[10px] text-slate-500 block">Resets midnight UTC</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-white font-mono text-lg font-bold">{{ user.daily_sent|default(0) }}</span>
+                            <span class="text-slate-600 text-sm">/ {{ daily_limit }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
+                            {% set daily_sent = user.daily_sent|default(0) %}
+                            {% set progress = (daily_sent / daily_limit * 100) if daily_limit > 0 else 0 %}
+                            <div class="bg-primary-500 h-full rounded-full transition-all duration-1000"
+                                style="width: {{ progress|round }}%"></div>
+                        </div>
+                        {% if daily_limit < user.daily_limit|default(240) %} <span
+                            class="shrink-0 text-[8px] px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400 font-black uppercase">
+                            Warmup</span>
+                            {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 pt-2">
+                    <div class="bg-white/2 rounded-xl p-3 border border-white/5">
+                        <p class="text-[9px] text-slate-500 uppercase font-black">Success Rate</p>
+                        <p class="text-xl font-bold text-white">99.4%</p>
+                    </div>
+                    <div class="bg-white/2 rounded-xl p-3 border border-white/5">
+                        <p class="text-[9px] text-slate-500 uppercase font-black">Assigned Pool</p>
+                        <p class="text-xl font-bold text-white">{{ assigned }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Activity Report -->
+    <div class="card-glass p-8">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="font-bold text-xl text-white">Recent Activity</h3>
+            <span class="text-[10px] text-slate-500 uppercase tracking-widest">Last 50 Processed</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="text-[10px] text-slate-500 uppercase tracking-wider border-b border-white/5">
+                    <tr>
+                        <th class="pb-4 font-semibold">Recipient</th>
+                        <th class="pb-4 font-semibold">Status</th>
+                        <th class="pb-4 font-semibold">Processed At</th>
+                        <th class="pb-4 font-semibold text-right">Details</th>
+                    </tr>
+                </thead>
+                <tbody id="report-body" class="divide-y divide-white/5">
+                    <tr>
+                        <td colspan="4" class="py-12 text-center text-slate-500 italic text-sm">
+                            Loading outreach status...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
-    {% endif %}
-</div>
-
-<!-- Recent Activity Report -->
-<div class="card-glass p-8">
-    <div class="flex items-center justify-between mb-6">
-        <h3 class="font-bold text-xl text-white">Recent Activity</h3>
-        <span class="text-[10px] text-slate-500 uppercase tracking-widest">Last 50 Processed</span>
-    </div>
-
-    <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="text-[10px] text-slate-500 uppercase tracking-wider border-b border-white/5">
-                <tr>
-                    <th class="pb-4 font-semibold">Recipient</th>
-                    <th class="pb-4 font-semibold">Status</th>
-                    <th class="pb-4 font-semibold">Processed At</th>
-                    <th class="pb-4 font-semibold text-right">Details</th>
-                </tr>
-            </thead>
-            <tbody id="report-body" class="divide-y divide-white/5">
-                <tr>
-                    <td colspan="4" class="py-12 text-center text-slate-500 italic text-sm">
-                        Loading outreach status...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
 </div>
 
 

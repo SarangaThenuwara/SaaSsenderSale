@@ -964,11 +964,47 @@ def user_dashboard(request: Request, user_id: str):
     assigned = db.recipients.count_documents({"assigned_to": me["_id"], "status": {"$in": ["Assigned", "InProgress"]}})
     pending = db.recipients.count_documents({"status": "Pending"})
     current_daily_limit = get_user_daily_limit(me)
-    ctx = {**template_ctx(request), "user": me, "assigned": assigned, "pending": pending, "daily_limit": current_daily_limit}
+    # Billing / Plan Status
+    plan_info = {
+        "status": "Active" if me.get("is_paid") else "Inactive",
+        "renewal_date": me.get("subscription_expires_at").strftime("%b %d, %Y") if me.get("subscription_expires_at") else "N/A",
+        "daily_limit": current_daily_limit,
+        "is_paid": bool(me.get("is_paid"))
+    }
+    
+    ctx = {**template_ctx(request), "user": me, "assigned": assigned, "pending": pending, "daily_limit": current_daily_limit, "plan": plan_info}
     try:
         return templates.TemplateResponse("premium/dashboard.html", ctx)
     except Exception:
         return templates.TemplateResponse("onboard.html", ctx)
+
+@app.get("/api/user/me")
+async def api_user_me(request: Request):
+    user = current_session_user(request)
+    if not user:
+        return JSONResponse({"error": "auth required"}, status_code=401)
+    
+    # Refresh from DB
+    me = db.users.find_one({"_id": user["_id"]})
+    if not me:
+        return JSONResponse({"error": "user not found"}, status_code=404)
+    
+    # Scrub sensitive data
+    me["_id"] = str(me["_id"])
+    if "credentials_base64" in me: del me["credentials_base64"]
+    if "token_base64" in me: del me["token_base64"]
+    if "credentials_valid" in me: del me["credentials_valid"]
+    if "supabase_id" in me: del me["supabase_id"]
+
+    # Convert dates
+    for k, v in me.items():
+        if isinstance(v, datetime):
+            me[k] = v.isoformat()
+            
+    # Add warmup/limit info
+    me["current_daily_limit"] = get_user_daily_limit(me)
+    
+    return JSONResponse(me)
 
 @app.get("/api/user/report")
 async def api_user_report(request: Request):
