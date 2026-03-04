@@ -371,7 +371,7 @@ async def add_security_headers(request: Request, call_next):
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         f"font-src 'self' https://fonts.gstatic.com; "
         f"img-src 'self' data: https:; "
-        f"connect-src 'self' https://api.ipify.org; "
+        f"connect-src 'self' https://api.ipify.org https://ssender-worker.enadoctemp.workers.dev https://fonts.googleapis.com; "
         f"frame-ancestors 'self'; "
         f"frame-src 'self' https://checkout.stripe.com https://js.stripe.com; "
         f"base-uri 'self'; "
