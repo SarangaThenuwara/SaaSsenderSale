@@ -1,213 +1,200 @@
-function corsHeaders(origin) {
-	return {
-		"Access-Control-Allow-Origin": origin,
-		"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-		"Access-Control-Allow-Headers": "Content-Type, Authorization",
-	};
-}
-
 export default {
 	async fetch(request, env, ctx) {
-		const ALLOWED_ORIGIN = "https://saa-ssender-sale.vercel.app";
-		const origin = request.headers.get("Origin");
+		const origin = "*"; // ✅ allow all origins
 
-		// 🔒 Origin restriction
-		if (origin !== ALLOWED_ORIGIN) {
-			return new Response("Forbidden", { status: 403 });
-		}
-
-		// Preflight (CORS)
+		// ✅ Handle CORS preflight
 		if (request.method === "OPTIONS") {
 			return new Response(null, {
-				headers: corsHeaders(ALLOWED_ORIGIN),
+				headers: corsHeaders(origin),
 			});
 		}
 
 		try {
-			// 🔑 Authorize with Backblaze B2
-			const authRes = await fetch("https://api.backblazeb2.com/b2api/v2/b2_authorize_account", {
-				headers: {
-					Authorization: "Basic " + btoa(`${env.B2_KEY_ID}:${env.B2_APPLICATION_KEY}`),
-				},
-			});
+			// 🔑 Step 1: Authorize with Backblaze B2
+			const authRes = await fetch(
+				"https://api.backblazeb2.com/b2api/v2/b2_authorize_account",
+				{
+					headers: {
+						Authorization:
+							"Basic " +
+							btoa(`${env.B2_KEY_ID}:${env.B2_APPLICATION_KEY}`),
+					},
+				}
+			);
 
 			if (!authRes.ok) {
-				const errText = await authRes.text();
-				return new Response(`B2 auth failed: ${errText}`, {
-					status: 502,
-					headers: corsHeaders(ALLOWED_ORIGIN),
-				});
+				throw new Error("B2 authorization failed");
 			}
 
 			const auth = await authRes.json();
+
 			const apiUrl = auth.apiUrl;
 			const authToken = auth.authorizationToken;
 			const downloadUrl = auth.downloadUrl;
-			const bucketId = env.B2_BUCKET_ID;
 
 			const url = new URL(request.url);
+			const pathname = url.pathname;
 
-			// ─── UPLOAD ────────────────────────────────────────────────────────────
-			if (url.pathname === "/upload" && request.method === "POST") {
-				const filename = url.searchParams.get("filename");
-				if (!filename) {
-					return new Response("Missing filename", {
-						status: 400,
-						headers: corsHeaders(ALLOWED_ORIGIN),
-					});
+			let b2Response;
+
+			// =========================
+			// 📤 UPLOAD FILE
+			// =========================
+			if (pathname === "/upload" && request.method === "POST") {
+				const fileName = url.searchParams.get("filename");
+
+				if (!fileName) {
+					return new Response("Missing filename", { status: 400 });
 				}
 
-				// Get upload URL from B2
-				const uploadUrlRes = await fetch(`${apiUrl}/b2api/v2/b2_get_upload_url`, {
-					method: "POST",
-					headers: {
-						Authorization: authToken,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ bucketId }),
-				});
-
-				if (!uploadUrlRes.ok) {
-					const errText = await uploadUrlRes.text();
-					return new Response(`Failed to get B2 upload URL: ${errText}`, {
-						status: 502,
-						headers: corsHeaders(ALLOWED_ORIGIN),
-					});
-				}
-
-				const uploadData = await uploadUrlRes.json();
-				const fileBytes = await request.arrayBuffer();
-
-				// Upload file to B2
-				const uploadRes = await fetch(uploadData.uploadUrl, {
-					method: "POST",
-					headers: {
-						Authorization: uploadData.authorizationToken,
-						"Content-Type": "application/pdf",
-						"X-Bz-File-Name": encodeURIComponent(filename),
-						"X-Bz-Content-Sha1": "do_not_verify",
-					},
-					body: fileBytes,
-				});
-
-				if (!uploadRes.ok) {
-					const errText = await uploadRes.text();
-					return new Response(`B2 upload failed: ${errText}`, {
-						status: 502,
-						headers: corsHeaders(ALLOWED_ORIGIN),
-					});
-				}
-
-				return new Response(JSON.stringify({ ok: true, key: filename }), {
-					headers: {
-						...corsHeaders(ALLOWED_ORIGIN),
-						"Content-Type": "application/json",
-					},
-				});
-			}
-
-			// ─── DOWNLOAD ──────────────────────────────────────────────────────────
-			if (url.pathname === "/download" && request.method === "GET") {
-				const filename = url.searchParams.get("filename");
-				if (!filename) {
-					return new Response("Missing filename", {
-						status: 400,
-						headers: corsHeaders(ALLOWED_ORIGIN),
-					});
-				}
-
-				const downloadRes = await fetch(
-					`${downloadUrl}/file/${env.B2_BUCKET_NAME}/${encodeURIComponent(filename)}`,
+				// Get upload URL
+				const uploadUrlRes = await fetch(
+					`${apiUrl}/b2api/v2/b2_get_upload_url`,
 					{
-						headers: { Authorization: authToken },
+						method: "POST",
+						headers: {
+							Authorization: authToken,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							bucketId: env.B2_BUCKET_ID,
+						}),
 					}
 				);
 
-				if (!downloadRes.ok) {
-					return new Response("File not found", {
-						status: downloadRes.status,
-						headers: corsHeaders(ALLOWED_ORIGIN),
+				const uploadData = await uploadUrlRes.json();
+
+				const file = await request.arrayBuffer();
+
+				// 🚫 Limit file size (10MB)
+				if (file.byteLength > 10 * 1024 * 1024) {
+					return new Response("File too large (max 10MB)", {
+						status: 413,
 					});
 				}
 
-				const contentType = downloadRes.headers.get("Content-Type") || "application/octet-stream";
-				const body = await downloadRes.arrayBuffer();
-
-				return new Response(body, {
-					headers: {
-						...corsHeaders(ALLOWED_ORIGIN),
-						"Content-Type": contentType,
-						"Content-Disposition": `attachment; filename="${filename.split("/").pop()}"`,
-					},
-				});
-			}
-
-			// ─── LIST ──────────────────────────────────────────────────────────────
-			if (url.pathname === "/list" && request.method === "POST") {
-				const listRes = await fetch(`${apiUrl}/b2api/v2/b2_list_file_names`, {
+				b2Response = await fetch(uploadData.uploadUrl, {
 					method: "POST",
 					headers: {
-						Authorization: authToken,
-						"Content-Type": "application/json",
+						Authorization: uploadData.authorizationToken,
+						"X-Bz-File-Name": encodeURIComponent(fileName),
+						"Content-Type": "b2/x-auto",
+						"X-Bz-Content-Sha1": "do_not_verify",
 					},
-					body: JSON.stringify({ bucketId, maxFileCount: 1000 }),
-				});
-
-				const listData = await listRes.json();
-				return new Response(JSON.stringify({ files: listData.files || [] }), {
-					headers: {
-						...corsHeaders(ALLOWED_ORIGIN),
-						"Content-Type": "application/json",
-					},
+					body: file,
 				});
 			}
 
-			// ─── DELETE ────────────────────────────────────────────────────────────
-			if (url.pathname === "/delete" && request.method === "POST") {
-				const body = await request.json();
-				const { fileName, fileId } = body;
+			// =========================
+			// 📥 DOWNLOAD FILE
+			// =========================
+			else if (pathname === "/download" && request.method === "GET") {
+				const fileName = url.searchParams.get("filename");
+
+				if (!fileName) {
+					return new Response("Missing filename", { status: 400 });
+				}
+
+				b2Response = await fetch(
+					`${downloadUrl}/file/ssender/${fileName}`,
+					{
+						headers: {
+							Authorization: authToken,
+						},
+					}
+				);
+			}
+
+			// =========================
+			// 📄 LIST FILES
+			// =========================
+			else if (pathname === "/list" && request.method === "GET") {
+				b2Response = await fetch(
+					`${apiUrl}/b2api/v2/b2_list_file_names`,
+					{
+						method: "POST",
+						headers: {
+							Authorization: authToken,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							bucketId: env.B2_BUCKET_ID,
+							maxFileCount: 100,
+						}),
+					}
+				);
+			}
+
+			// =========================
+			// ❌ DELETE FILE
+			// =========================
+			else if (pathname === "/delete" && request.method === "POST") {
+				const { fileName, fileId } = await request.json();
 
 				if (!fileName || !fileId) {
 					return new Response("Missing fileName or fileId", {
 						status: 400,
-						headers: corsHeaders(ALLOWED_ORIGIN),
 					});
 				}
 
-				const deleteRes = await fetch(`${apiUrl}/b2api/v2/b2_delete_file_version`, {
-					method: "POST",
-					headers: {
-						Authorization: authToken,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ fileName, fileId }),
-				});
-
-				if (!deleteRes.ok) {
-					const errText = await deleteRes.text();
-					return new Response(`Delete failed: ${errText}`, {
-						status: 502,
-						headers: corsHeaders(ALLOWED_ORIGIN),
-					});
-				}
-
-				return new Response(JSON.stringify({ ok: true }), {
-					headers: {
-						...corsHeaders(ALLOWED_ORIGIN),
-						"Content-Type": "application/json",
-					},
-				});
+				b2Response = await fetch(
+					`${apiUrl}/b2api/v2/b2_delete_file_version`,
+					{
+						method: "POST",
+						headers: {
+							Authorization: authToken,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							fileName,
+							fileId,
+						}),
+					}
+				);
 			}
 
-			return new Response("Not found", {
-				status: 404,
-				headers: corsHeaders(ALLOWED_ORIGIN),
+			// =========================
+			// ❌ INVALID ROUTE
+			// =========================
+			else {
+				return new Response("Not Found", { status: 404 });
+			}
+
+			// =========================
+			// 📦 RETURN RESPONSE
+			// =========================
+			const data = await b2Response.arrayBuffer();
+
+			return new Response(data, {
+				status: b2Response.status,
+				headers: {
+					...corsHeaders(origin),
+					"Content-Type":
+						b2Response.headers.get("Content-Type") ||
+						"application/json",
+				},
 			});
 		} catch (err) {
-			return new Response(`Worker error: ${err.message}`, {
-				status: 500,
-				headers: corsHeaders(ALLOWED_ORIGIN),
-			});
+			return new Response(
+				JSON.stringify({
+					error: err.message || "Internal Server Error",
+				}),
+				{
+					status: 500,
+					headers: corsHeaders(origin),
+				}
+			);
 		}
 	},
 };
+
+// =========================
+// ✅ CORS HEADERS
+// =========================
+function corsHeaders(origin) {
+	return {
+		"Access-Control-Allow-Origin": origin,
+		"Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+		"Access-Control-Allow-Headers": "Content-Type, Authorization",
+	};
+}

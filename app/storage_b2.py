@@ -54,10 +54,10 @@ def presign_upload(filename: str, content_type: str = "application/pdf", expires
     return {"upload_url": url, "key": key}
 
 def get_b2_status() -> dict:
-    # Use the /list endpoint to get stats
+    # Use the /list endpoint to get stats (worker expects GET)
     url = _get_worker_url("/list")
     try:
-        resp = requests.post(url, headers={"Origin": "https://saa-ssender-sale.vercel.app"})
+        resp = requests.get(url, headers={"Origin": "https://saa-ssender-sale.vercel.app"})
         
         if not resp.ok:
             return {"ok": False, "error": f"Worker returned status {resp.status_code}"}
@@ -90,9 +90,9 @@ def delete_cv(key: str):
         return
     url = _get_worker_url("/delete")
     try:
-        # First, find fileId
+        # First, find fileId (worker expects GET for /list)
         list_url = _get_worker_url("/list")
-        list_resp = requests.post(list_url, headers={"Origin": "https://saa-ssender-sale.vercel.app"})
+        list_resp = requests.get(list_url, headers={"Origin": "https://saa-ssender-sale.vercel.app"})
         if not list_resp.ok:
             return
         files = list_resp.json().get("files", [])
