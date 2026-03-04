@@ -184,8 +184,16 @@
 
   <script nonce="{{ csp_nonce }}">
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => { });
+      window.addEventListener('load', async () => {
+        try {
+          // Unregister all old service workers first to force fresh sw.js
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const reg of registrations) {
+            await reg.unregister();
+          }
+          // Now re-register the latest version
+          await navigator.serviceWorker.register('/sw.js');
+        } catch (e) { /* silently ignore */ }
       });
     }
   </script>
