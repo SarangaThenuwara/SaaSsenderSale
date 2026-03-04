@@ -1,4 +1,4 @@
-const CACHE_NAME = 'saas-sender-v2'; // Bumped version
+const CACHE_NAME = 'saas-sender-v3'; // Bumped version
 const ASSETS = [
     '/manifest.json',
     '/static/img/icon.svg',
@@ -36,11 +36,13 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(event.request)
                 .then((response) => {
-                    // Update cache for offline use, but mostly rely on the fresh network response
-                    const responseClone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseClone);
-                    });
+                    // Update cache for offline use (only GET requests)
+                    if (event.request.method === 'GET') {
+                        const responseClone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseClone);
+                        });
+                    }
                     return response;
                 })
                 .catch(() => {
