@@ -1,209 +1,168 @@
 export default {
-	async fetch(request, env, ctx) {
-		const origin = "*";
+  async fetch(request, env, ctx) {
+    const origin = "*";
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    };
 
-		if (request.method === "OPTIONS") {
-			return new Response(null, { headers: corsHeaders(origin) });
-		}
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders });
+    }
 
-		const url = new URL(request.url);
-		const pathname = url.pathname;
+    const url = new URL(request.url);
+    const pathname = url.pathname.replace(/\/+$/, "") || "/";
 
-		// 🔍 DEBUG endpoint — remove after diagnosis
-		if (pathname === "/debug") {
-			return new Response(JSON.stringify({
-				method: request.method,
-				pathname,
-				url: request.url,
-				headers: Object.fromEntries(request.headers.entries()),
-				B2_KEY_ID_set: !!env.B2_KEY_ID,
-				B2_APPLICATION_KEY_set: !!env.B2_APPLICATION_KEY,
-				B2_BUCKET_ID_set: !!env.B2_BUCKET_ID,
-			}, null, 2), {
-				headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-			});
-		}
+    try {
+      const KEY_ID = String(env.B2_KEY_ID || "").trim();
+      const APP_KEY = String(env.B2_APPLICATION_KEY || "").trim();
+      const BUCKET_ID = String(env.B2_BUCKET_ID || "").trim();
+      const BUCKET_NAME = String(env.B2_BUCKET_NAME || "").trim() || "ssender";
 
-		try {
-			// ── Step 1: Verify env vars are set ──────────────────────────────────
-			if (!env.B2_KEY_ID || !env.B2_APPLICATION_KEY || !env.B2_BUCKET_ID) {
-				return new Response(
-					JSON.stringify({
-						error: "Missing B2 environment variables",
-						B2_KEY_ID: !!env.B2_KEY_ID,
-						B2_APPLICATION_KEY: !!env.B2_APPLICATION_KEY,
-						B2_BUCKET_ID: !!env.B2_BUCKET_ID,
-					}),
-					{ status: 500, headers: { ...corsHeaders(origin), "Content-Type": "application/json" } }
-				);
-			}
+      // 🔍 DEBUG endpoint
+      if (pathname === "/debug") {
+        return new Response(JSON.stringify({
+          status: "Worker Active",
+          env_set: {
+            B2_KEY_ID: !!KEY_ID,
+            B2_APPLICATION_KEY: !!APP_KEY,
+            B2_BUCKET_ID: !!BUCKET_ID,
+            B2_BUCKET_NAME: !!BUCKET_NAME
+          },
+          config: {
+            KEY_ID_PREV: KEY_ID ? KEY_ID.substring(0, 4) + "****" : false,
+            BUCKET_NAME
+          },
+          request: { method: request.method, pathname, url: request.url }
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
 
-			// ── Step 2: Authorize with B2 ─────────────────────────────────────────
-			const authRes = await fetch("https://api.backblazeb2.com/b2api/v2/b2_authorize_account", {
-				headers: {
-					Authorization: "Basic " + btoa(`${env.B2_KEY_ID}:${env.B2_APPLICATION_KEY}`),
-				},
-			});
+      // 🔍 TEST auth
+      if (pathname === "/test-auth") {
+        try {
+          const auth = await b2Auth(KEY_ID, APP_KEY);
+          return new Response(JSON.stringify({ ok: true, bucketId: BUCKET_ID, auth }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ ok: false, error: err.message }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+      }
 
-			if (!authRes.ok) {
-				const errText = await authRes.text();
-				return new Response(
-					JSON.stringify({ error: "B2 auth failed", status: authRes.status, detail: errText }),
-					{ status: 502, headers: { ...corsHeaders(origin), "Content-Type": "application/json" } }
-				);
-			}
+      // --- 1. UPLOAD (POST /upload) ---
+      if (pathname === "/upload" && request.method === "POST") {
+        const fileName = url.searchParams.get("filename");
+        if (!fileName) throw new Error("Missing filename parameter");
 
-			const auth = await authRes.json();
-			const { apiUrl, authorizationToken: authToken, downloadUrl } = auth;
+        const auth = await b2Auth(KEY_ID, APP_KEY);
 
+        const getUrlRes = await fetch(`${auth.apiUrl}/b2api/v2/b2_get_upload_url`, {
+          method: "POST",
+          headers: { Authorization: auth.authorizationToken, "Content-Type": "application/json" },
+          body: JSON.stringify({ bucketId: BUCKET_ID })
+        });
 
-			// ── UPLOAD ────────────────────────────────────────────────────────────
-			if (pathname === "/upload" && request.method === "POST") {
-				const fileName = url.searchParams.get("filename");
-				if (!fileName) {
-					return new Response(JSON.stringify({ error: "Missing filename param" }), {
-						status: 400, headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-					});
-				}
+        if (!getUrlRes.ok) {
+          const detail = await getUrlRes.text();
+          return new Response(JSON.stringify({ error: "B2 Upload URL failed", detail }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
 
-				// Get B2 upload URL
-				const uploadUrlRes = await fetch(`${apiUrl}/b2api/v2/b2_get_upload_url`, {
-					method: "POST",
-					headers: { Authorization: authToken, "Content-Type": "application/json" },
-					body: JSON.stringify({ bucketId: env.B2_BUCKET_ID }),
-				});
+        const { uploadUrl, authorizationToken: uploadToken } = await getUrlRes.json();
 
-				if (!uploadUrlRes.ok) {
-					const errText = await uploadUrlRes.text();
-					return new Response(
-						JSON.stringify({ error: "Failed to get B2 upload URL", status: uploadUrlRes.status, detail: errText }),
-						{ status: 502, headers: { ...corsHeaders(origin), "Content-Type": "application/json" } }
-					);
-				}
+        const b2Res = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            Authorization: uploadToken,
+            "X-Bz-File-Name": encodeURIComponent(fileName),
+            "Content-Type": request.headers.get("Content-Type") || "application/octet-stream",
+            "X-Bz-Content-Sha1": "do_not_verify"
+          },
+          body: await request.arrayBuffer()
+        });
 
-				const uploadData = await uploadUrlRes.json();
-				const file = await request.arrayBuffer();
+        const result = await b2Res.text();
+        return new Response(result, { status: b2Res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
 
-				if (file.byteLength > 10 * 1024 * 1024) {
-					return new Response(JSON.stringify({ error: "File too large (max 10MB)" }), {
-						status: 413, headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-					});
-				}
+      // --- 2. DOWNLOAD (GET /download) ---
+      if (pathname === "/download" && request.method === "GET") {
+        const fileName = url.searchParams.get("filename");
+        if (!fileName) throw new Error("Missing filename parameter");
 
-				const b2UploadRes = await fetch(uploadData.uploadUrl, {
-					method: "POST",
-					headers: {
-						Authorization: uploadData.authorizationToken,
-						"X-Bz-File-Name": encodeURIComponent(fileName),
-						"Content-Type": "b2/x-auto",
-						"X-Bz-Content-Sha1": "do_not_verify",
-					},
-					body: file,
-				});
+        const auth = await b2Auth(KEY_ID, APP_KEY);
+        const dlRes = await fetch(`${auth.downloadUrl}/file/${BUCKET_NAME}/${encodeURIComponent(fileName)}`, {
+          headers: { Authorization: auth.authorizationToken }
+        });
 
-				if (!b2UploadRes.ok) {
-					const errText = await b2UploadRes.text();
-					return new Response(
-						JSON.stringify({ error: "B2 upload failed", status: b2UploadRes.status, detail: errText }),
-						{ status: 502, headers: { ...corsHeaders(origin), "Content-Type": "application/json" } }
-					);
-				}
+        if (!dlRes.ok) {
+          const errText = await dlRes.text();
+          return new Response(JSON.stringify({ error: "B2 Download failed", detail: errText }), { status: dlRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
 
-				const uploadResult = await b2UploadRes.json();
-				return new Response(JSON.stringify({ ok: true, key: fileName, fileId: uploadResult.fileId }), {
-					status: 200, headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-				});
-			}
+        return new Response(await dlRes.arrayBuffer(), {
+          status: dlRes.status,
+          headers: {
+            "Access-Control-Allow-Origin": origin,
+            "Content-Type": dlRes.headers.get("Content-Type") || "application/octet-stream",
+            "Content-Disposition": dlRes.headers.get("Content-Disposition") || ""
+          }
+        });
+      }
 
-			// ── DOWNLOAD ──────────────────────────────────────────────────────────
-			else if (pathname === "/download" && request.method === "GET") {
-				const fileName = url.searchParams.get("filename");
-				if (!fileName) {
-					return new Response(JSON.stringify({ error: "Missing filename param" }), {
-						status: 400, headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-					});
-				}
+      // --- 3. LIST (GET /list) ---
+      if (pathname === "/list" && request.method === "GET") {
+        const auth = await b2Auth(KEY_ID, APP_KEY);
+        const listRes = await fetch(`${auth.apiUrl}/b2api/v2/b2_list_file_names`, {
+          method: "POST",
+          headers: { Authorization: auth.authorizationToken, "Content-Type": "application/json" },
+          body: JSON.stringify({ bucketId: BUCKET_ID, maxFileCount: 100 })
+        });
 
-				const dlRes = await fetch(`${downloadUrl}/file/ssender/${fileName}`, {
-					headers: { Authorization: authToken },
-				});
+        const result = await listRes.text();
+        return new Response(result, { status: listRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
 
-				if (!dlRes.ok) {
-					return new Response(JSON.stringify({ error: "File not found", status: dlRes.status }), {
-						status: dlRes.status, headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-					});
-				}
+      // --- 4. DELETE (POST /delete) ---
+      if (pathname === "/delete" && request.method === "POST") {
+        const { fileName, fileId } = await request.json();
+        if (!fileName || !fileId) throw new Error("Missing fileName or fileId");
 
-				const contentType = dlRes.headers.get("Content-Type") || "application/octet-stream";
-				return new Response(await dlRes.arrayBuffer(), {
-					headers: {
-						...corsHeaders(origin),
-						"Content-Type": contentType,
-						"Content-Disposition": `attachment; filename="${fileName.split("/").pop()}"`,
-					},
-				});
-			}
+        const auth = await b2Auth(KEY_ID, APP_KEY);
+        const delRes = await fetch(`${auth.apiUrl}/b2api/v2/b2_delete_file_version`, {
+          method: "POST",
+          headers: { Authorization: auth.authorizationToken, "Content-Type": "application/json" },
+          body: JSON.stringify({ fileName, fileId })
+        });
 
-			// ── LIST ──────────────────────────────────────────────────────────────
-			else if (pathname === "/list" && request.method === "GET") {
-				const listRes = await fetch(`${apiUrl}/b2api/v2/b2_list_file_names`, {
-					method: "POST",
-					headers: { Authorization: authToken, "Content-Type": "application/json" },
-					body: JSON.stringify({ bucketId: env.B2_BUCKET_ID, maxFileCount: 100 }),
-				});
+        const result = await delRes.text();
+        return new Response(result, { status: delRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
 
-				const listData = await listRes.json();
-				return new Response(JSON.stringify({ files: listData.files || [] }), {
-					headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-				});
-			}
+      return new Response(JSON.stringify({ error: `Not Found: ${pathname} [${request.method}]` }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-			// ── DELETE ────────────────────────────────────────────────────────────
-			else if (pathname === "/delete" && request.method === "POST") {
-				const body = await request.json();
-				const { fileName, fileId } = body;
-
-				if (!fileName || !fileId) {
-					return new Response(JSON.stringify({ error: "Missing fileName or fileId" }), {
-						status: 400, headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-					});
-				}
-
-				const delRes = await fetch(`${apiUrl}/b2api/v2/b2_delete_file_version`, {
-					method: "POST",
-					headers: { Authorization: authToken, "Content-Type": "application/json" },
-					body: JSON.stringify({ fileName, fileId }),
-				});
-
-				if (!delRes.ok) {
-					const errText = await delRes.text();
-					return new Response(JSON.stringify({ error: "Delete failed", detail: errText }), {
-						status: 502, headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-					});
-				}
-
-				return new Response(JSON.stringify({ ok: true }), {
-					headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-				});
-			}
-
-			return new Response(JSON.stringify({ error: "Not Found" }), {
-				status: 404, headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-			});
-
-		} catch (err) {
-			return new Response(
-				JSON.stringify({ error: err.message || "Internal Server Error", stack: err.stack }),
-				{ status: 500, headers: { ...corsHeaders(origin), "Content-Type": "application/json" } }
-			);
-		}
-	},
+    } catch (err) {
+      return new Response(JSON.stringify({
+        error: err.message || "Internal Server Error",
+        stack: err.stack
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+  }
 };
 
-function corsHeaders(origin) {
-	return {
-		"Access-Control-Allow-Origin": origin,
-		"Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-		"Access-Control-Allow-Headers": "Content-Type, Authorization",
-	};
+async function b2Auth(id, key) {
+  const res = await fetch("https://api.backblazeb2.com/b2api/v2/b2_authorize_account", {
+    headers: { Authorization: "Basic " + btoa(`${id}:${key}`) }
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`B2 Auth Failed: ${txt}`);
+  }
+  return res.json();
 }
