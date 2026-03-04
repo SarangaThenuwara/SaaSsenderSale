@@ -1,4 +1,4 @@
-const CACHE_NAME = 'saas-sender-v3'; // Bumped version
+const CACHE_NAME = 'saas-sender-v4'; // Bumped to force sw refresh
 const ASSETS = [
     '/manifest.json',
     '/static/img/icon.svg',
@@ -26,23 +26,34 @@ self.addEventListener('activate', (event) => {
             );
         })
     );
+    self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
+
+    // IMPORTANT: Only handle same-origin requests.
+    // Let the browser handle all cross-origin requests (fonts, APIs, external assets)
+    // natively so they are subject to the HTML document's normal security rules
+    // and don't get blocked by service-worker-inherited CSP.
+    if (url.origin !== self.location.origin) {
+        return; // Do NOT call event.respondWith() for cross-origin requests
+    }
+
+    // Skip non-GET requests (POST, PUT, DELETE etc.) — can't be cached
+    if (event.request.method !== 'GET') {
+        return;
+    }
 
     // 1. For Navigation (HTML) requests, use Network First
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request)
                 .then((response) => {
-                    // Update cache for offline use (only GET requests)
-                    if (event.request.method === 'GET') {
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseClone);
-                        });
-                    }
+                    const responseClone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseClone);
+                    });
                     return response;
                 })
                 .catch(() => {
@@ -53,7 +64,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 2. For static assets in ASSETS, use Cache First
+    // 2. For same-origin static assets, use Cache First
     if (ASSETS.includes(url.pathname) || url.pathname.startsWith('/static/')) {
         event.respondWith(
             caches.match(event.request).then((response) => {
@@ -63,7 +74,6 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 3. Default: Network only or whatever
-    event.respondWith(fetch(event.request));
+    // 3. All other same-origin requests: Network only
+    // (API calls, etc. — don't cache these)
 });
-
