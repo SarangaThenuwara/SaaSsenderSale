@@ -370,7 +370,7 @@ async def add_security_headers(request: Request, call_next):
         f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://js.stripe.com; "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         f"font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com data:; "
-        f"img-src 'self' data: https:; "
+        f"img-src 'self' data: https: https://grainy-gradients.vercel.app; "
         f"connect-src 'self' https://api.ipify.org https://ssender-worker.enadoctemp.workers.dev https://fonts.googleapis.com https://grainy-gradients.vercel.app; "
         f"frame-ancestors 'self'; "
         f"frame-src 'self' https://checkout.stripe.com https://js.stripe.com; "
