@@ -1453,7 +1453,7 @@ def payment_page(request: Request):
         "order_id": session.id,
         "user_id": user["_id"],
         "amount": 10.00,
-        "currency": "usd",
+        "currency": "USD",
         "status": "Initiated",
         "created_at": datetime.utcnow()
     })
