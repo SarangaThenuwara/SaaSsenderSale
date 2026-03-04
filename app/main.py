@@ -889,7 +889,7 @@ async def api_presign_upload(request: Request):
         return JSONResponse({"error": "Invalid content type. Only PDF files are allowed."}, status_code=400)
 
     try:
-        res = presign_upload(filename=filename, content_type=content_type)
+        res = presign_upload(filename=filename, content_type=content_type, user_id=str(user["_id"]))
     except Exception as e:
         LOG.exception("presign failed")
         return JSONResponse({"error": "presign failed"}, status_code=500)
@@ -1039,7 +1039,20 @@ async def settings_get(request: Request):
     me = db.users.find_one({"_id": user["_id"]})
     me["_id_str"] = str(me["_id"])
     
-    ctx = {**template_ctx(request), "user": me}
+    current_daily_limit = get_user_daily_limit(me)
+    is_paid = bool(me.get("is_paid"))
+    plan_info = {
+        "name": "Outreach Pro (BYOK)" if is_paid else "Free Tier (Warmup Only)",
+        "status": "Active" if is_paid else "Inactive",
+        "renewal_date": me.get("subscription_expires_at").strftime("%b %d, %Y") if (is_paid and me.get("subscription_expires_at")) else "None",
+        "daily_limit": current_daily_limit,
+        "is_paid": is_paid
+    }
+    
+    global_settings = db.settings.find_one({"_id": "global"}) or {}
+    payment_active = global_settings.get("payment_gateway_enabled", False)
+    
+    ctx = {**template_ctx(request), "user": me, "plan": plan_info, "payment_active": payment_active}
     return templates.TemplateResponse("premium/settings.html", ctx)
 
 

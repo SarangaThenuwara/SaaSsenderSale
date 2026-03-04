@@ -277,51 +277,8 @@
             </div>
         </div>
         {% else %}
-        <!-- Billing & Subscription Info -->
-        <div class="card-glass p-6 lg:col-span-2 flex flex-col justify-between">
-            <div>
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-white">Plan & Billing</h3>
-                    <span
-                        class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ 'bg-emerald-500/20 text-emerald-400' if plan.is_paid else 'bg-red-500/20 text-red-400' }}">
-                        {{ plan.status }}
-                    </span>
-                </div>
-
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center text-xs">
-                        <span class="text-slate-500">Current Plan</span>
-                        <span
-                            class="{{ 'text-emerald-400 font-bold' if plan.is_paid else 'text-white font-medium' }}">{{
-                            plan.name }}</span>
-                    </div>
-                    <div class="flex justify-between items-center text-xs">
-                        <span class="text-slate-500">Renewal Date</span>
-                        <span class="text-white font-medium">{{ plan.renewal_date }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-6 pt-6 border-t border-white/5 space-y-3">
-                {% if not plan.is_paid %}
-                <a href="/payment"
-                    class="block w-full py-2 text-center text-xs bg-primary-600 hover:bg-primary-500 text-white rounded-lg transition-colors font-bold">Activate
-                    Subscription</a>
-                {% else %}
-                <div class="flex justify-between items-center text-xs">
-                    <span class="text-slate-500">Auto-Renew</span>
-                    <span class="text-emerald-400">Enabled</span>
-                </div>
-                <a href="#"
-                    onclick="alert('Manage subscription via Stripe portal coming soon. Please contact support for changes.')"
-                    class="block w-full py-2 text-center text-xs bg-white/5 hover:bg-white/10 text-slate-400 rounded-lg transition-all">Manage
-                    Billing</a>
-                {% endif %}
-            </div>
-        </div>
-
         <!-- Quick Info (Usage) -->
-        <div class="card-glass p-6 lg:col-span-3">
+        <div class="card-glass p-6 lg:col-span-2">
             <h3 class="font-bold text-white mb-4 flex items-center gap-2">
                 <svg class="w-4 h-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

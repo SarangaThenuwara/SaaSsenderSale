@@ -464,6 +464,7 @@
     });
   </script>
 
+  {% if not session_user %}
   <!-- Cookie Consent Banner -->
   <div id="cookie-banner"
     class="fixed bottom-0 left-0 right-0 z-[100] bg-slate-900/95 backdrop-blur-xl border-t border-white/10 p-4 transform translate-y-full transition-transform duration-500 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -506,6 +507,7 @@
       }
     });
   </script>
+  {% endif %}
 </body>
 
 </html>

@@ -28,10 +28,12 @@ window.presignedUpload = async function (file, presignEndpoint, completeEndpoint
 
   const { upload_url, key } = await presignResp.json();
 
-  // 2) PUT file with progress
+  // 2) PUT (or POST) file with progress
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", upload_url, true);
+    // Worker expects POST for file upload
+    xhr.open("POST", upload_url, true);
+    // Explicitly setting Content-Type so it's not multipart/form-data
     xhr.setRequestHeader("Content-Type", "application/pdf");
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
