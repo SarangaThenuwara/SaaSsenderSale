@@ -16,8 +16,13 @@ window.presignedUpload = async function (file, presignEndpoint, completeEndpoint
   form.append("filename", file.name);
   form.append("content_type", "application/pdf");
 
+  const csrf = document.getElementById("csrf_token")?.value || document.querySelector('input[name="csrf"]')?.value;
+
   const presignResp = await fetch(presignEndpoint, {
     method: "POST",
+    headers: {
+      "X-CSRF-Token": csrf
+    },
     body: form
   });
 
@@ -46,7 +51,10 @@ window.presignedUpload = async function (file, presignEndpoint, completeEndpoint
         // notify server the upload completed and associate key with user
         const completeResp = await fetch(completeEndpoint, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrf
+          },
           body: JSON.stringify({ key, filename: file.name })
         });
         if (!completeResp.ok) {
