@@ -28,7 +28,7 @@ celery_app.conf.beat_schedule = {
     },
     "auto-sync-pool": {
         "task": "app.sync_pool.sync_from_main_database",
-        "schedule": crontab(minute=0), # Every hour at the top of the hour
+        "schedule": crontab(minute=0, hour='*/6'), # Every 6 hours
     },
     "purge-old-deleted-users": {
         "task": "app.send_worker.purge_deleted_users",
