@@ -360,10 +360,12 @@
                             <div class="bg-primary-500 h-full rounded-full transition-all duration-1000"
                                 style="width:{{ pct }}%;"></div>
                         </div>
+                        {% if plan.warmup_active %}
                         <span
                             title="The system is slowly increasing your daily limit to keep your account safe from being flagged as spam. This is normal and recommended."
                             class="cursor-help shrink-0 text-[8px] px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400 font-black uppercase transition-colors decoration-none">
                             ? WARMUP ACTIVE</span>
+                        {% endif %}
                     </div>
                 </div>
 

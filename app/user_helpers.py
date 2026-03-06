@@ -116,18 +116,18 @@ def get_user_daily_limit(user: dict) -> int:
     # 1. Base potential limit from user record
     max_limit = user.get("daily_limit", 240)
     
-    # 2. Calculate Warmup Limit
-    created_at = user.get("created_at")
-    if not created_at:
-        # Fallback if created_at is missing for some reason
-        return max_limit
+    # 2. Calculate Warmup Limit based on first campaign start
+    warmup_start = user.get("warmup_started_at")
+    if not warmup_start:
+        # User hasn't run their first campaign yet, keep them at base 20
+        return min(20, max_limit)
         
     now = datetime.datetime.utcnow()
-    # Days since signup (0-indexed, so today is day 0)
-    days_since_signup = (now - created_at).days
+    # Days since first campaign start (0-indexed, so day of start is day 0)
+    days_since_start = (now - warmup_start).days
     
-    # Warmup formula: 20 base + (20 * days_since_signup)
-    warmup_limit = 20 + (days_since_signup * 20)
+    # Warmup formula: 20 base + (20 * days_since_start)
+    warmup_limit = 20 + (days_since_start * 20)
     
     # 3. Return the lesser of the warmup limit or the user's max daily limit
     return min(warmup_limit, max_limit)

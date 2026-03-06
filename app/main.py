@@ -1031,12 +1031,15 @@ def user_dashboard(request: Request, user_id: str):
     current_daily_limit = get_user_daily_limit(me)
     # Billing / Plan Status
     is_paid = bool(me.get("is_paid"))
+    warmup_started = bool(me.get("warmup_started_at"))
+    
     plan_info = {
-        "name": "Outreach Pro (BYOK)" if is_paid else "Free Tier (Warmup Only)",
-        "status": "Active" if is_paid else "Inactive",
+        "name": "Outreach Pro (BYOK)" if is_paid else ("Free Tier (Warmup Active)" if warmup_started else "Free Tier (Setup Mode)"),
+        "status": "Active" if (is_paid or warmup_started) else "Inactive",
         "renewal_date": me.get("subscription_expires_at").strftime("%b %d, %Y") if (is_paid and me.get("subscription_expires_at")) else "None",
         "daily_limit": current_daily_limit,
-        "is_paid": is_paid
+        "is_paid": is_paid,
+        "warmup_active": warmup_started
     }
     
     ctx = {**template_ctx(request), "user": me, "assigned": assigned, "pending": pending, "daily_limit": current_daily_limit, "plan": plan_info}
@@ -1127,12 +1130,15 @@ async def settings_get(request: Request):
     
     current_daily_limit = get_user_daily_limit(me)
     is_paid = bool(me.get("is_paid"))
+    warmup_started = bool(me.get("warmup_started_at"))
+    
     plan_info = {
-        "name": "Outreach Pro (BYOK)" if is_paid else "Free Tier (Warmup Only)",
-        "status": "Active" if is_paid else "Inactive",
+        "name": "Outreach Pro (BYOK)" if is_paid else ("Free Tier (Warmup Active)" if warmup_started else "Free Tier (Setup Mode)"),
+        "status": "Active" if (is_paid or warmup_started) else "Inactive",
         "renewal_date": me.get("subscription_expires_at").strftime("%b %d, %Y") if (is_paid and me.get("subscription_expires_at")) else "None",
         "daily_limit": current_daily_limit,
-        "is_paid": is_paid
+        "is_paid": is_paid,
+        "warmup_active": warmup_started
     }
     
     global_settings = db.settings.find_one({"_id": "global"}) or {}
@@ -1428,7 +1434,13 @@ async def api_campaign_toggle(request: Request):
             "email_templates": user.get("email_templates", []),
             "snapshot_at": datetime.utcnow()
         }
-        db.users.update_one({"_id": user["_id"]}, {"$set": {"campaign_active": True, "campaign_snapshot": snapshot}})
+        
+        upd = {"campaign_active": True, "campaign_snapshot": snapshot}
+        # Set warmup_started_at only on the very first start
+        if not user.get("warmup_started_at"):
+            upd["warmup_started_at"] = datetime.utcnow()
+            
+        db.users.update_one({"_id": user["_id"]}, {"$set": upd})
     else:
         db.users.update_one({"_id": user["_id"]}, {"$set": {"campaign_active": False}})
     
