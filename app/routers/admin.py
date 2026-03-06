@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Body
+from fastapi import APIRouter, Depends, HTTPException, Request, Body, BackgroundTasks
 from fastapi.responses import JSONResponse
 import requests
 import logging
@@ -329,21 +329,20 @@ def reset_queues(_admin=Depends(get_admin_user)):
     return {"reset_count": res.modified_count}
 
 @router.post("/recruiters/sync")
-def trigger_recruiter_sync(_admin=Depends(get_admin_user)):
-    """Manually trigger the background sync from the configured source."""
-    try:
-        from app.sync_pool import sync_from_main_database
-        # Trigger as a Celery task
-        # Ensure it's not failing due to connection error
-        task = sync_from_main_database.delay()
-        return {"ok": True, "task_id": task.id}
-    except Exception as e:
-        # LOG is now defined
-        LOG.error(f"Failed to trigger recruiter sync task: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"ok": False, "message": f"Server Error: {str(e)}. Check your Redis/Upstash connection in .env"}
-        )
+def trigger_recruiter_sync(
+    background_tasks: BackgroundTasks,
+    _admin=Depends(get_admin_user)
+):
+    """Trigger recruiter sync in the background (works on Vercel without Celery worker)."""
+    def _run_sync():
+        try:
+            from app.sync_pool import _do_sync
+            _do_sync()
+        except Exception as e:
+            LOG.error(f"Background sync failed: {e}")
+
+    background_tasks.add_task(_run_sync)
+    return {"ok": True, "message": "Sync started in background. Check server logs for progress."}
 
 # --- Enhanced Recruiter Management ---
 
