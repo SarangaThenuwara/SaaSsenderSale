@@ -311,7 +311,11 @@
                     <div class="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent"></div>
                     <div class="relative z-10 flex flex-col md:flex-row gap-4 items-center justify-between mb-8">
                         <div>
-                            <h3 class="text-xl font-bold">Global Recruiter Pool</h3>
+                            <h3 class="text-xl font-bold flex items-center gap-3">
+                                Global Recruiter Pool
+                                <span id="recruiter-total-badge"
+                                    class="text-xs font-mono px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-400 border border-primary-500/20">...</span>
+                            </h3>
                             <p class="text-xs text-slate-500 mt-1">Manage and verify cross-border entries. Last Sync:
                                 <span id="last-sync-time" class="text-emerald-400 font-mono">Loading...</span>
                             </p>
@@ -1242,8 +1246,17 @@
         // --- 3. Recruiter Pool Logic ---
         let recPage = 1;
         let recTotalPages = 1;
-        // Expose globally so onclick in injected pagination HTML can reach it
-        window.loadRecruiters = async function loadRecruiters(page = 1) {
+
+        // Event delegation for pagination — injected HTML onclick won't work due to CSP
+        document.getElementById('recruiters-pagination')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-page]');
+            if (btn && !btn.disabled) {
+                const page = parseInt(btn.dataset.page);
+                if (!isNaN(page)) window.loadRecruiters(page);
+            }
+        });
+
+        window.loadRecruiters = async function (page = 1) {
             recPage = page;
             const tableBody = document.getElementById('recruiters-table-body');
             const term = document.getElementById('recruiter-search').value;
@@ -1280,15 +1293,25 @@
                 if (paginationDiv) {
                     paginationDiv.innerHTML = `
                         <div class="text-slate-500">
-                            Showing page <span class="text-white font-bold">${page}</span> of <span class="text-white font-bold">${recTotalPages}</span> 
-                            <span class="ml-2 font-mono">(${data.total} total items)</span>
+                            Page <span class="text-white font-bold">${page}</span> of <span class="text-white font-bold">${recTotalPages}</span>
+                            <span class="ml-2 font-mono text-slate-600">(${(data.total || 0).toLocaleString()} total)</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="loadRecruiters(${page - 1})" ${page <= 1 ? 'disabled' : ''} class="px-3 py-1.5 bg-white/5 rounded-lg hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold">Previous</button>
-                            <button onclick="loadRecruiters(${page + 1})" ${page >= recTotalPages ? 'disabled' : ''} class="px-3 py-1.5 bg-primary-600/20 text-primary-500 rounded-lg hover:bg-primary-600/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold">Next Page</button>
+                            <button data-page="${page - 1}" ${page <= 1 ? 'disabled' : ''}
+                                class="px-3 py-1.5 bg-white/5 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors font-semibold">
+                                &larr; Previous
+                            </button>
+                            <button data-page="${page + 1}" ${page >= recTotalPages ? 'disabled' : ''}
+                                class="px-3 py-1.5 bg-primary-600/20 text-primary-400 rounded-lg hover:bg-primary-600/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors font-semibold">
+                                Next &rarr;
+                            </button>
                         </div>
                     `;
                 }
+
+                // Update total badge in header
+                const badge = document.getElementById('recruiter-total-badge');
+                if (badge) badge.textContent = `${(data.total || 0).toLocaleString()} emails`;
 
                 // Update last sync time
                 if (data.last_sync_time) {
