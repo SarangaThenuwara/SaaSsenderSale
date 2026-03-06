@@ -20,16 +20,17 @@
                 <p class="text-xs text-blue-400 mt-0.5">You are currently viewing the system as {{ user.username }}.</p>
             </div>
         </div>
-        <button onclick="stopImpersonating()"
+        <button id="exit-impersonation-btn"
             class="px-4 py-2 bg-red-500 hover:bg-red-400 text-white text-xs font-bold rounded-lg transition-colors">
             Exit Impersonation
         </button>
     </div>
-    <script>
+    <script nonce="{{ csp_nonce }}">
         async function stopImpersonating() {
             const res = await fetch('/api/admin/stop_impersonating', { method: 'POST' });
             if (res.ok) window.location.href = '/admin';
         }
+        document.getElementById('exit-impersonation-btn')?.addEventListener('click', stopImpersonating);
     </script>
     {% endif %}
 
@@ -57,8 +58,7 @@
                 {% endif %}
             </p>
         </div>
-        <button onclick="window.history.replaceState({}, document.title, window.location.pathname);"
-            class="ml-auto text-slate-500 hover:text-white transition-colors">
+        <button id="clear-error-btn" class="ml-auto text-slate-500 hover:text-white transition-colors">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -164,7 +164,7 @@
                 <p class="text-slate-400 text-xs mb-4">Provide the PDF resume that will be attached to your outreach
                     emails.</p>
                 {% if not has_cv %}
-                <button onclick="document.getElementById('cv_file').click()"
+                <button id="upload-cv-guide-btn"
                     class="text-primary-400 hover:text-primary-300 text-sm font-semibold link-hover">Upload Below
                     &rarr;</button>
                 {% else %}
@@ -393,6 +393,16 @@
 
 
 <script nonce="{{ csp_nonce }}">
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('clear-error-btn')?.addEventListener('click', () => {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            document.getElementById('clear-error-btn')?.closest('div.bg-red-500\/10')?.remove();
+        });
+        document.getElementById('upload-cv-guide-btn')?.addEventListener('click', () => {
+            document.getElementById('cv_file')?.click();
+        });
+    });
+
     document.getElementById('toggle-campaign')?.addEventListener('click', async () => {
         const btn = document.getElementById('toggle-campaign');
         const currentActive = btn.getAttribute('data-active') === 'true';

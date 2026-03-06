@@ -186,8 +186,7 @@
         </div>
     </div>
 
-    <form action="/settings" method="post" class="space-y-8"
-        onsubmit="return confirm('Save these configuration changes? This will impact your email outreach immediately.')">
+    <form action="/settings" method="post" id="settings-form" class="space-y-8">
         <input type="hidden" name="csrf" value="{{ csrf_token }}">
 
         <!-- Gmail API Credentials Section -->
@@ -325,17 +324,17 @@
                         <label class="block text-xs font-medium text-slate-400">Body Content</label>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] uppercase text-slate-500 font-bold">Insert:</span>
-                            <button type="button" onclick="insertVar('body-editor-1', '{first_name}')"
-                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-primary-400 hover:bg-primary-500/10 transition-colors uppercase font-black">Variable</button>
-                            <button type="button" onclick="insertVar('body-editor-1', '<strong>', '</strong>')"
-                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-400 hover:text-white transition-colors font-bold uppercase">Bold</button>
+                            <button type="button" data-target="body-editor-1" data-start="{first_name}"
+                                class="insert-var-btn px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-primary-400 hover:bg-primary-500/10 transition-colors uppercase font-black">Variable</button>
+                            <button type="button" data-target="body-editor-1" data-start="<strong>" data-end="</strong>"
+                                class="insert-var-btn px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-400 hover:text-white transition-colors font-bold uppercase">Bold</button>
                             <div class="h-3 w-px bg-white/10 mx-0.5"></div>
-                            <button type="button" onclick="insertVar('body-editor-1', '👋 ')"
-                                class="hover:scale-125 transition-transform text-xs">👋</button>
-                            <button type="button" onclick="insertVar('body-editor-1', '🚀 ')"
-                                class="hover:scale-125 transition-transform text-xs">🚀</button>
-                            <button type="button" onclick="insertVar('body-editor-1', '✉️ ')"
-                                class="hover:scale-125 transition-transform text-xs">✉️</button>
+                            <button type="button" data-target="body-editor-1" data-start="👋 "
+                                class="insert-var-btn hover:scale-125 transition-transform text-xs">👋</button>
+                            <button type="button" data-target="body-editor-1" data-start="🚀 "
+                                class="insert-var-btn hover:scale-125 transition-transform text-xs">🚀</button>
+                            <button type="button" data-target="body-editor-1" data-start="✉️ "
+                                class="insert-var-btn hover:scale-125 transition-transform text-xs">✉️</button>
                             <div class="h-3 w-px bg-white/10 mx-0.5"></div>
                             <button type="button" data-preview="1"
                                 class="toggle-preview text-[10px] uppercase tracking-widest text-primary-400 font-bold hover:text-white transition-colors">Preview</button>
@@ -343,7 +342,7 @@
                     </div>
                     <textarea name="body_template_1" rows="6" id="body-editor-1" class="input-glass px-4 py-3 text-sm"
                         placeholder="<p>{Dear|Hi} [Recruiter Name],</p><p>I am writing to express my interest in the [Job Title] role. With [Number] years of experience in [Field], I have a proven track record of [Achievement].</p>">{{ templates_data[0].body if templates_data|length > 0 else (user.body_template_1 or user.body_template or '<p>{Dear|Hi} [Recruiter Name],</p><p>I am writing to express my interest in the [Job Title] role.</p>') }}</textarea>
-                    <div class="preview-container hidden animate-fade-in" id="preview-container-1">
+                    <div class=" preview-container hidden animate-fade-in" id="preview-container-1">
                         <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 px-1">Email Preview</p>
                         <div class="rounded-xl bg-white p-6 shadow-2xl overflow-hidden min-h-[120px]">
                             <div class="html-preview prose prose-sm max-w-none text-slate-800" id="html-preview-1">
@@ -372,15 +371,15 @@
                         <label class="block text-xs font-medium text-slate-400">Body Content</label>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] uppercase text-slate-500 font-bold">Insert:</span>
-                            <button type="button" onclick="insertVar('body-editor-2', '{first_name}')"
-                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-primary-400 hover:bg-primary-500/10 transition-colors uppercase font-black">Variable</button>
-                            <button type="button" onclick="insertVar('body-editor-2', '<strong>', '</strong>')"
-                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-400 hover:text-white transition-colors font-bold uppercase">Bold</button>
+                            <button type="button" data-target="body-editor-2" data-start="{first_name}"
+                                class="insert-var-btn px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-primary-400 hover:bg-primary-500/10 transition-colors uppercase font-black">Variable</button>
+                            <button type="button" data-target="body-editor-2" data-start="<strong>" data-end="</strong>"
+                                class="insert-var-btn px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-400 hover:text-white transition-colors font-bold uppercase">Bold</button>
                             <div class="h-3 w-px bg-white/10 mx-0.5"></div>
-                            <button type="button" onclick="insertVar('body-editor-2', '👋 ')"
-                                class="hover:scale-125 transition-transform text-xs">👋</button>
-                            <button type="button" onclick="insertVar('body-editor-2', '🚀 ')"
-                                class="hover:scale-125 transition-transform text-xs">🚀</button>
+                            <button type="button" data-target="body-editor-2" data-start="👋 "
+                                class="insert-var-btn hover:scale-125 transition-transform text-xs">👋</button>
+                            <button type="button" data-target="body-editor-2" data-start="🚀 "
+                                class="insert-var-btn hover:scale-125 transition-transform text-xs">🚀</button>
                             <div class="h-3 w-px bg-white/10 mx-0.5"></div>
                             <button type="button" data-preview="2"
                                 class="toggle-preview text-[10px] uppercase tracking-widest text-primary-400 font-bold hover:text-white transition-colors">Preview</button>
@@ -417,15 +416,15 @@
                         <label class="block text-xs font-medium text-slate-400">Body Content</label>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] uppercase text-slate-500 font-bold">Insert:</span>
-                            <button type="button" onclick="insertVar('body-editor-3', '{first_name}')"
-                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-primary-400 hover:bg-primary-500/10 transition-colors uppercase font-black">Variable</button>
-                            <button type="button" onclick="insertVar('body-editor-3', '<strong>', '</strong>')"
-                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-400 hover:text-white transition-colors font-bold uppercase">Bold</button>
+                            <button type="button" data-target="body-editor-3" data-start="{first_name}"
+                                class="insert-var-btn px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-primary-400 hover:bg-primary-500/10 transition-colors uppercase font-black">Variable</button>
+                            <button type="button" data-target="body-editor-3" data-start="<strong>" data-end="</strong>"
+                                class="insert-var-btn px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-400 hover:text-white transition-colors font-bold uppercase">Bold</button>
                             <div class="h-3 w-px bg-white/10 mx-0.5"></div>
-                            <button type="button" onclick="insertVar('body-editor-3', '👋 ')"
-                                class="hover:scale-125 transition-transform text-xs">👋</button>
-                            <button type="button" onclick="insertVar('body-editor-3', '🚀 ')"
-                                class="hover:scale-125 transition-transform text-xs">🚀</button>
+                            <button type="button" data-target="body-editor-3" data-start="👋 "
+                                class="insert-var-btn hover:scale-125 transition-transform text-xs">👋</button>
+                            <button type="button" data-target="body-editor-3" data-start="🚀 "
+                                class="insert-var-btn hover:scale-125 transition-transform text-xs">🚀</button>
                             <div class="h-3 w-px bg-white/10 mx-0.5"></div>
                             <button type="button" data-preview="3"
                                 class="toggle-preview text-[10px] uppercase tracking-widest text-primary-400 font-bold hover:text-white transition-colors">Preview</button>
@@ -464,7 +463,7 @@
 
 <script nonce="{{ csp_nonce }}">
     // --- Smart Editor Logic ---
-    window.insertVar = function (id, startTag, endTag = '') {
+    function insertVar(id, startTag, endTag = '') {
         const el = document.getElementById(id);
         if (!el) return;
 
@@ -485,7 +484,23 @@
         const num = id.split('-').pop();
         updatePreview(num);
         updateTemplateDots();
-    };
+    }
+
+    document.querySelectorAll('.insert-var-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.target;
+            const start = btn.dataset.start;
+            const end = btn.dataset.end || '';
+            insertVar(target, start, end);
+        });
+    });
+
+    // Handle Form Confirmation
+    document.getElementById('settings-form')?.addEventListener('submit', (e) => {
+        if (!confirm('Save these configuration changes? This will impact your email outreach immediately.')) {
+            e.preventDefault();
+        }
+    });
 
     // --- Template Tab Logic ---
     const tabs = document.querySelectorAll('.template-tab');
