@@ -1492,41 +1492,103 @@ async def payment_cancel(request: Request):
         return RedirectResponse(url="/login")
     return RedirectResponse(url=f"/user/{user['_id']}/dashboard?payment=cancelled")
 
+@app.get("/api/user/portal")
+async def billing_portal(request: Request):
+    """Redirects the user to the Stripe Customer Portal to manage their subscription."""
+    user = current_session_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    me = db.users.find_one({"_id": user["_id"]})
+    customer_id = me.get("stripe_customer_id")
+    
+    if not customer_id:
+        # If no customer ID, they haven't started a subscription yet.
+        return RedirectResponse(url="/payment")
+        
+    from .stripe_pay import create_portal_session
+    session = create_portal_session(customer_id)
+    if not session:
+        return RedirectResponse(url="/dashboard?error=portal_failed")
+        
+    return RedirectResponse(url=session.url, status_code=303)
+
 @app.post("/api/payment/webhook")
 async def stripe_webhook(request: Request):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
     
+    from .stripe_pay import verify_webhook_signature
     event = verify_webhook_signature(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     if not event:
         return JSONResponse({"status": "invalid signature"}, status_code=400)
     
-    # Handle the event
+    LOG.info(f"Stripe Webhook received: {event['type']}")
+    
+    # 1. Checkout Session Completed (Initial purchase)
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         user_id = session.get('metadata', {}).get('user_id')
+        customer_id = session.get('customer')
+        subscription_id = session.get('subscription')
         
         if user_id:
-            # Update payment record
-            db.payments.update_one(
-                {"order_id": session.id},
-                {"$set": {
-                    "status": "Completed", 
-                    "completed_at": datetime.utcnow(),
-                    "stripe_customer_id": session.get('customer')
-                }}
-            )
-            
-            # Activate subscription
-            expiry = datetime.utcnow() + timedelta(days=30)
+            # Update user with Stripe identity
             db.users.update_one(
                 {"_id": ObjectId(user_id)},
                 {"$set": {
+                    "stripe_customer_id": customer_id,
+                    "stripe_subscription_id": subscription_id,
                     "is_paid": True,
-                    "subscription_expires_at": expiry
+                    "subscription_expires_at": datetime.utcnow() + timedelta(days=32), # Buffer for overlap
+                    "paid_at": datetime.utcnow()
                 }}
             )
-            LOG.info(f"Subscription activated via webhook for user {user_id}")
+            LOG.info(f"Subscription INITIALIZED for user {user_id}")
+
+    # 2. Recurring Payment Succeeded
+    elif event['type'] == 'invoice.paid':
+        invoice = event['data']['object']
+        customer_id = invoice.get('customer')
+        subscription_id = invoice.get('subscription')
+        
+        if customer_id:
+             # Find user by customer_id
+             db.users.update_one(
+                 {"stripe_customer_id": customer_id},
+                 {"$set": {
+                     "is_paid": True,
+                     "subscription_expires_at": datetime.utcnow() + timedelta(days=32),
+                     "last_invoice_paid": datetime.utcnow()
+                 }}
+             )
+             LOG.info(f"Subscription RENEWED for customer {customer_id}")
+
+    # 3. Payment Failed
+    elif event['type'] == 'invoice.payment_failed':
+        invoice = event['data']['object']
+        customer_id = invoice.get('customer')
+        if customer_id:
+            db.users.update_one(
+                {"stripe_customer_id": customer_id},
+                {"$set": {"payment_status": "past_due"}}
+            )
+            LOG.warning(f"Payment FAILED for customer {customer_id}")
+
+    # 4. Subscription Deleted or Cancelled
+    elif event['type'] == 'customer.subscription.deleted':
+        subscription = event['data']['object']
+        customer_id = subscription.get('customer')
+        if customer_id:
+            db.users.update_one(
+                {"stripe_customer_id": customer_id},
+                {"$set": {
+                    "is_paid": False, 
+                    "subscription_expires_at": datetime.utcnow(),
+                    "campaign_active": False # Stop outreach if unpaid
+                }}
+            )
+            LOG.info(f"Subscription DELETED for customer {customer_id}")
 
     return JSONResponse({"status": "success"})
 

@@ -5,6 +5,7 @@ from app.config import ADMIN_API_KEY
 from app.security import csrf_protect, parse_oid
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
+import stripe
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(csrf_protect)])
 
@@ -684,4 +685,48 @@ def add_credits(user_id: str, payload: dict = Body(...), _admin=Depends(get_admi
     res = db.users.update_one({"_id": target_id}, {"$inc": {"daily_limit": amount}})
     log_admin_action(_admin.get("username", "admin"), "add_credits", f"Added {amount} limit to {user_id}")
     return {"ok": True, "modified": res.modified_count}
+
+@router.post("/billing/subscription/{user_id}")
+def update_user_subscription(user_id: str, payload: dict = Body(...), _admin=Depends(get_admin_user)):
+    """
+    Admin: Manually upgrade/downgrade subscription status.
+    If 'is_paid' is true, we set expiry to +30 days by default.
+    """
+    is_paid = payload.get("is_paid", False)
+    target_id = parse_oid(user_id)
+    
+    update_data = {"is_paid": is_paid}
+    if is_paid:
+        update_data["subscription_expires_at"] = datetime.utcnow() + timedelta(days=30)
+    else:
+        update_data["subscription_expires_at"] = datetime.utcnow()
+        update_data["campaign_active"] = False
+
+    res = db.users.update_one({"_id": target_id}, {"$set": update_data})
+    log_admin_action(_admin.get("username", "admin"), "update_subscription", f"Set is_paid={is_paid} for {user_id}")
+    return {"ok": True, "modified": res.modified_count}
+
+@router.post("/billing/subscription/{user_id}/cancel")
+def cancel_user_subscription(user_id: str, _admin=Depends(get_admin_user)):
+    """
+    Admin: Proactively cancel the user's Stripe subscription.
+    """
+    target_id = parse_oid(user_id)
+    user = db.users.find_one({"_id": target_id})
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    sub_id = user.get("stripe_subscription_id")
+    if not sub_id:
+        # Fallback: Just mark as unpaid if no Stripe ID
+        db.users.update_one({"_id": target_id}, {"$set": {"is_paid": False, "campaign_active": False}})
+        return {"ok": True, "message": "Local access revoked (no Stripe subscription found)"}
+    
+    from app.stripe_pay import cancel_subscription
+    res = cancel_subscription(sub_id)
+    if res:
+        log_admin_action(_admin.get("username", "admin"), "cancel_stripe_subscription", f"Cancelled Stripe subscription {sub_id} for user {user_id}")
+        return {"ok": True, "message": "Subscription marked for cancellation in Stripe"}
+    else:
+        raise HTTPException(500, "Failed to cancel subscription in Stripe")
 
