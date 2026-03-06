@@ -3,14 +3,19 @@ import datetime
 from .celery_app import celery_app
 from .db import db, client
 
+from .config import RECRUITER_SOURCE_DB, RECRUITER_SOURCE_COLLECTION
+
 LOG = logging.getLogger(__name__)
 
 @celery_app.task
-def sync_from_main_database(source_name="hremail.email"):
+def sync_from_main_database(source_name=None):
     """
     Syncs new recruiter records from a source collection into the master pool.
     Uses the modern recruiter_manager for propagation.
     """
+    if source_name is None:
+        source_name = f"{RECRUITER_SOURCE_DB}.{RECRUITER_SOURCE_COLLECTION}"
+    
     try:
         from app.services.recruiter_manager import process_recruiters_batch
         

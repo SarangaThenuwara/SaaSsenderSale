@@ -47,6 +47,10 @@ if APP_ENV == "production":
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 MONGODB_DB = os.getenv("MONGODB_DB", "saa_sender")
 
+# Recruiter Sync Source
+RECRUITER_SOURCE_DB = os.getenv("RECRUITER_SOURCE_DB", "hremail")
+RECRUITER_SOURCE_COLLECTION = os.getenv("RECRUITER_SOURCE_COLLECTION", "email")
+
 # Redis / Celery
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)

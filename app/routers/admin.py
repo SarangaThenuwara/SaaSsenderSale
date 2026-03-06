@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Body
+from fastapi.responses import JSONResponse
 import requests
 from app.db import db
 from app.config import ADMIN_API_KEY
@@ -327,11 +328,18 @@ def reset_queues(_admin=Depends(get_admin_user)):
 
 @router.post("/recruiters/sync")
 def trigger_recruiter_sync(_admin=Depends(get_admin_user)):
-    """Manually trigger the background sync from hremail.email."""
-    from app.sync_pool import sync_from_main_database
-    # Trigger as a Celery task
-    task = sync_from_main_database.delay()
-    return {"ok": True, "task_id": task.id}
+    """Manually trigger the background sync from the configured source."""
+    try:
+        from app.sync_pool import sync_from_main_database
+        # Trigger as a Celery task
+        task = sync_from_main_database.delay()
+        return {"ok": True, "task_id": task.id}
+    except Exception as e:
+        LOG.error(f"Failed to trigger sync: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "message": str(e)}
+        )
 
 # --- Enhanced Recruiter Management ---
 

@@ -918,36 +918,36 @@
             try {
                 const res = await fetch('/api/admin/infra');
                 const data = await res.json();
-                const sys = data.system;
-                const dbs = data.databases;
+                const sys = data.system || {};
+                const dbs = data.databases || {};
 
                 sysContainer.innerHTML = `
                     <div class="space-y-4">
                         <div class="space-y-1">
                             <div class="flex justify-between text-xs mb-1">
                                 <span class="text-slate-400">CPU Usage</span>
-                                <span class="text-white font-mono">${sys.cpu}%</span>
+                                <span class="text-white font-mono">${sys.cpu ?? 0}%</span>
                             </div>
                             <div class="h-2 bg-white/5 rounded-full overflow-hidden">
-                                <div class="bg-primary-500 h-full" style="width: ${sys.cpu}%"></div>
+                                <div class="bg-primary-500 h-full" style="width: ${sys.cpu ?? 0}%"></div>
                             </div>
                         </div>
                         <div class="space-y-1">
                             <div class="flex justify-between text-xs mb-1">
-                                <span class="text-slate-400">Memory (${sys.memory_used}GB / ${sys.memory_total}GB)</span>
-                                <span class="text-white font-mono">${sys.memory_pct}%</span>
+                                <span class="text-slate-400">Memory (${sys.memory_used ?? 0}GB / ${sys.memory_total ?? 0}GB)</span>
+                                <span class="text-white font-mono">${sys.memory_pct ?? 0}%</span>
                             </div>
                             <div class="h-2 bg-white/5 rounded-full overflow-hidden">
-                                <div class="bg-primary-500 h-full" style="width: ${sys.memory_pct}%"></div>
+                                <div class="bg-primary-500 h-full" style="width: ${sys.memory_pct ?? 0}%"></div>
                             </div>
                         </div>
                          <div class="space-y-1">
                             <div class="flex justify-between text-xs mb-1">
-                                <span class="text-slate-400">Storage (${sys.storage_used}GB / ${sys.storage_total}GB)</span>
-                                <span class="text-white font-mono">${sys.storage_pct}%</span>
+                                <span class="text-slate-400">Storage (${sys.storage_used ?? 0}GB / ${sys.storage_total ?? 0}GB)</span>
+                                <span class="text-white font-mono">${sys.storage_pct ?? 0}%</span>
                             </div>
                             <div class="h-2 bg-white/5 rounded-full overflow-hidden">
-                                <div class="bg-green-500 h-full" style="width: ${sys.storage_pct}%"></div>
+                                <div class="bg-green-500 h-full" style="width: ${sys.storage_pct ?? 0}%"></div>
                             </div>
                         </div>
                     </div>
@@ -957,26 +957,29 @@
                     <div class="space-y-4 text-sm">
                         <div class="p-4 bg-white/5 rounded-2xl border border-white/5">
                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">MongoDB Cluster</p>
-                            <div class="space-y-2">
+                            ${(dbs.mongo && dbs.mongo.error) ?
+                        `<p class="text-xs text-red-400 italic">${dbs.mongo.error}</p>` :
+                        `<div class="space-y-2">
                                 <div class="flex justify-between">
                                     <span class="text-slate-400">Data Footprint</span>
-                                    <span class="text-white font-mono">${dbs.mongo.data_size} MB</span>
+                                    <span class="text-white font-mono">${dbs.mongo?.data_size ?? 0} MB</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-slate-400">Total Documents</span>
-                                    <span class="text-white font-mono">${dbs.mongo.objects.toLocaleString()}</span>
+                                    <span class="text-white font-mono">${(dbs.mongo?.objects ?? 0).toLocaleString()}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-slate-400">Index Volume</span>
-                                    <span class="text-white font-mono">${dbs.mongo.index_size} MB</span>
+                                    <span class="text-white font-mono">${dbs.mongo?.index_size ?? 0} MB</span>
                                 </div>
-                            </div>
+                            </div>`
+                    }
                         </div>
 
                         <div class="p-4 bg-white/5 rounded-2xl border border-white/5">
                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Redis Persistence</p>
-                            ${dbs.redis.error ?
-                        `<p class="text-xs text-red-400 italic">${dbs.redis.error}</p>` :
+                            ${(!dbs.redis || dbs.redis.error) ?
+                        `<p class="text-xs text-red-400 italic">${dbs.redis?.error || "Redis status unavailable"}</p>` :
                         `<div class="space-y-2">
                                     <div class="flex justify-between">
                                         <span class="text-slate-400">Memory / Peak</span>
@@ -1015,17 +1018,17 @@
                          <div class="grid grid-cols-2 gap-3 p-3 bg-white/5 rounded-lg">
                             <div>
                                 <p class="text-[10px] font-bold text-slate-500 uppercase">Local IP</p>
-                                <p class="text-white font-mono text-xs">${sys.local_ip}</p>
+                                <p class="text-white font-mono text-xs">${sys.local_ip || 'N/A'}</p>
                             </div>
                             <div>
                                 <p class="text-[10px] font-bold text-slate-500 uppercase">Public IP</p>
-                                <p class="text-primary-400 font-mono text-xs">${sys.public_ip}</p>
+                                <p class="text-primary-400 font-mono text-xs">${sys.public_ip || 'N/A'}</p>
                             </div>
                         </div>
                         <div class="flex justify-between items-center p-3 bg-white/5 rounded-lg">
                             <div>
                                 <p class="text-[10px] font-bold text-slate-500 uppercase">Hostname</p>
-                                <p class="text-white text-xs">${sys.hostname}</p>
+                                <p class="text-white text-xs">${sys.hostname || 'N/A'}</p>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
