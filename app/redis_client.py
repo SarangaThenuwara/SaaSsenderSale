@@ -9,13 +9,15 @@ LOG = logging.getLogger(__name__)
 try:
     pool = redis.ConnectionPool.from_url(
         REDIS_URL, 
-        max_connections=10, 
+        max_connections=20, 
         socket_timeout=5, 
+        socket_connect_timeout=5,
         socket_keepalive=True,
+        health_check_interval=30,  # Ping server every 30s of idleness
         retry_on_timeout=True
     )
     redis_client = redis.StrictRedis(connection_pool=pool)
-    LOG.info("Redis connection pool initialized successfully")
+    LOG.info("Redis connection pool initialized with health checks")
 except Exception as e:
     LOG.error(f"Failed to initialize Redis pool: {e}")
     redis_client = None
