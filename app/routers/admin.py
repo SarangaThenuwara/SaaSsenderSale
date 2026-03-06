@@ -179,8 +179,8 @@ def get_db_stats():
     
     # MongoDB Stats
     try:
-        from .config import RECRUITER_SOURCE_DB, RECRUITER_SOURCE_COLLECTION
-        from ..db import client
+        from app.config import RECRUITER_SOURCE_DB, RECRUITER_SOURCE_COLLECTION
+        from app.db import client
         
         stats = db.command("dbstats")
         db_stats["mongo"] = {
