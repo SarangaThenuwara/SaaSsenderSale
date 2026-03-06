@@ -983,34 +983,50 @@
 
                 dbContainer.innerHTML = `
                     <div class="space-y-4 text-sm">
-                        <div class="p-4 bg-white/5 rounded-2xl border border-white/5">
-                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">MongoDB Cluster</p>
-                            ${(dbs.mongo && dbs.mongo.error) ?
-                        `<p class="text-xs text-red-400 italic">${dbs.mongo.error}</p>` :
-                        `<div class="space-y-2">
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Data Footprint</span>
-                                    <span class="text-white font-mono">${dbs.mongo?.data_size ?? 0} MB</span>
+                        ${(dbs.mongo && dbs.mongo.error) ?
+                        `<div class="p-4 bg-red-500/10 rounded-2xl border border-red-500/20 text-red-400 text-xs italic">${dbs.mongo.error}</div>` :
+                        `
+                            <div class="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Local Recruiter Pool (SaaS Sender)</p>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Documents</span>
+                                        <span class="text-white font-mono">${(dbs.mongo?.local?.count ?? 0).toLocaleString()}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Data Size</span>
+                                        <span class="text-white font-mono">${dbs.mongo?.local?.size ?? 0} MB</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Storage Used</span>
+                                        <span class="text-emerald-400 font-bold font-mono">${dbs.mongo?.local?.storage ?? 0} MB</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Index Size</span>
+                                        <span class="text-white font-mono">${dbs.mongo?.local?.indexes ?? 0} MB</span>
+                                    </div>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Total Documents</span>
-                                    <span class="text-white font-mono">${(dbs.mongo?.objects ?? 0).toLocaleString()}</span>
+                            </div>
+
+                            <div class="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">HREmail Global Source</p>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Documents</span>
+                                        <span class="text-white font-mono">${(dbs.mongo?.source?.count ?? 0).toLocaleString()}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Data Size</span>
+                                        <span class="text-white font-mono">${dbs.mongo?.source?.size ?? 0} MB</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Index Size</span>
+                                        <span class="text-white font-mono">${dbs.mongo?.source?.indexes ?? 0} MB</span>
+                                    </div>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Recruiter Source</span>
-                                    <span class="text-primary-400 font-bold font-mono">${(dbs.mongo?.source_count ?? 0).toLocaleString()}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Local Pool</span>
-                                    <span class="text-emerald-400 font-bold font-mono">${(dbs.mongo?.local_count ?? 0).toLocaleString()}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Index Volume</span>
-                                    <span class="text-white font-mono">${dbs.mongo?.index_size ?? 0} MB</span>
-                                </div>
-                            </div>`
+                            </div>
+                            `
                     }
-                        </div>
 
                         <div class="p-4 bg-white/5 rounded-2xl border border-white/5">
                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Redis Persistence</p>

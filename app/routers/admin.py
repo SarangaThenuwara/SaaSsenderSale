@@ -182,29 +182,35 @@ def get_db_stats():
         from app.config import RECRUITER_SOURCE_DB, RECRUITER_SOURCE_COLLECTION
         from app.db import client
         
-        # Try to get general DB stats (might fail on some shared clusters)
+        # Local stats (SaaS Sender)
+        local_stats = {}
         try:
-            stats = db.command("dbstats")
-            db_stats["mongo"] = {
-                "ok": True,
-                "data_size": round(stats.get("dataSize", 0) / (1024**2), 2), # MB
-                "index_size": round(stats.get("indexSize", 0) / (1024**2), 2),
-                "collections": stats.get("collections", 0),
-                "objects": stats.get("objects", 0),
+            cstats = db.command("collstats", "recruiters")
+            local_stats = {
+                "count": cstats.get("count", 0),
+                "size": round(cstats.get("size", 0) / (1024**2), 2),
+                "storage": round(cstats.get("storageSize", 0) / (1024**2), 2),
+                "indexes": round(cstats.get("totalIndexSize", 0) / (1024**2), 2)
             }
-        except Exception:
-            db_stats["mongo"] = {"ok": True, "partial": True}
+        except: pass
 
-        # Individual counts (use estimated_document_count for speed/compatibility)
+        # Source stats (HREmail) - might be restricted
+        source_stats = {}
         try:
-            db_stats["mongo"]["source_count"] = client[RECRUITER_SOURCE_DB][RECRUITER_SOURCE_COLLECTION].estimated_document_count()
-        except: 
-            db_stats["mongo"]["source_count"] = "N/A (No Access)"
-            
-        try:
-            db_stats["mongo"]["local_count"] = db.recruiters.estimated_document_count()
-        except:
-            db_stats["mongo"]["local_count"] = 0
+            cstats = client[RECRUITER_SOURCE_DB].command("collstats", RECRUITER_SOURCE_COLLECTION)
+            source_stats = {
+                "count": cstats.get("count", 0),
+                "size": round(cstats.get("size", 0) / (1024**2), 2),
+                "storage": round(cstats.get("storageSize", 0) / (1024**2), 2),
+                "indexes": round(cstats.get("totalIndexSize", 0) / (1024**2), 2)
+            }
+        except: pass
+
+        db_stats["mongo"] = {
+            "ok": True,
+            "local": local_stats,
+            "source": source_stats
+        }
 
     except Exception as e: 
         LOG.error(f"Mongo stats failed: {e}")
