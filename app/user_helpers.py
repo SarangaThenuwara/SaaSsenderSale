@@ -21,8 +21,21 @@ def create_or_update_user(username: str, email: str, daily_limit: int = 240) -> 
     return res
 
 def save_credentials_base64(user_id, credentials_base64: str, token_base64: str):
-    # Optionally encrypt token_base64 before storing
-    USERS.update_one({"_id": user_id}, {"$set": {"credentials_base64": credentials_base64, "token_base64": token_base64}})
+    """
+    Encrypt and store Gmail API credentials.
+    """
+    from .utils import encrypt_bytes_to_b64
+    
+    # Encrypt both before storing
+    encrypted_creds = encrypt_bytes_to_b64(credentials_base64.encode())
+    encrypted_token = encrypt_bytes_to_b64(token_base64.encode())
+    
+    USERS.update_one({"_id": user_id}, {"$set": {
+        "credentials_base64": encrypted_creds, 
+        "token_base64": encrypted_token,
+        "credentials_valid": True,  # Mark as done
+        "needs_reauth": False
+    }})
 
 def save_templates(user_id, subject_template: str, body_template: str):
     now = datetime.datetime.utcnow()

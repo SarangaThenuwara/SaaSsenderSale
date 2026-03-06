@@ -1119,6 +1119,12 @@ async def settings_get(request: Request):
     me = db.users.find_one({"_id": user["_id"]})
     me["_id_str"] = str(me["_id"])
     
+    # SECURITY: Mask credentials for UI display
+    if me.get("credentials_base64"):
+        me["credentials_base64"] = "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]"
+    if me.get("token_base64"):
+        me["token_base64"] = "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]"
+    
     current_daily_limit = get_user_daily_limit(me)
     is_paid = bool(me.get("is_paid"))
     plan_info = {

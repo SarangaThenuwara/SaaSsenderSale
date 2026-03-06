@@ -997,6 +997,14 @@
                                     <span class="text-white font-mono">${(dbs.mongo?.objects ?? 0).toLocaleString()}</span>
                                 </div>
                                 <div class="flex justify-between">
+                                    <span class="text-slate-400">Recruiter Source</span>
+                                    <span class="text-primary-400 font-bold font-mono">${(dbs.mongo?.source_count ?? 0).toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Local Pool</span>
+                                    <span class="text-emerald-400 font-bold font-mono">${(dbs.mongo?.local_count ?? 0).toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between">
                                     <span class="text-slate-400">Index Volume</span>
                                     <span class="text-white font-mono">${dbs.mongo?.index_size ?? 0} MB</span>
                                 </div>
