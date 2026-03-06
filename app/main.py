@@ -1106,8 +1106,12 @@ async def settings_post(
     sender_email: str = Form(None),
     credentials_base64: str = Form(None),
     token_base64: str = Form(None),
-    subject_template: str = Form(None),
-    body_template: str = Form(None),
+    subject_template_1: str = Form(None),
+    body_template_1: str = Form(None),
+    subject_template_2: str = Form(None),
+    body_template_2: str = Form(None),
+    subject_template_3: str = Form(None),
+    body_template_3: str = Form(None),
     csrf: str = Form(None)
 ):
 
@@ -1179,29 +1183,48 @@ async def settings_post(
 
 
     # 4) Templates
-    if subject_template:
-        # Sanitize subject
-        subject_template = bleach.clean(subject_template, tags=[], strip=True)
-    else:
-        subject_template = "Regarding the job opening"
-
-    if body_template:
-        # 1. Simple heuristic: if no common tags, assume plain text and convert \n to <br>
-        # This is extremely lightweight (one string scan and one replace)
-        if not any(tag in body_template.lower() for tag in ['<p', '<div', '<br', '<li']):
-             body_template = body_template.replace('\n', '<br>')
-
-        # 2. Sanitize body (allow some basic formatting if needed)
-        allowed_tags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'a', 'div', 'span', 'ul', 'li', 'ol']
-        allowed_attrs = {'a': ['href', 'title', 'target']}
-        body_template = bleach.clean(body_template, tags=allowed_tags, attributes=allowed_attrs, strip=True)
-    else:
-        body_template = "<p>Hi,</p><p>I am interested in the position.</p>"
+    email_templates = []
+    
+    # Process up to 3 templates (A, B, C)
+    items = [
+        (subject_template_1, body_template_1),
+        (subject_template_2, body_template_2),
+        (subject_template_3, body_template_3)
+    ]
+    
+    for i, (subj, body) in enumerate(items):
+        s = (subj or "").strip()
+        b = (body or "").strip()
+        
+        # Default values for Template A (Slot 1) if omitted
+        if i == 0:
+            if not s: s = "Regarding the job opening"
+            if not b: b = "<p>Hi,</p><p>I am interested in the position.</p>"
+        
+        # Only sanitize if not empty, otherwise keep empty
+        if s:
+            s = bleach.clean(s, tags=[], strip=True)
+        if b:
+            # Smart Conversion for Body
+            if not any(tag in b.lower() for tag in ['<p', '<div', '<br', '<li']):
+                b = b.replace('\n', '<br>')
+            
+            # Sanitize Body
+            allowed_tags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'a', 'div', 'span', 'ul', 'li', 'ol']
+            allowed_attrs = {'a': ['href', 'title', 'target']}
+            b = bleach.clean(b, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+        
+        email_templates.append({
+            "subject": s,
+            "body": b
+        })
 
     if errors:
         # Return to settings with current user but merge form data so they don't lose input
-        merged_user = {**user, "sender_email": sender_email, "credentials_base64": credentials_base64, 
-                       "token_base64": token_base64, "subject_template": subject_template, "body_template": body_template}
+        # Fix: Keep original sender_email if the new one is invalid or missing
+        display_email = sender_email if sender_email else user.get("sender_email")
+        merged_user = {**user, "sender_email": display_email, "credentials_base64": credentials_base64, 
+                       "token_base64": token_base64, "email_templates": email_templates}
         return templates.TemplateResponse("premium/settings.html", {
             **template_ctx(request), 
             "error": " | ".join(errors), 
@@ -1228,12 +1251,21 @@ async def settings_post(
              return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "Internal error: Encryption failed", "user": user})
 
     update_data = {
-        "sender_email": sender_email,
-        "subject_template": subject_template,
-        "body_template": body_template,
+        "email_templates": email_templates,
         "updated_at": datetime.utcnow(),
         "campaign_active": False # Automatically stop campaign on settings change
     }
+
+    if sender_email:
+        update_data["sender_email"] = sender_email
+
+    # Backward compatibility: Save the first template to the original fields as well
+    if email_templates:
+        update_data["subject_template"] = email_templates[0]["subject"]
+        update_data["body_template"] = email_templates[0]["body"]
+    else:
+        update_data["subject_template"] = "Regarding the job opening"
+        update_data["body_template"] = "<p>Hi,</p><p>I am interested in the position.</p>"
     
     if encrypted_credentials and credentials_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
         update_data["credentials_base64"] = encrypted_credentials
@@ -1317,6 +1349,7 @@ async def api_campaign_toggle(request: Request):
             "cv_filename": user.get("cv_filename"),
             "subject": user.get("subject_template"),
             "body": user.get("body_template"),
+            "email_templates": user.get("email_templates", []),
             "snapshot_at": datetime.utcnow()
         }
         db.users.update_one({"_id": user["_id"]}, {"$set": {"campaign_active": True, "campaign_snapshot": snapshot}})
