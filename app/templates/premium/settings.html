@@ -322,10 +322,24 @@
                 </div>
                 <div class="space-y-2">
                     <div class="flex items-center justify-between">
-                        <label class="block text-xs font-medium text-slate-400">Body (HTML Supported)</label>
-                        <button type="button" data-preview="1"
-                            class="toggle-preview text-[10px] uppercase tracking-widest text-primary-400 font-bold hover:text-white transition-colors">Show
-                            Preview</button>
+                        <label class="block text-xs font-medium text-slate-400">Body Content</label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] uppercase text-slate-500 font-bold">Insert:</span>
+                            <button type="button" onclick="insertVar('body-editor-1', '{first_name}')"
+                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-primary-400 hover:bg-primary-500/10 transition-colors uppercase font-black">Variable</button>
+                            <button type="button" onclick="insertVar('body-editor-1', '<strong>', '</strong>')"
+                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-400 hover:text-white transition-colors font-bold uppercase">Bold</button>
+                            <div class="h-3 w-px bg-white/10 mx-0.5"></div>
+                            <button type="button" onclick="insertVar('body-editor-1', '👋 ')"
+                                class="hover:scale-125 transition-transform text-xs">👋</button>
+                            <button type="button" onclick="insertVar('body-editor-1', '🚀 ')"
+                                class="hover:scale-125 transition-transform text-xs">🚀</button>
+                            <button type="button" onclick="insertVar('body-editor-1', '✉️ ')"
+                                class="hover:scale-125 transition-transform text-xs">✉️</button>
+                            <div class="h-3 w-px bg-white/10 mx-0.5"></div>
+                            <button type="button" data-preview="1"
+                                class="toggle-preview text-[10px] uppercase tracking-widest text-primary-400 font-bold hover:text-white transition-colors">Preview</button>
+                        </div>
                     </div>
                     <textarea name="body_template_1" rows="6" id="body-editor-1" class="input-glass px-4 py-3 text-sm"
                         placeholder="<p>{Dear|Hi} [Recruiter Name],</p><p>I am writing to express my interest in the [Job Title] role. With [Number] years of experience in [Field], I have a proven track record of [Achievement].</p>">{{ templates_data[0].body if templates_data|length > 0 else (user.body_template_1 or user.body_template or '<p>{Dear|Hi} [Recruiter Name],</p><p>I am writing to express my interest in the [Job Title] role.</p>') }}</textarea>
@@ -355,10 +369,22 @@
                 </div>
                 <div class="space-y-2">
                     <div class="flex items-center justify-between">
-                        <label class="block text-xs font-medium text-slate-400">Body (HTML Supported)</label>
-                        <button type="button" data-preview="2"
-                            class="toggle-preview text-[10px] uppercase tracking-widest text-primary-400 font-bold hover:text-white transition-colors">Show
-                            Preview</button>
+                        <label class="block text-xs font-medium text-slate-400">Body Content</label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] uppercase text-slate-500 font-bold">Insert:</span>
+                            <button type="button" onclick="insertVar('body-editor-2', '{first_name}')"
+                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-primary-400 hover:bg-primary-500/10 transition-colors uppercase font-black">Variable</button>
+                            <button type="button" onclick="insertVar('body-editor-2', '<strong>', '</strong>')"
+                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-400 hover:text-white transition-colors font-bold uppercase">Bold</button>
+                            <div class="h-3 w-px bg-white/10 mx-0.5"></div>
+                            <button type="button" onclick="insertVar('body-editor-2', '👋 ')"
+                                class="hover:scale-125 transition-transform text-xs">👋</button>
+                            <button type="button" onclick="insertVar('body-editor-2', '🚀 ')"
+                                class="hover:scale-125 transition-transform text-xs">🚀</button>
+                            <div class="h-3 w-px bg-white/10 mx-0.5"></div>
+                            <button type="button" data-preview="2"
+                                class="toggle-preview text-[10px] uppercase tracking-widest text-primary-400 font-bold hover:text-white transition-colors">Preview</button>
+                        </div>
                     </div>
                     <textarea name="body_template_2" rows="6" id="body-editor-2" class="input-glass px-4 py-3 text-sm"
                         placeholder="<p>Hello,</p><p>I came across your job listing...</p>">{{ templates_data[1].body if templates_data|length > 1 else (user.body_template_2 or '') }}</textarea>
@@ -388,10 +414,22 @@
                 </div>
                 <div class="space-y-2">
                     <div class="flex items-center justify-between">
-                        <label class="block text-xs font-medium text-slate-400">Body (HTML Supported)</label>
-                        <button type="button" data-preview="3"
-                            class="toggle-preview text-[10px] uppercase tracking-widest text-primary-400 font-bold hover:text-white transition-colors">Show
-                            Preview</button>
+                        <label class="block text-xs font-medium text-slate-400">Body Content</label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] uppercase text-slate-500 font-bold">Insert:</span>
+                            <button type="button" onclick="insertVar('body-editor-3', '{first_name}')"
+                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-primary-400 hover:bg-primary-500/10 transition-colors uppercase font-black">Variable</button>
+                            <button type="button" onclick="insertVar('body-editor-3', '<strong>', '</strong>')"
+                                class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-400 hover:text-white transition-colors font-bold uppercase">Bold</button>
+                            <div class="h-3 w-px bg-white/10 mx-0.5"></div>
+                            <button type="button" onclick="insertVar('body-editor-3', '👋 ')"
+                                class="hover:scale-125 transition-transform text-xs">👋</button>
+                            <button type="button" onclick="insertVar('body-editor-3', '🚀 ')"
+                                class="hover:scale-125 transition-transform text-xs">🚀</button>
+                            <div class="h-3 w-px bg-white/10 mx-0.5"></div>
+                            <button type="button" data-preview="3"
+                                class="toggle-preview text-[10px] uppercase tracking-widest text-primary-400 font-bold hover:text-white transition-colors">Preview</button>
+                        </div>
                     </div>
                     <textarea name="body_template_3" rows="6" id="body-editor-3" class="input-glass px-4 py-3 text-sm"
                         placeholder="<p>Dear Hiring Manager,</p><p>I would love to discuss...</p>">{{ templates_data[2].body if templates_data|length > 2 else (user.body_template_3 or '') }}</textarea>
@@ -425,6 +463,30 @@
 </div>
 
 <script nonce="{{ csp_nonce }}">
+    // --- Smart Editor Logic ---
+    window.insertVar = function (id, startTag, endTag = '') {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        const start = el.selectionStart;
+        const end = el.selectionEnd;
+        const text = el.value;
+        const before = text.substring(0, start);
+        const after = text.substring(end, text.length);
+        const selected = text.substring(start, end);
+
+        el.value = before + startTag + selected + endTag + after;
+
+        // Restore focus and selection
+        el.focus();
+        el.setSelectionRange(start + startTag.length, start + startTag.length + selected.length);
+
+        // Trigger updates
+        const num = id.split('-').pop();
+        updatePreview(num);
+        updateTemplateDots();
+    };
+
     // --- Template Tab Logic ---
     const tabs = document.querySelectorAll('.template-tab');
     const panels = document.querySelectorAll('.template-panel');
@@ -498,10 +560,18 @@
         const editor = document.getElementById(`body-editor-${num}`);
         const preview = document.getElementById(`html-preview-${num}`);
         if (!editor || !preview) return;
+
         let content = editor.value;
-        if (!content.toLowerCase().match(/<[a-z][\s\S]*>/i)) {
-            content = content.replace(/\n/g, '<br>');
+
+        // Smart Conversion for Non-Technical Users
+        // Logic: If user didn't manually wrap in <p>, auto-wrap paragraphs and breaks
+        if (!content.includes('<p>') && !content.includes('<div>')) {
+            content = content.trim()
+                .split('\n\n')
+                .map(p => p.trim() ? `<p>${p.replace(/\n/g, '<br>')}</p>` : '')
+                .join('');
         }
+
         preview.innerHTML = content;
     }
 
