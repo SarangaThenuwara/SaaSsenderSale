@@ -146,6 +146,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function timeAgo(date) {
+        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + " years ago";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + " months ago";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + " days ago";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + " hours ago";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + " minutes ago";
+        return Math.floor(seconds) + " seconds ago";
+    }
+
     // --- Report Loading ---
     async function loadReport() {
         const reportBody = document.getElementById("report-body");
@@ -165,7 +180,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            reportBody.innerHTML = data.map(r => `
+            reportBody.innerHTML = data.map(r => {
+                let statusLabel = r.status;
+                let statusClass = 'bg-blue-500/10 text-blue-400';
+                let guidance = r.last_error || 'Success';
+
+                if (r.status === 'Sent') {
+                    statusLabel = 'Delivered';
+                    statusClass = 'bg-green-500/10 text-green-400';
+                } else if (r.status === 'Failed') {
+                    statusLabel = 'Action Needed';
+                    statusClass = 'bg-red-500/10 text-red-400';
+                    
+                    if (guidance.toLowerCase().includes('token') || guidance.includes('401')) {
+                        guidance = "Email connection expired. Please disconnect and reconnect your email in Settings.";
+                    } else if (guidance.toLowerCase().includes('limit')) {
+                        guidance = "Daily limit reached. The system will resume tomorrow.";
+                    }
+                }
+
+                return `
                 <tr class="hover:bg-white/2 transition-colors">
                     <td class="py-4">
                         <div class="flex flex-col">
@@ -174,21 +208,20 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                     </td>
                     <td class="py-4">
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${r.status === 'Sent' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-                }">
-                            ${r.status}
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${statusClass}">
+                            ${statusLabel}
                         </span>
                     </td>
                     <td class="py-4 text-xs text-slate-400">
-                        ${r.sent_at ? new Date(r.sent_at).toLocaleString() : '-'}
+                        ${r.sent_at ? timeAgo(r.sent_at) : '-'}
                     </td>
                     <td class="py-4 text-right">
-                        <span class="text-[10px] text-slate-500 italic max-w-xs truncate block ml-auto">
-                            ${r.last_error || 'Success'}
+                        <span title="${guidance}" class="text-[10px] text-slate-500 italic max-w-xs truncate block ml-auto cursor-help">
+                            ${guidance}
                         </span>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
 
         } catch (err) {
             console.error("Failed to load report", err);

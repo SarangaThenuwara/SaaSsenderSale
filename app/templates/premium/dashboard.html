@@ -86,10 +86,16 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
             <h1 class="text-4xl font-bold text-white">Welcome back, {{ user.username }}</h1>
-            <p class="text-slate-400 mt-1">Manage your outreach and track recruiter responses.</p>
+            <p class="text-slate-400 mt-1">Connect with recruiters and land your next role effortlessly.</p>
             {% if user.is_paid %}
-            <p class="text-xs text-green-400 font-bold mt-1">Premium Plan Active (Expires: {{
-                user.subscription_expires_at.strftime('%Y-%m-%d') }})</p>
+            <p class="text-xs text-green-400 font-bold mt-1 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd" />
+                </svg>
+                Premium Plan Active (Expires: {{ user.subscription_expires_at.strftime('%Y-%m-%d') }})
+            </p>
             {% endif %}
         </div>
 
@@ -113,7 +119,7 @@
             </div>
             <div class="hidden sm:block h-10 w-px bg-white/10"></div>
             <div class="text-left md:text-right">
-                <p class="text-[10px] text-slate-500 uppercase tracking-wider">Assigned</p>
+                <p class="text-[10px] text-slate-500 uppercase tracking-wider">Target Recipients</p>
                 <p class="text-2xl font-bold text-white">{{ assigned }}</p>
             </div>
         </div>
@@ -186,15 +192,14 @@
                         class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide">Pending</span>
                     {% endif %}
                 </div>
-                <h4 class="font-bold text-white mb-1">Connect Gmail Securely</h4>
-                <p class="text-slate-400 text-xs mb-4">Link your Gmail account using OAuth2. Your credentials are
-                    zero-knowledge encrypted.</p>
+                <h4 class="font-bold text-white mb-1">Link Your Email Account</h4>
+                <p class="text-slate-400 text-xs mb-4">Allow the system to send emails on your behalf safely and
+                    securely.</p>
                 {% if not has_gmail %}
-                <a href="/settings"
-                    class="text-primary-400 hover:text-primary-300 text-sm font-semibold link-hover">Configure in
-                    Settings &rarr;</a>
+                <a href="/settings" class="text-primary-400 hover:text-primary-300 text-sm font-semibold link-hover">Go
+                    to Settings &rarr;</a>
                 {% else %}
-                <p class="text-xs text-emerald-400/80 font-medium">OAuth2 Configured & Valid</p>
+                <p class="text-xs text-emerald-400/80 font-medium">Email Connected Successfully</p>
                 {% endif %}
             </div>
         </div>
@@ -277,7 +282,7 @@
 
             <div class="space-y-4 relative z-10">
                 <div class="flex justify-between items-center text-[10px] bg-white/5 p-2 rounded-lg">
-                    <span class="text-slate-400 font-medium">CV Document</span>
+                    <span class="text-slate-400 font-medium">Active Resume File</span>
                     <span class="text-primary-300 font-mono font-bold">{{ user.campaign_snapshot.cv_filename }}</span>
                 </div>
 
@@ -291,7 +296,7 @@
                 </div>
 
                 <div class="flex justify-between items-center text-[10px]">
-                    <span class="text-slate-400">Snapshot Latency</span>
+                    <span class="text-slate-400">Settings Last Synced</span>
                     <span class="text-slate-500 font-mono">{{ user.campaign_snapshot.snapshot_at.strftime('%H:%M:%S
                         UTC') }}</span>
                 </div>
@@ -319,8 +324,8 @@
                 <div class="space-y-2">
                     <div class="flex justify-between items-end text-xs">
                         <div>
-                            <span class="text-slate-400 block font-medium">Daily Outreach Quota</span>
-                            <span class="text-[10px] text-slate-500 block">Resets midnight UTC</span>
+                            <span class="text-slate-400 block font-medium">Daily Email limit</span>
+                            <span class="text-[10px] text-slate-500 block">Resets automatically at midnight</span>
                         </div>
                         <div class="text-right">
                             <span class="text-white font-mono text-lg font-bold">{{ user.daily_sent|default(0) }}</span>
@@ -331,14 +336,14 @@
                     <div class="flex items-center gap-2">
                         <div class="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
                             {% set daily_sent = user.daily_sent|default(0) %}
-                            {% set progress = (daily_sent / daily_limit * 100) if daily_limit > 0 else 0 %}
+                            {% set pct = (daily_sent / daily_limit * 100)|round if daily_limit > 0 else 0 %}
                             <div class="bg-primary-500 h-full rounded-full transition-all duration-1000"
-                                style="width: {{ progress|round }}%"></div>
+                                style="width:{{ pct }}%"></div>
                         </div>
-                        {% if daily_limit < user.daily_limit|default(240) %} <a href="/resources/email-warmup-guide"
-                            class="shrink-0 text-[8px] px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400 font-black uppercase hover:bg-primary-500/30 transition-colors animate-pulse decoration-none">
-                            Warmup Active?</a>
-                            {% endif %}
+                        <span
+                            title="The system is slowly increasing your daily limit to keep your account safe from being flagged as spam. This is normal and recommended."
+                            class="cursor-help shrink-0 text-[8px] px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400 font-black uppercase transition-colors decoration-none">
+                            ? WARMUP ACTIVE</span>
                     </div>
                 </div>
 

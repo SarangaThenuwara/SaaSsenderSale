@@ -197,7 +197,7 @@
                     <path
                         d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L12 9.573l8.073-6.08c1.618-1.214 3.927-.059 3.927 1.964z" />
                 </svg>
-                Gmail API Configuration
+                Email Connection Settings
             </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -211,7 +211,7 @@
 
             <div class="space-y-4">
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-300">Credentials (Base64)</label>
+                    <label class="block text-sm font-medium text-slate-300">Gmail Connection Key (Part 1)</label>
                     <textarea name="credentials_base64" rows="3"
                         class="input-glass px-4 py-3 font-mono text-xs focus:ring-primary-500/50 {% if user.credentials_base64 == '[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]' %}text-primary-400 font-bold focus:blur-none blur-[4px] hover:blur-[2px] transition-all cursor-password{% endif %}"
                         placeholder="Paste the Base64 encoded string provided by the generator">{{ user.credentials_base64 or '' }}</textarea>
@@ -228,7 +228,7 @@
 
 
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-300">Token (Base64)</label>
+                    <label class="block text-sm font-medium text-slate-300">Gmail Connection Key (Part 2)</label>
                     <textarea name="token_base64" rows="3"
                         class="input-glass px-4 py-3 font-mono text-xs focus:ring-primary-500/50 {% if user.token_base64 == '[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]' %}text-primary-400 font-bold focus:blur-none blur-[4px] hover:blur-[2px] transition-all cursor-password{% endif %}"
                         placeholder="Paste the Base64 encoded string provided by the generator">{{ user.token_base64 or '' }}</textarea>
