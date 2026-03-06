@@ -7,14 +7,18 @@ LOG = logging.getLogger(__name__)
 # Initialize a connection pool for persistent connections
 # We use socket_keepalive=True to help keep the connection alive through idleness
 try:
+    # Parse the URL to see if it's rediss (SSL)
+    is_ssl = REDIS_URL.startswith("rediss://")
+    
     pool = redis.ConnectionPool.from_url(
         REDIS_URL, 
         max_connections=20, 
         socket_timeout=5, 
         socket_connect_timeout=5,
         socket_keepalive=True,
-        health_check_interval=30,  # Ping server every 30s of idleness
-        retry_on_timeout=True
+        health_check_interval=30,
+        retry_on_timeout=True,
+        ssl_cert_reqs=None if is_ssl else 'required'
     )
     redis_client = redis.StrictRedis(connection_pool=pool)
     LOG.info("Redis connection pool initialized with health checks")

@@ -315,6 +315,10 @@
                             <p class="text-xs text-slate-500 mt-1">Manage and verify cross-border entries.</p>
                         </div>
                         <div class="flex items-center gap-2">
+                            <button id="btn-sync-recruiters" title="Sync from hremail.email"
+                                class="px-4 py-2 bg-primary-600/10 hover:bg-primary-600/20 text-primary-400 border border-primary-600/20 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all">
+                                Sync from HR Email
+                            </button>
                             <input type="text" id="recruiter-search" placeholder="Search pool..."
                                 class="bg-slate-950 border border-white/10 rounded-lg px-4 py-2 text-xs w-64 outline-none focus:ring-1 focus:ring-primary-500">
                             <button id="btn-refresh-recruiters"
@@ -1259,6 +1263,31 @@
                 `).join('');
             } catch (err) { }
         }
+        document.getElementById('btn-sync-recruiters')?.addEventListener('click', async () => {
+            if (!confirm('Start recruiter sync from hremail.email? This runs in the background.')) return;
+            const btn = document.getElementById('btn-sync-recruiters');
+            const originalText = btn.innerText;
+            btn.innerText = 'SYNCING...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/admin/recruiters/sync', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': CSRF_TOKEN }
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    alert('Sync task queued successfully. Check workers for progress.');
+                } else {
+                    alert('Failed to start sync: ' + (data.message || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Connection error triggering sync.');
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        });
         document.getElementById('recruiter-search')?.addEventListener('change', () => loadRecruiters(1));
         document.getElementById('btn-refresh-recruiters')?.addEventListener('click', () => loadRecruiters(1));
 

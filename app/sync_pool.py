@@ -6,73 +6,53 @@ from .db import db, client
 LOG = logging.getLogger(__name__)
 
 @celery_app.task
-def sync_from_main_database(source_name="HR.UAE"):
-
+def sync_from_main_database(source_name="hremail.email"):
     """
-    Syncs new recruiter records from a source collection into the 'recipients' pool.
-    Uses email as a deduplication key.
+    Syncs new recruiter records from a source collection into the master pool.
+    Uses the modern recruiter_manager for propagation.
     """
     try:
-        # Resolve source collection
-        # Default to HR.UAE in the primary database
-        source_coll = db[source_name]
+        from app.services.recruiter_manager import process_recruiters_batch
         
-        # If it's a dot-separated name, it might be db_name.coll_name
+        # Resolve source collection
+        source_coll = None
         if "." in source_name:
-            try:
-                # Check if it's explicitly a separate database
-                parts = source_name.split(".")
-                test_db = client[parts[0]]
-                if parts[1] in test_db.list_collection_names():
-                    source_coll = test_db[parts[1]]
-            except:
-                pass
+            # db_name.coll_name
+            db_name, coll_name = source_name.split(".")
+            source_coll = client[db_name][coll_name]
+        else:
+            source_coll = db[source_name]
 
         LOG.info(f"Syncing from source collection: {source_coll.database.name}.{source_coll.name}")
         
-        from pymongo import UpdateOne
-        operations = []
         source_cursor = source_coll.find({})
+        batch = []
+        total_synced = 0
         
-        now = datetime.datetime.utcnow()
-        new_count = 0
         for doc in source_cursor:
             email = doc.get("email")
             if not email:
                 continue
             
-            email = email.strip().lower()
-            
-            # Use UpdateOne with upsert=True on email 
-            # This ensures even if something was deleted or modified manually, we preserve unique emails.
-            # $setOnInsert ensures we only set status=Pending for NEW records.
-            operations.append(UpdateOne(
-                {"email": email},
-                {
-                    "$setOnInsert": {
-                        "email": email,
-                        "name": (doc.get("name") or doc.get("full_name") or "").strip(),
-                        "company": (doc.get("company") or doc.get("company_name") or "").strip(),
-                        "status": "Pending",
-                        "source": source_name,
-                        "created_at": now
-                    }
-                },
-                upsert=True
-            ))
+            # Prepare data in format expected by process_recruiters_batch
+            batch.append({
+                "email": email.strip().lower(),
+                "name": (doc.get("name") or doc.get("full_name") or "").strip(),
+                "company": (doc.get("company") or doc.get("company_name") or "").strip(),
+                "source": f"sync:{source_name}"
+            })
 
-            if len(operations) >= 1000:
-                res = db.recipients.bulk_write(operations, ordered=False)
-                new_count += res.upserted_count
-                operations = []
+            if len(batch) >= 1000:
+                process_recruiters_batch(batch)
+                total_synced += len(batch)
+                batch = []
 
-        if operations:
-            res = db.recipients.bulk_write(operations, ordered=False)
-            new_count += res.upserted_count
+        if batch:
+            process_recruiters_batch(batch)
+            total_synced += len(batch)
 
-        LOG.info(f"Successfully synced {new_count} new recruiters.")
-        return {"count": new_count, "status": "success"}
-
+        LOG.info(f"Successfully processed {total_synced} recruiters from {source_name}")
+        return {"count": total_synced, "status": "success"}
 
     except Exception as e:
         LOG.exception(f"Sync failed for {source_name}")

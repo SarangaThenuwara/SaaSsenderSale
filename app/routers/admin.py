@@ -325,6 +325,14 @@ def reset_queues(_admin=Depends(get_admin_user)):
     res = db.users.update_many({}, {"$set": {"daily_sent": 0}})
     return {"reset_count": res.modified_count}
 
+@router.post("/recruiters/sync")
+def trigger_recruiter_sync(_admin=Depends(get_admin_user)):
+    """Manually trigger the background sync from hremail.email."""
+    from app.sync_pool import sync_from_main_database
+    # Trigger as a Celery task
+    task = sync_from_main_database.delay()
+    return {"ok": True, "task_id": task.id}
+
 # --- Enhanced Recruiter Management ---
 
 import dns.resolver
