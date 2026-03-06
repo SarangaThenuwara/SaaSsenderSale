@@ -1079,19 +1079,34 @@ async def api_user_report(request: Request):
     if not user:
         return JSONResponse({"error": "auth required"}, status_code=401)
     
-    # Fetch last 50 processed recipients
-    recipients = list(db.recipients.find(
-        {"assigned_to": user["_id"], "status": {"$in": ["Sent", "Failed"]}}
-    ).sort("sent_at", -1).limit(50))
-    
-    for r in recipients:
-        r["_id"] = str(r["_id"])
-        r["assigned_to"] = str(r["assigned_to"])
-        for key, value in r.items():
-            if isinstance(value, datetime):
-                r[key] = value.isoformat()
-            
-    return JSONResponse(recipients)
+    try:
+        # Fetch last 50 sent/failed entries from the new ledger
+        ledger_entries = list(db.user_recruiter_ledger.find(
+            {"userId": user["_id"], "status": {"$in": ["sent", "failed"]}}
+        ).sort("lastAttempt", -1).limit(50))
+
+        results = []
+        for entry in ledger_entries:
+            # Fetch the recruiter email from the recruiters collection
+            recruiter = db.recruiters.find_one(
+                {"_id": entry.get("recruiterId")},
+                {"email": 1, "domain": 1}
+            )
+            email = recruiter.get("email", "unknown@unknown.com") if recruiter else "unknown@unknown.com"
+
+            sent_at = entry.get("lastAttempt") or entry.get("created_at")
+            results.append({
+                "email": email,
+                "status": "Sent" if entry["status"] == "sent" else "Failed",
+                "sent_at": sent_at.isoformat() if sent_at else None,
+                "last_error": entry.get("error"),
+                "role": "Recruiter"
+            })
+
+        return JSONResponse(results)
+    except Exception as e:
+        LOG.exception("Error loading user report")
+        return JSONResponse({"error": "report unavailable"}, status_code=500)
 
 
 @app.get("/settings")
