@@ -251,7 +251,7 @@
 
                 {% if has_cv %}
                 <div class="flex items-center justify-center gap-4 mt-4">
-                    <a href="/api/cv/preview/{{ user._id_str }}" target="_blank" onclick="event.stopPropagation();"
+                    <a id="cv-preview-link" href="/api/cv/preview/{{ user._id_str }}" target="_blank"
                         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500/10 border border-primary-500/20 text-primary-400 hover:bg-primary-500/20 hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -420,6 +420,10 @@
         });
         document.getElementById('upload-cv-guide-btn')?.addEventListener('click', () => {
             document.getElementById('cv_file')?.click();
+        });
+        // Stop CV preview link from triggering the file-upload area click
+        document.getElementById('cv-preview-link')?.addEventListener('click', (e) => {
+            e.stopPropagation();
         });
     });
 
