@@ -182,19 +182,33 @@ def get_db_stats():
         from app.config import RECRUITER_SOURCE_DB, RECRUITER_SOURCE_COLLECTION
         from app.db import client
         
-        stats = db.command("dbstats")
-        db_stats["mongo"] = {
-            "data_size": round(stats.get("dataSize", 0) / (1024**2), 2), # MB
-            "index_size": round(stats.get("indexSize", 0) / (1024**2), 2),
-            "collections": stats.get("collections", 0),
-            "objects": stats.get("objects", 0),
-            # Precise counts for requested collections
-            "source_count": client[RECRUITER_SOURCE_DB][RECRUITER_SOURCE_COLLECTION].count_documents({}),
-            "local_count": db.recruiters.count_documents({})
-        }
+        # Try to get general DB stats (might fail on some shared clusters)
+        try:
+            stats = db.command("dbstats")
+            db_stats["mongo"] = {
+                "ok": True,
+                "data_size": round(stats.get("dataSize", 0) / (1024**2), 2), # MB
+                "index_size": round(stats.get("indexSize", 0) / (1024**2), 2),
+                "collections": stats.get("collections", 0),
+                "objects": stats.get("objects", 0),
+            }
+        except Exception:
+            db_stats["mongo"] = {"ok": True, "partial": True}
+
+        # Individual counts (use estimated_document_count for speed/compatibility)
+        try:
+            db_stats["mongo"]["source_count"] = client[RECRUITER_SOURCE_DB][RECRUITER_SOURCE_COLLECTION].estimated_document_count()
+        except: 
+            db_stats["mongo"]["source_count"] = "N/A (No Access)"
+            
+        try:
+            db_stats["mongo"]["local_count"] = db.recruiters.estimated_document_count()
+        except:
+            db_stats["mongo"]["local_count"] = 0
+
     except Exception as e: 
         LOG.error(f"Mongo stats failed: {e}")
-        db_stats["mongo"] = {"error": "Connection failed"}
+        db_stats["mongo"] = {"error": str(e)}
     
     # Redis Stats (ENHANCED)
     try:
