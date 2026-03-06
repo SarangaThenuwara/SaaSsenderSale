@@ -4,6 +4,35 @@
 
 <div class="max-w-7xl mx-auto space-y-8 animate-fade-in">
 
+    {% if user.is_impersonated %}
+    <div class="bg-blue-500/10 border border-blue-500/50 rounded-xl p-4 flex items-center justify-between mb-8">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+            </div>
+            <div>
+                <h4 class="text-sm font-bold text-white">Admin Impersonation Active</h4>
+                <p class="text-xs text-blue-400 mt-0.5">You are currently viewing the system as {{ user.username }}.</p>
+            </div>
+        </div>
+        <button onclick="stopImpersonating()"
+            class="px-4 py-2 bg-red-500 hover:bg-red-400 text-white text-xs font-bold rounded-lg transition-colors">
+            Exit Impersonation
+        </button>
+    </div>
+    <script>
+        async function stopImpersonating() {
+            const res = await fetch('/api/admin/stop_impersonating', { method: 'POST' });
+            if (res.ok) window.location.href = '/admin';
+        }
+    </script>
+    {% endif %}
+
     {% if request.query_params.get('error') %}
     <div class="bg-red-500/10 border border-red-500/50 rounded-xl p-4 flex items-center gap-4 animate-bounce">
         <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">

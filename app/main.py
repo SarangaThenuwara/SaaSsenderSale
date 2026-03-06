@@ -137,6 +137,18 @@ def current_session_user(request: Request):
     
     # 1) Check for hardcoded admin session
     if session.get("is_admin"):
+        impersonate_id = session.get("impersonating")
+        if impersonate_id:
+            from bson.objectid import ObjectId
+            try:
+                imp_user = db.users.find_one({"_id": ObjectId(impersonate_id)})
+                if imp_user:
+                    imp_user["_id_str"] = str(imp_user["_id"])
+                    imp_user["is_impersonated"] = True
+                    return imp_user
+            except Exception:
+                pass
+                
         admin_user = db.users.find_one({"role": "admin"})
         if admin_user:
             admin_user["_id_str"] = str(admin_user["_id"])

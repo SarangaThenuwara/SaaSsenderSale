@@ -621,3 +621,67 @@ def global_report(_admin=Depends(get_admin_user)):
             "sent_at": a.get("sent_at").isoformat() if a.get("sent_at") else None
         })
     return result
+
+# --- NEW ADMIN FEATURES ---
+
+@router.post("/impersonate/{user_id}")
+def impersonate_user(user_id: str, request: Request, _admin=Depends(get_admin_user)):
+    """Set session var to impersonate another user."""
+    request.session["impersonating"] = user_id
+    log_admin_action(_admin.get("username", "admin"), "impersonate", f"Impersonating user {user_id}")
+    return {"ok": True, "message": f"Now impersonating {user_id}. Refresh the page."}
+
+@router.post("/stop_impersonating")
+def stop_impersonating(request: Request, _admin=Depends(get_admin_user)):
+    """Stop impersonating and return to admin session."""
+    request.session.pop("impersonating", None)
+    return {"ok": True}
+
+@router.get("/message_trace")
+def message_trace(query: str, _admin=Depends(get_admin_user)):
+    """Global search across user_recruiter_ledger by email/domain."""
+    import re
+    # Match email exactly, or if it's a domain, try $regex
+    regex = re.compile(re.escape(query), re.IGNORECASE)
+    leads = list(db.user_recruiter_ledger.find({
+        "$or": [
+            {"email": regex},
+            {"domain": regex}
+        ]
+    }).sort("updated_at", -1).limit(100))
+    for l in leads:
+        l["_id"] = str(l["_id"])
+        l["userId"] = str(l["userId"])
+        if "campaignId" in l: l["campaignId"] = str(l["campaignId"])
+    return {"results": leads}
+
+@router.get("/content_review")
+def content_review(_admin=Depends(get_admin_user)):
+    """Fetch users' templates to review for spam."""
+    users = list(db.users.find({
+        "$or": [
+            {"email_templates": {"$exists": True, "$not": {"$size": 0}}},
+            {"body_template": {"$exists": True, "$ne": ""}}
+        ]
+    }).limit(100))
+    results = []
+    for u in users:
+        results.append({
+            "user_id": str(u["_id"]),
+            "username": u.get("username"),
+            "email": u.get("email"),
+            "subject": u.get("subject_template"),
+            "body": u.get("body_template"),
+            "templates": u.get("email_templates")
+        })
+    return results
+
+@router.post("/billing/credits/{user_id}")
+def add_credits(user_id: str, payload: dict = Body(...), _admin=Depends(get_admin_user)):
+    """Manually issue bonus credits/sends."""
+    amount = payload.get("amount", 0)
+    target_id = parse_oid(user_id)
+    res = db.users.update_one({"_id": target_id}, {"$inc": {"daily_limit": amount}})
+    log_admin_action(_admin.get("username", "admin"), "add_credits", f"Added {amount} limit to {user_id}")
+    return {"ok": True, "modified": res.modified_count}
+

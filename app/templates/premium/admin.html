@@ -106,6 +106,15 @@
                 </svg>
                 System Policy
             </button>
+            <button
+                class="tab-btn px-4 py-2 text-sm font-bold text-slate-400 hover:text-white flex items-center gap-2 transition-all rounded-lg whitespace-nowrap"
+                data-target="panel-moderation">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Content Mod
+            </button>
         </div>
 
         <!-- Global Actions -->
@@ -236,10 +245,20 @@
                                         </button>
                                         <button
                                             class="delete-user p-2 rounded bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-all"
-                                            data-id="{{ u._id_str }}" data-username="{{ u.username }}">
+                                            data-id="{{ u._id_str }}" data-username="{{ u.username }}"
+                                            title="Delete User">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            class="impersonate-user p-2 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition-all"
+                                            data-id="{{ u._id_str }}" data-username="{{ u.username }}"
+                                            title="Impersonate User">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                             </svg>
                                         </button>
                                     </div>
@@ -348,6 +367,41 @@
                             <!-- JS Populated -->
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Global Message Trace -->
+            <div class="mt-6 card-glass p-8 bg-slate-900 border border-white/5 rounded-2xl">
+                <div class="flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold">Global Message Trace</h3>
+                        <p class="text-xs text-slate-500">Search entire recipient ledger by domain or email address.</p>
+                    </div>
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <input type="text" id="trace-query" placeholder="Search john@example.com..."
+                            class="bg-slate-950 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-primary-500 flex-1 md:w-64">
+                        <button id="btn-trace"
+                            class="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold px-4 py-2 rounded-xl transition-all">Search</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto max-h-80 scrollbar-hide">
+                    <table class="w-full text-left text-sm">
+                        <thead
+                            class="text-[10px] uppercase font-bold text-slate-500 tracking-widest border-b border-white/5">
+                            <tr>
+                                <th class="pb-3 text-left">Recipient</th>
+                                <th class="pb-3 text-center">User ID</th>
+                                <th class="pb-3 text-center">Status</th>
+                                <th class="pb-3 text-right">Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trace-results-body" class="divide-y divide-white/5">
+                            <tr>
+                                <td colspan="4" class="py-12 text-center text-slate-600 italic">Enter a query to trace
+                                    message history.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -514,6 +568,26 @@
                 </div>
             </div>
         </div>
+
+        <!-- PANEL: CONTENT MODERATION -->
+        <div id="panel-moderation" class="panel-content hidden animate-slide-up">
+            <div class="card-glass p-8 bg-slate-900 border border-white/5 rounded-2xl relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent"></div>
+                <div class="relative z-10 flex flex-col md:flex-row gap-4 items-center justify-between mb-8">
+                    <div>
+                        <h3 class="text-xl font-bold">Content Review</h3>
+                        <p class="text-xs text-slate-500 mt-1">Audit active user templates for spam, phishing, and abuse
+                            vectors.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6" id="moderation-list">
+                    <!-- JS Populated -->
+                    <div class="py-12 text-center text-slate-500 italic">Connecting to moderation stream...</div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -614,8 +688,95 @@
                 if (target === 'panel-users') loadGlobalActivity();
                 if (target === 'panel-infra') loadInfraData();
                 if (target === 'panel-policy') loadPolicyData();
+                if (target === 'panel-moderation') loadModerationData();
             });
         });
+
+        // --- Moderation Data Fetching ---
+        async function loadModerationData() {
+            const list = document.getElementById('moderation-list');
+            try {
+                const res = await fetch('/api/admin/content_review');
+                const users = await res.json();
+
+                if (users.length === 0) {
+                    list.innerHTML = '<div class="py-12 text-center text-slate-500 italic">No user content found for review.</div>';
+                    return;
+                }
+
+                list.innerHTML = users.map(u => {
+                    const templates = u.templates || [];
+                    const emailCount = templates.length > 0 ? templates.length : (u.body ? 1 : 0);
+
+                    let templatesHtml = '';
+                    if (templates.length > 0) {
+                        templatesHtml = templates.map((t, idx) => `
+                            <div class="mt-4 p-4 bg-slate-950 rounded-xl border border-white/5">
+                                <p class="text-[10px] text-slate-500 uppercase font-black mb-2">Variation ${idx + 1}</p>
+                                <p class="text-sm font-bold text-white mb-2">${escapeHtml(t.subject)}</p>
+                                <div class="text-xs text-slate-400 whitespace-pre-wrap font-mono bg-black/50 p-3 rounded-lg border border-white/5 overflow-x-auto">${escapeHtml(t.body)}</div>
+                            </div>
+                        `).join('');
+                    } else if (u.body) {
+                        templatesHtml = `
+                            <div class="mt-4 p-4 bg-slate-950 rounded-xl border border-white/5">
+                                <p class="text-[10px] text-slate-500 uppercase font-black mb-2">Legacy Template</p>
+                                <p class="text-sm font-bold text-white mb-2">${escapeHtml(u.subject)}</p>
+                                <div class="text-xs text-slate-400 whitespace-pre-wrap font-mono bg-black/50 p-3 rounded-lg border border-white/5 overflow-x-auto">${escapeHtml(u.body)}</div>
+                            </div>
+                        `;
+                    } else {
+                        templatesHtml = `<p class="text-xs text-slate-500 italic mt-4">No templates configured.</p>`;
+                    }
+
+                    return `
+                        <div class="bg-slate-950/50 border border-white/5 rounded-2xl p-6">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="flex items-center gap-3 mb-1">
+                                        <h4 class="font-bold text-white text-lg">${escapeHtml(u.username)}</h4>
+                                        <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest text-primary-400 bg-primary-500/10 border border-primary-500/10">${emailCount} TEMPLATES</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 font-mono">${escapeHtml(u.email)}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                     <button onclick="warnUser('${u.user_id}', '${escapeHtml(u.username)}')" class="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-500 text-[10px] font-black uppercase rounded-lg transition-all">Issue Warning</button>
+                                     <button onclick="banUser('${u.user_id}', '${escapeHtml(u.username)}')" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 text-[10px] font-black uppercase rounded-lg transition-all">Ban Sender</button>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 border-t border-white/5 pt-2">
+                                ${templatesHtml}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                list.innerHTML = `<div class="py-12 text-center text-red-400 italic">Error loading content: ${err.message}</div>`;
+            }
+        }
+
+        // Global Helper for Escaping HTML
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        window.banUser = async (id, username) => {
+            if (!confirm(`CRITICAL: Are you sure you want to BLOCK the user "${username}" for spam/abuse?`)) return;
+            await fetch(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_blocked: true }) });
+            loadModerationData();
+            alert(`User ${username} has been blocked.`);
+        };
+
+        window.warnUser = async (id, username) => {
+            alert(`For now, you can contact the user at ${username} or restrict their sending limits.`);
+        };
 
         // --- Policy & BI Data Fetching ---
         async function loadPolicyData() {
@@ -926,6 +1087,19 @@
             });
         });
 
+        document.querySelectorAll('.impersonate-user').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm(`Impersonate user "${btn.dataset.username}"? You will be logged in as them.`)) return;
+
+                const res = await fetch(`/api/admin/impersonate/${btn.dataset.id}`, { method: 'POST' });
+                if (res.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    alert('Failed to impersonate user.');
+                }
+            });
+        });
+
         document.querySelectorAll('.unlock-user').forEach(btn => {
             btn.addEventListener('click', async () => {
                 if (!confirm(`Unlock this user's account? This clears their brute-force lockout.`)) return;
@@ -1036,6 +1210,55 @@
             await fetch('/api/admin/suppression', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, reason: 'admin_manual' }) });
             document.getElementById('suppress-email').value = '';
             loadDeliverability();
+        });
+
+        // Message Trace Logic
+        document.getElementById('btn-trace')?.addEventListener('click', async () => {
+            const query = document.getElementById('trace-query').value.trim();
+            if (!query) return;
+
+            const tbody = document.getElementById('trace-results-body');
+            const btn = document.getElementById('btn-trace');
+            const originalText = btn.innerText;
+            btn.innerText = '...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`/api/admin/message_trace?query=${encodeURIComponent(query)}`);
+                const data = await res.json();
+
+                if (data.results.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="py-12 text-center text-slate-600 italic">No matches found in ledger.</td></tr>';
+                } else {
+                    tbody.innerHTML = data.results.map(r => `
+                        <tr class="hover:bg-white/[0.01] transition-colors border-t border-white/5">
+                            <td class="py-3 px-2">
+                                <p class="text-white font-mono text-sm">${r.email}</p>
+                                <p class="text-[9px] text-slate-500 font-mono">Domain: ${r.domain || ''}</p>
+                            </td>
+                            <td class="py-3 px-2 text-center text-[10px] font-mono text-slate-400">
+                                ${r.userId.slice(-6)}
+                            </td>
+                            <td class="py-3 px-2 text-center">
+                                <span class="px-2 py-0.5 rounded text-[8px] font-bold tracking-tighter uppercase border 
+                                    ${r.status === 'sent' ? 'bg-green-500/10 text-green-400 border-green-500/10' :
+                            (r.status === 'bounced' || r.status === 'failed' ? 'bg-red-500/10 text-red-400 border-red-500/10' :
+                                'bg-amber-500/10 text-amber-400 border-amber-500/10')}">
+                                    ${r.status}
+                                </span>
+                            </td>
+                            <td class="py-3 px-2 text-right text-[10px] text-slate-500 font-mono">
+                                ${new Date(r.updated_at || r.created_at).toLocaleString()}
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-red-400 italic">Search failed: ${err.message}</td></tr>`;
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
         });
 
         // --- 5. System Nodes Logic ---
