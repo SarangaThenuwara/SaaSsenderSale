@@ -1018,8 +1018,16 @@ def user_dashboard(request: Request, user_id: str):
     else:
         me["cv_filesize_str"] = None
     
-    assigned = db.recipients.count_documents({"assigned_to": me["_id"], "status": {"$in": ["Assigned", "InProgress"]}})
-    pending = db.recipients.count_documents({"status": "Pending"})
+    active_campaign_id = me.get("active_campaign_id", "default")
+    assigned = db.user_recruiter_ledger.count_documents({
+        "userId": me["_id"], 
+        "status": "pending",
+        "campaignId": active_campaign_id
+    })
+    
+    # "Pending" originally meant the global system queue waitlist. 
+    # For now, let's just make it the total global recruiter pool so they see how many are available.
+    pending = db.recruiters.count_documents({"health": "good"})
     current_daily_limit = get_user_daily_limit(me)
     # Billing / Plan Status
     is_paid = bool(me.get("is_paid"))

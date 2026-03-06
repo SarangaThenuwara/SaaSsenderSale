@@ -1,78 +1,75 @@
 import datetime
-import random
+import logging
 from .db import db
-from pymongo import ReturnDocument
 
-RECIPIENTS = db.recipients
-USERS = db.users
+LOG = logging.getLogger(__name__)
 
-def assign_pending_recipients(max_assign=5000):
+def assign_pending_recipients(max_assign=1000):
     """
-    Capacity-aware randomized assignment of pending recipients to active users.
-    Ensures that users get a different, random set of recruiters to avoid 
-    footprinting and ensure fair distribution.
+    Populates the user_recruiter_ledger for active users.
+    Randomly assigns recruiters from the global pool that haven't been assigned yet,
+    replenishing their 'pending' queue efficiently.
     """
     now = datetime.datetime.utcnow()
     
-    # build active users who have campaign toggled on and credentials validated
-    users = list(USERS.find({
-        "campaign_active": True, 
+    # Active users who aren't blocked or deleted
+    users = list(db.users.find({
+        # Populate their queue regardless of them having connected Gmail yet
+        # so they can see TARGET RECIPIENTS mapped out when they land on the dashboard.
         "is_blocked": {"$ne": True},
-        "is_deleted": {"$ne": True},
-        "credentials_valid": True,
-        "needs_reauth": {"$ne": True}
+        "is_deleted": {"$ne": True}
     }))
     
-    # Shuffle user list for intra-batch randomization
-    random.shuffle(users)
+    assigned_total = 0
     
-    # compute current capacity for today
     for u in users:
-        u["daily_sent"] = u.get("daily_sent", 0)
-        u["capacity"] = max(0, u.get("daily_limit", 240) - u["daily_sent"])
-
-    # filter users who actually have room to send more
-    users = [u for u in users if u["capacity"] > 0]
-    if not users:
-        return {"assigned": 0, "reason": "no_capacity_or_no_active_users"}
-
-    # Fetch a set of pending recipients. 
-    # Use $sample or just fetch and shuffle. For performance with large pools, 
-    # fetching a slice and shuffling is often better than a large $sample.
-    pending_cursor = list(RECIPIENTS.find({"status": "Pending"}).limit(max_assign))
-    random.shuffle(pending_cursor)
-    
-    assigned = 0
-    user_idx = 0
-    
-    for r in pending_cursor:
-        # find next user with capacity
-        found = None
-        # Loop through users starting from user_idx to find one with capacity
-        for _ in range(len(users)):
-            u = users[user_idx]
-            user_idx = (user_idx + 1) % len(users)
-            if u["capacity"] > 0:
-                found = u
-                break
+        active_campaign_id = u.get("active_campaign_id", "default")
+        uid = u["_id"]
         
-        if not found:
-            break
-
-        # Transaction-safe assignment
-        res = RECIPIENTS.find_one_and_update(
-            {"_id": r["_id"], "status": "Pending"},
-            {"$set": {
-                "status": "Assigned", 
-                "assigned_to": found["_id"], 
-                "assigned_at": now, 
-                "assigned_by": "random_assigner_v2"
-            }},
-            return_document=ReturnDocument.AFTER
-        )
+        # Check current pending queue size
+        pending_count = db.user_recruiter_ledger.count_documents({
+            "userId": uid, 
+            "status": "pending",
+            "campaignId": active_campaign_id
+        })
         
-        if res:
-            found["capacity"] -= 1
-            assigned += 1
-
-    return {"assigned": assigned}
+        # If they already have a healthy buffer, skip to save resources
+        if pending_count > 500:
+            continue
+            
+        # Get all recruiter IDs this user has EVER interacted with 
+        # (pending, sent, failed, etc) to ensure we don't message the same person twice
+        assigned_ids = db.user_recruiter_ledger.find({"userId": uid}).distinct("recruiterId")
+        
+        # Sample completely new recruiters for them
+        pipeline = [
+            {"$match": {"_id": {"$nin": assigned_ids}, "health": "good"}},
+            {"$sample": {"size": max_assign}}
+        ]
+        
+        new_recruiters = list(db.recruiters.aggregate(pipeline))
+        
+        if not new_recruiters:
+            continue
+            
+        ledger_ops = []
+        for r in new_recruiters:
+            ledger_ops.append({
+                "userId": uid,
+                "recruiterId": r["_id"],
+                "campaignId": active_campaign_id,
+                "status": "pending",
+                "country": r.get("detectedCountry"),
+                "provider": r.get("providerType"),
+                "lastAttempt": None,
+                "created_at": now
+            })
+            
+        if ledger_ops:
+            try:
+                db.user_recruiter_ledger.insert_many(ledger_ops, ordered=False)
+                assigned_total += len(ledger_ops)
+            except Exception as e:
+                LOG.error(f"Error inserting ledger ops for user {uid}: {e}")
+            
+    return {"assigned": assigned_total}
