@@ -53,8 +53,15 @@ RECRUITER_SOURCE_COLLECTION = os.getenv("RECRUITER_SOURCE_COLLECTION", "email")
 
 # Redis / Celery
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+# Vercel fix: if variables contain literal ${REDIS_URL} (unexpanded shell-style), expand them
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
+if "${REDIS_URL}" in CELERY_BROKER_URL:
+    CELERY_BROKER_URL = CELERY_BROKER_URL.replace("${REDIS_URL}", REDIS_URL)
+
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
+if "${REDIS_URL}" in CELERY_RESULT_BACKEND:
+    CELERY_RESULT_BACKEND = CELERY_RESULT_BACKEND.replace("${REDIS_URL}", REDIS_URL)
 
 # Backblaze B2 (S3-compatible)
 B2_KEY_ID = os.getenv("B2_S3_KEY_ID")
