@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from fastapi.responses import JSONResponse
 import requests
+import logging
 from app.db import db
 from app.config import ADMIN_API_KEY
 from app.security import csrf_protect, parse_oid
@@ -9,6 +10,7 @@ from datetime import datetime, timedelta
 import stripe
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(csrf_protect)])
+LOG = logging.getLogger(__name__)
 
 def get_admin_user(request: Request):
     """
@@ -332,13 +334,15 @@ def trigger_recruiter_sync(_admin=Depends(get_admin_user)):
     try:
         from app.sync_pool import sync_from_main_database
         # Trigger as a Celery task
+        # Ensure it's not failing due to connection error
         task = sync_from_main_database.delay()
         return {"ok": True, "task_id": task.id}
     except Exception as e:
-        LOG.error(f"Failed to trigger sync: {e}")
+        # LOG is now defined
+        LOG.error(f"Failed to trigger recruiter sync task: {str(e)}")
         return JSONResponse(
             status_code=500,
-            content={"ok": False, "message": str(e)}
+            content={"ok": False, "message": f"Server Error: {str(e)}. Check your Redis/Upstash connection in .env"}
         )
 
 # --- Enhanced Recruiter Management ---

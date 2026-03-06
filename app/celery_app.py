@@ -5,7 +5,7 @@ celery_app = Celery(
     "app",
     broker=CELERY_BROKER_URL,
     backend=CELERY_RESULT_BACKEND,
-    include=["app.tasks"]
+    include=["app.tasks", "app.sync_pool"]
 )
 
 # You can load periodic tasks etc. from here if needed
