@@ -329,20 +329,18 @@ def reset_queues(_admin=Depends(get_admin_user)):
     return {"reset_count": res.modified_count}
 
 @router.post("/recruiters/sync")
-def trigger_recruiter_sync(
-    background_tasks: BackgroundTasks,
-    _admin=Depends(get_admin_user)
-):
-    """Trigger recruiter sync in the background (works on Vercel without Celery worker)."""
-    def _run_sync():
-        try:
-            from app.sync_pool import _do_sync
-            _do_sync()
-        except Exception as e:
-            LOG.error(f"Background sync failed: {e}")
-
-    background_tasks.add_task(_run_sync)
-    return {"ok": True, "message": "Sync started in background. Check server logs for progress."}
+def trigger_recruiter_sync(_admin=Depends(get_admin_user)):
+    """Run recruiter sync synchronously (Vercel kills background tasks)."""
+    try:
+        from app.sync_pool import _do_sync
+        result = _do_sync()
+        return {"ok": True, "result": result}
+    except Exception as e:
+        LOG.exception(f"Sync failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "message": str(e)}
+        )
 
 # --- Enhanced Recruiter Management ---
 

@@ -1267,10 +1267,10 @@
             } catch (err) { }
         }
         document.getElementById('btn-sync-recruiters')?.addEventListener('click', async () => {
-            if (!confirm('Start recruiter sync from hremail.email? This runs in the background.')) return;
+            if (!confirm('Start recruiter sync? Since Vercel is serverless, this will run directly right now. It may take 10-30 seconds depending on data size. Do NOT close the tab until complete.')) return;
             const btn = document.getElementById('btn-sync-recruiters');
             const originalText = btn.innerText;
-            btn.innerText = 'SYNCING...';
+            btn.innerText = 'SYNCING... (PLEASE WAIT)';
             btn.disabled = true;
 
             try {
@@ -1278,14 +1278,23 @@
                     method: 'POST',
                     headers: { 'X-CSRF-Token': CSRF_TOKEN }
                 });
-                const data = await res.json();
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    throw new Error("Server timed out or returned invalid response.");
+                }
+
                 if (data.ok) {
-                    alert('Sync task queued successfully. Check workers for progress.');
+                    const count = data.result?.count || 0;
+                    alert(`Sync completed successfully! Processed ${count} recruiters.`);
+                    loadRecruiters(1); // Reload table
                 } else {
-                    alert('Failed to start sync: ' + (data.message || 'Unknown error'));
+                    alert('Failed to sync: ' + (data.message || 'Unknown error'));
                 }
             } catch (err) {
-                alert('Connection error triggering sync.');
+                alert('Connection error triggering sync. ' + err.message);
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;

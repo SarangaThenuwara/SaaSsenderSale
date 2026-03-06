@@ -1,0 +1,21 @@
+Total documents in hremail.email: 10954
+
+Sample documents (first 3):
+
+  [1] Keys: ['email', 'timestamp']
+       email: 'jobs@pappas.at'
+       timestamp: datetime.datetime(2025, 5, 7, 12, 23, 49, 868000)
+
+  [2] Keys: ['email', 'timestamp']
+       email: 'personal@koenig-rex.com'
+       timestamp: datetime.datetime(2025, 5, 7, 12, 23, 49, 868000)
+
+  [3] Keys: ['email', 'timestamp']
+       email: 'klemens.lengauer@jku.at'
+       timestamp: datetime.datetime(2025, 5, 7, 12, 23, 49, 868000)
+
+Docs with 'email' field: 10954/10954
+
+Current recruiters in saa_sender.recruiters: 0
+
+Done.
