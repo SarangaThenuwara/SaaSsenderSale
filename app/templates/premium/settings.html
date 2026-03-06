@@ -537,7 +537,8 @@
             const response = await fetch('/api/validate_credentials', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('input[name="csrf"]')?.value
                 }
             });
             const data = await response.json();

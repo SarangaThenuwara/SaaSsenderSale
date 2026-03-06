@@ -675,6 +675,7 @@
 
 <script nonce="{{ csp_nonce }}">
     document.addEventListener('DOMContentLoaded', () => {
+        const CSRF_TOKEN = "{{ csrf_token }}";
 
         // --- 1. Navigation Controller ---
         const tabs = document.querySelectorAll('.tab-btn');
@@ -785,7 +786,14 @@
 
         window.banUser = async (id, username) => {
             if (!confirm(`CRITICAL: Are you sure you want to BLOCK the user "${username}" for spam/abuse?`)) return;
-            await fetch(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_blocked: true }) });
+            await fetch(`/api/admin/users/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': CSRF_TOKEN
+                },
+                body: JSON.stringify({ is_blocked: true })
+            });
             loadModerationData();
             alert(`User ${username} has been blocked.`);
         };
@@ -887,7 +895,10 @@
             if (!confirm("Apply these global policy changes? This will instantly affect system-wide behavior and user access.")) return;
             await fetch('/api/admin/settings', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': CSRF_TOKEN
+                },
                 body: JSON.stringify(payload)
             });
             alert("System policies propagated successfully.");
@@ -1075,7 +1086,14 @@
             input.addEventListener('input', (e) => {
                 clearTimeout(timer);
                 timer = setTimeout(async () => {
-                    await fetch(`/api/admin/users/${e.target.dataset.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ daily_limit: e.target.value }) });
+                    await fetch(`/api/admin/users/${e.target.dataset.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': CSRF_TOKEN
+                        },
+                        body: JSON.stringify({ daily_limit: e.target.value })
+                    });
                 }, 800);
             });
         });
@@ -1087,7 +1105,10 @@
 
                 await fetch(`/api/admin/users/${btn.dataset.id}`, {
                     method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': CSRF_TOKEN
+                    },
                     body: JSON.stringify({ is_blocked: !isBlocked })
                 });
                 window.location.reload();
@@ -1098,7 +1119,10 @@
             btn.addEventListener('click', async () => {
                 if (!confirm(`CRITICAL: Soft-delete user "${btn.dataset.username}"? This will halt their campaigns immediately.`)) return;
 
-                await fetch(`/api/admin/users/${btn.dataset.id}`, { method: 'DELETE' });
+                await fetch(`/api/admin/users/${btn.dataset.id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-Token': CSRF_TOKEN }
+                });
                 window.location.reload();
             });
         });
@@ -1107,7 +1131,10 @@
             btn.addEventListener('click', async () => {
                 if (!confirm(`Impersonate user "${btn.dataset.username}"? You will be logged in as them.`)) return;
 
-                const res = await fetch(`/api/admin/impersonate/${btn.dataset.id}`, { method: 'POST' });
+                const res = await fetch(`/api/admin/impersonate/${btn.dataset.id}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': CSRF_TOKEN }
+                });
                 if (res.ok) {
                     window.location.href = '/dashboard';
                 } else {
@@ -1120,7 +1147,10 @@
             btn.addEventListener('click', async () => {
                 if (!confirm(`Unlock this user's account? This clears their brute-force lockout.`)) return;
 
-                const res = await fetch(`/api/admin/users/${btn.dataset.id}/unlock`, { method: 'POST' });
+                const res = await fetch(`/api/admin/users/${btn.dataset.id}/unlock`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': CSRF_TOKEN }
+                });
                 if (res.ok) {
                     window.location.reload();
                 } else {
@@ -1135,7 +1165,10 @@
 
                 await fetch(`/api/admin/billing/subscription/${btn.dataset.id}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': CSRF_TOKEN
+                    },
                     body: JSON.stringify({ is_paid: true })
                 });
                 window.location.reload();
@@ -1149,7 +1182,10 @@
 
                 const res = await fetch(`/api/admin/billing/subscription/${btn.dataset.id}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': CSRF_TOKEN
+                    },
                     body: JSON.stringify({ is_paid: false })
                 });
                 if (res.ok) {
@@ -1241,7 +1277,14 @@
         document.getElementById('btn-suppress')?.addEventListener('click', async () => {
             const email = document.getElementById('suppress-email').value;
             if (!email || !confirm(`Supress ${email} globally?`)) return;
-            await fetch('/api/admin/suppression', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, reason: 'admin_manual' }) });
+            await fetch('/api/admin/suppression', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': CSRF_TOKEN
+                },
+                body: JSON.stringify({ email, reason: 'admin_manual' })
+            });
             document.getElementById('suppress-email').value = '';
             loadDeliverability();
         });
@@ -1341,14 +1384,24 @@
         }
         window.controlWorker = async (worker, action) => {
             if (!confirm(`Are you sure you want to ${action.toUpperCase()} worker ${worker}?`)) return;
-            await fetch(`/api/admin/workers/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ worker }) });
+            await fetch(`/api/admin/workers/${action}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': CSRF_TOKEN
+                },
+                body: JSON.stringify({ worker })
+            });
             setTimeout(loadWorkers, 800);
         };
         document.getElementById('refresh-workers')?.addEventListener('click', () => { loadQueues(); loadWorkers(); });
 
         document.getElementById('reset-queues-btn')?.addEventListener('click', async () => {
             if (!confirm("Reset ALL and force synchronize system counters?")) return;
-            await fetch('/api/admin/queue/reset', { method: 'POST' });
+            await fetch('/api/admin/queue/reset', {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': CSRF_TOKEN }
+            });
             alert("Counters synchronized.");
             window.location.reload();
         });
@@ -1372,7 +1425,14 @@
         document.getElementById('btn-save-edit')?.addEventListener('click', async () => {
             if (!confirm("Commit these metadata overrides to the recruiter pool? This will bypass automated scrapers.")) return;
             const id = document.getElementById('edit-recruiter-id').value;
-            await fetch(`/api/admin/recruiters/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ detectedCountry: document.getElementById('edit-country').value, health: document.getElementById('edit-health').value, manual_override: document.getElementById('edit-override').checked }) });
+            await fetch(`/api/admin/recruiters/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': CSRF_TOKEN
+                },
+                body: JSON.stringify({ detectedCountry: document.getElementById('edit-country').value, health: document.getElementById('edit-health').value, manual_override: document.getElementById('edit-override').checked })
+            });
             closeEditModal();
             loadRecruiters(recPage);
         });
@@ -1407,7 +1467,10 @@
         try {
             const res = await fetch('/api/admin/broadcast', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': CSRF_TOKEN
+                },
                 body: JSON.stringify({ message: message.trim() })
             });
             const data = await res.json();
@@ -1426,7 +1489,10 @@
         const originalText = btn ? btn.innerText : '';
         try {
             if (btn) { btn.innerText = 'OPTIMIZING...'; btn.disabled = true; }
-            const res = await fetch('/api/admin/optimize_indexes', { method: 'POST' });
+            const res = await fetch('/api/admin/optimize_indexes', {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': CSRF_TOKEN }
+            });
             const data = await res.json();
             if (data.ok) {
                 const results = Object.entries(data.results)
@@ -1445,7 +1511,10 @@
 
     window.clearBroadcast = async () => {
         try {
-            const res = await fetch('/api/admin/broadcast', { method: 'DELETE' });
+            const res = await fetch('/api/admin/broadcast', {
+                method: 'DELETE',
+                headers: { 'X-CSRF-Token': CSRF_TOKEN }
+            });
             const data = await res.json();
             if (data.ok) {
                 alert('✅ Broadcast notification cleared. Users will no longer see the banner.');

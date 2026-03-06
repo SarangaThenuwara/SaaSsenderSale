@@ -338,7 +338,7 @@
                             {% set daily_sent = user.daily_sent|default(0) %}
                             {% set pct = (daily_sent / daily_limit * 100)|round if daily_limit > 0 else 0 %}
                             <div class="bg-primary-500 h-full rounded-full transition-all duration-1000"
-                                style="width:{{ pct }}%"></div>
+                                style="width:{{ pct }}%;"></div>
                         </div>
                         <span
                             title="The system is slowly increasing your daily limit to keep your account safe from being flagged as spam. This is normal and recommended."
@@ -411,7 +411,10 @@
         try {
             const response = await fetch('/api/campaign/toggle', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.getElementById('csrf_token')?.value
+                },
                 body: JSON.stringify({ active: nextActive })
             });
             const data = await response.json();
