@@ -41,3 +41,4 @@ debug_auth.py
 migrate_limit.py
 test_*.py
 node_modules
+venv/
