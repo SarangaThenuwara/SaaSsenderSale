@@ -960,6 +960,24 @@
                                 <div class="bg-green-500 h-full" style="width: ${sys.storage_pct ?? 0}%"></div>
                             </div>
                         </div>
+
+                        ${sys.server_time ? `
+                        <div class="mt-4 pt-4 border-t border-white/5 space-y-2">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">System Clock</p>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-400">Server Time</span>
+                                <span class="text-white font-mono">${sys.server_time}</span>
+                            </div>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-400">Last Rebooted</span>
+                                <span class="text-amber-400 font-mono">${sys.boot_time}</span>
+                            </div>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-400">Uptime</span>
+                                <span class="text-emerald-400 font-bold font-mono">${sys.uptime}</span>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 `;
 

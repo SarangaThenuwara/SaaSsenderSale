@@ -121,6 +121,7 @@ import socket
 def get_infra_stats():
     """Gathers system-level resource utilization."""
     try:
+        import datetime as dt
         # CPU & Memory
         cpu_usage = psutil.cpu_percent(interval=None)
         memory = psutil.virtual_memory()
@@ -138,6 +139,19 @@ def get_infra_stats():
         try:
             public_ip = requests.get('https://api.ipify.org', timeout=2).text
         except: pass
+
+        # Server time & uptime
+        now_utc = dt.datetime.utcnow()
+        boot_ts = psutil.boot_time()
+        boot_dt = dt.datetime.utcfromtimestamp(boot_ts)
+        uptime_secs = int((now_utc - boot_dt).total_seconds())
+        uptime_str = ""
+        days, rem = divmod(uptime_secs, 86400)
+        hours, rem = divmod(rem, 3600)
+        minutes = rem // 60
+        if days: uptime_str += f"{days}d "
+        if hours or days: uptime_str += f"{hours}h "
+        uptime_str += f"{minutes}m"
         
         return {
             "cpu": cpu_usage,
@@ -151,7 +165,10 @@ def get_infra_stats():
             "net_recv": round(net.bytes_recv / (1024**2), 2),
             "local_ip": local_ip,
             "public_ip": public_ip,
-            "hostname": hostname
+            "hostname": hostname,
+            "server_time": now_utc.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "boot_time": boot_dt.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "uptime": uptime_str.strip()
         }
     except Exception:
         return {}
