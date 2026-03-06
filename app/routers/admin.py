@@ -168,19 +168,30 @@ def get_db_stats():
         }
     except: db_stats["mongo"] = {"error": "Connection failed"}
     
-    # Redis Stats
+    # Redis Stats (ENHANCED)
     try:
-        from app.celery_app import celery_app
-        with celery_app.pool.acquire(block=True) as conn:
-            r = conn.default_channel.client
-            info = r.info()
+        from app.redis_client import redis_client
+        if redis_client:
+            info = redis_client.info()
             db_stats["redis"] = {
+                "ok": True,
+                "version": info.get("redis_version"),
                 "used_memory": info.get("used_memory_human"),
+                "peak_memory": info.get("used_memory_peak_human"),
                 "clients": info.get("connected_clients"),
                 "uptime_days": info.get("uptime_in_days"),
-                "ops_per_sec": info.get("instantaneous_ops_per_sec")
+                "ops_per_sec": info.get("instantaneous_ops_per_sec"),
+                "total_commands": info.get("total_commands_processed"),
+                "hit_rate": round(info.get("keyspace_hits", 0) / (info.get("keyspace_hits", 0) + info.get("keyspace_misses", 1)) * 100, 2) if (info.get("keyspace_hits", 0) + info.get("keyspace_misses", 0)) > 0 else 0,
+                "keys": sum([db.get("keys", 0) for name, db in info.items() if name.startswith("db")]),
+                "expires": sum([db.get("expires", 0) for name, db in info.items() if name.startswith("db")]),
+                "os": info.get("os"),
+                "process_id": info.get("process_id")
             }
-    except: db_stats["redis"] = {"error": "Connection failed"}
+        else:
+            db_stats["redis"] = {"error": "Redis client not available"}
+    except Exception as e:
+        db_stats["redis"] = {"error": str(e)}
     
     return db_stats
 

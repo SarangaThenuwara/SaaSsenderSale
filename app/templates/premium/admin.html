@@ -951,27 +951,57 @@
 
                 dbContainer.innerHTML = `
                     <div class="space-y-4 text-sm">
-                        <div class="p-3 bg-white/5 rounded-lg">
-                            <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">MongoDB</p>
-                            <div class="flex justify-between">
-                                <span class="text-slate-400">Data Size</span>
-                                <span class="text-white">${dbs.mongo.data_size} MB</span>
-                            </div>
-                            <div class="flex justify-between mt-1">
-                                <span class="text-slate-400">Objects</span>
-                                <span class="text-white">${dbs.mongo.objects}</span>
+                        <div class="p-4 bg-white/5 rounded-2xl border border-white/5">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">MongoDB Cluster</p>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Data Footprint</span>
+                                    <span class="text-white font-mono">${dbs.mongo.data_size} MB</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Total Documents</span>
+                                    <span class="text-white font-mono">${dbs.mongo.objects.toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Index Volume</span>
+                                    <span class="text-white font-mono">${dbs.mongo.index_size} MB</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="p-3 bg-white/5 rounded-lg">
-                            <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Redis Cache</p>
-                            <div class="flex justify-between">
-                                <span class="text-slate-400">Memory Used</span>
-                                <span class="text-white">${dbs.redis.used_memory}</span>
-                            </div>
-                            <div class="flex justify-between mt-1">
-                                <span class="text-slate-400">Clients</span>
-                                <span class="text-white">${dbs.redis.clients}</span>
-                            </div>
+
+                        <div class="p-4 bg-white/5 rounded-2xl border border-white/5">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Redis Persistence</p>
+                            ${dbs.redis.error ?
+                        `<p class="text-xs text-red-400 italic">${dbs.redis.error}</p>` :
+                        `<div class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Memory / Peak</span>
+                                        <span class="text-white font-mono">${dbs.redis.used_memory} / ${dbs.redis.peak_memory}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Active Clients</span>
+                                        <span class="text-white font-mono">${dbs.redis.clients}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Ops/Sec</span>
+                                        <span class="text-white font-mono">${dbs.redis.ops_per_sec}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Hit Rate</span>
+                                        <span class="text-emerald-400 font-mono">${dbs.redis.hit_rate}%</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Keys / Expires</span>
+                                        <span class="text-white font-mono">${dbs.redis.keys} / ${dbs.redis.expires}</span>
+                                    </div>
+                                    <div class="border-t border-white/5 pt-2 mt-2">
+                                        <div class="flex justify-between text-[9px] text-slate-500">
+                                            <span>v${dbs.redis.version}</span>
+                                            <span class="uppercase tracking-tighter">${dbs.redis.os.split(' ')[0]} / PID: ${dbs.redis.process_id}</span>
+                                        </div>
+                                    </div>
+                                </div>`
+                    }
                         </div>
                     </div>
                 `;

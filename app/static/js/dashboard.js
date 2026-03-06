@@ -93,7 +93,8 @@ document.addEventListener("DOMContentLoaded", () => {
             await window.presignedUpload(
                 file,
                 "/api/presign_upload",
-                "/api/presign_complete"
+                "/api/presign_complete",
+                { filesize: file.size }
             );
 
             // Success

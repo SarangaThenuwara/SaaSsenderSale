@@ -239,14 +239,34 @@
                 </p>
 
                 <p id="upload-area-subtext" class="text-xs text-slate-500 truncate max-w-full">
-                    {{ user.cv_filename if user.cv_filename else ('PDF Uploaded' if has_cv else 'Recommended: 1-2 page
-                    PDF resume') }}
+                    {% if user.cv_filename %}
+                    {{ user.cv_filename }}
+                    {% if user.cv_filesize_str %}
+                    <span class="text-[10px] opacity-60 ml-1">({{ user.cv_filesize_str }})</span>
+                    {% endif %}
+                    {% else %}
+                    {{ 'PDF Uploaded' if has_cv else 'Recommended: 1-2 page PDF resume' }}
+                    {% endif %}
                 </p>
 
                 {% if has_cv %}
-                <p id="upload-replace-text"
-                    class="text-[9px] text-slate-600 mt-2 uppercase font-black group-hover:text-primary-400 transition-colors">
-                    Click to replace current file</p>
+                <div class="flex items-center justify-center gap-4 mt-4">
+                    <a href="/api/cv/preview/{{ user._id_str }}" target="_blank" onclick="event.stopPropagation();"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500/10 border border-primary-500/20 text-primary-400 hover:bg-primary-500/20 hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Preview CV
+                    </a>
+                    <div class="h-4 w-px bg-white/10"></div>
+                    <p id="upload-replace-text"
+                        class="text-[9px] text-slate-500 uppercase font-black group-hover:text-primary-400 transition-colors">
+                        Click to Replace
+                    </p>
+                </div>
                 {% endif %}
 
                 <input type="hidden" id="csrf_token" value="{{ csrf_token }}">

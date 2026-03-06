@@ -109,6 +109,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 async def startup_event():
     LOG.info(">>> SAA SENDER APPLICATION STARTING <<<")
+    # Initialize Redis connection
+    from app.redis_client import ensure_redis_connection
+    if ensure_redis_connection():
+        LOG.info(">>> REDIS CONNECTION ESTABLISHED AND READY <<<")
+    else:
+        LOG.error(">>> REDIS CONNECTION FAILED ON STARTUP <<<")
     LOG.info(">>> LOGGING CONFIGURED SUCCESSFULLY <<<")
 
 # --- Middlewares ---
@@ -913,6 +919,7 @@ async def api_presign_complete(request: Request):
     body = await request.json()
     key = body.get("key")
     filename = body.get("filename")
+    filesize = body.get("filesize")
     if not key:
         return JSONResponse({"error": "key required"}, status_code=400)
     user = current_session_user(request)
@@ -925,6 +932,7 @@ async def api_presign_complete(request: Request):
     db.users.update_one({"_id": user["_id"]}, {"$set": {
         "cv_b2_key": key, 
         "cv_filename": filename, 
+        "cv_filesize": filesize,
         "cv_uploaded_at": datetime.utcnow(),
         "campaign_active": False # Stop campaign on CV update
     }})
@@ -934,6 +942,31 @@ async def api_presign_complete(request: Request):
         delete_cv(old_key)
 
     return JSONResponse({"ok": True, "key": key})
+
+@app.get("/api/cv/preview/{user_id}")
+async def api_cv_preview(user_id: str, request: Request):
+    user = current_session_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    if str(user["_id"]) != user_id and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    try:
+        me = db.users.find_one({"_id": ObjectId(user_id)})
+    except Exception:
+         raise HTTPException(status_code=400, detail="Invalid user ID")
+
+    if not me or not me.get("cv_b2_key"):
+        raise HTTPException(status_code=404, detail="CV not found")
+    
+    from .storage_b2 import download_cv_bytes
+    from fastapi import Response
+    try:
+        content, content_type = download_cv_bytes(me["cv_b2_key"])
+        return Response(content, media_type=content_type)
+    except Exception:
+        LOG.exception("Failed to fetch CV for preview")
+        raise HTTPException(status_code=500, detail="Failed to fetch CV from storage")
 
 @app.post("/api/test_send")
 @limiter.limit("10/minute")
@@ -972,6 +1005,18 @@ def user_dashboard(request: Request, user_id: str):
     
     # Ensure 'me' also has _id_str for the template
     me["_id_str"] = str(me["_id"])
+    
+    # Format CV size for display
+    if me.get("cv_filesize"):
+        fs = me.get("cv_filesize")
+        if fs < 1024:
+            me["cv_filesize_str"] = f"{fs} B"
+        elif fs < 1024 * 1024:
+            me["cv_filesize_str"] = f"{round(fs / 1024, 1)} KB"
+        else:
+            me["cv_filesize_str"] = f"{round(fs / (1024 * 1024), 1)} MB"
+    else:
+        me["cv_filesize_str"] = None
     
     assigned = db.recipients.count_documents({"assigned_to": me["_id"], "status": {"$in": ["Assigned", "InProgress"]}})
     pending = db.recipients.count_documents({"status": "Pending"})
@@ -1201,23 +1246,25 @@ async def settings_post(
             if not s: s = "Regarding the job opening"
             if not b: b = "<p>Hi,</p><p>I am interested in the position.</p>"
         
-        # Only sanitize if not empty, otherwise keep empty
-        if s:
-            s = bleach.clean(s, tags=[], strip=True)
-        if b:
-            # Smart Conversion for Body
-            if not any(tag in b.lower() for tag in ['<p', '<div', '<br', '<li']):
-                b = b.replace('\n', '<br>')
+        # Only process if not empty
+        if s or b:
+            # Only sanitize if not empty, otherwise keep empty
+            if s:
+                s = bleach.clean(s, tags=[], strip=True)
+            if b:
+                # Smart Conversion for Body
+                if not any(tag in b.lower() for tag in ['<p', '<div', '<br', '<li']):
+                    b = b.replace('\n', '<br>')
+                
+                # Sanitize Body
+                allowed_tags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'a', 'div', 'span', 'ul', 'li', 'ol']
+                allowed_attrs = {'a': ['href', 'title', 'target']}
+                b = bleach.clean(b, tags=allowed_tags, attributes=allowed_attrs, strip=True)
             
-            # Sanitize Body
-            allowed_tags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'a', 'div', 'span', 'ul', 'li', 'ol']
-            allowed_attrs = {'a': ['href', 'title', 'target']}
-            b = bleach.clean(b, tags=allowed_tags, attributes=allowed_attrs, strip=True)
-        
-        email_templates.append({
-            "subject": s,
-            "body": b
-        })
+            email_templates.append({
+                "subject": s,
+                "body": b
+            })
 
     if errors:
         # Return to settings with current user but merge form data so they don't lose input

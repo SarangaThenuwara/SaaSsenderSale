@@ -1,4 +1,4 @@
-window.presignedUpload = async function (file, presignEndpoint, completeEndpoint) {
+window.presignedUpload = async function (file, presignEndpoint, completeEndpoint, meta = {}) {
   // CLIENT-SIDE VALIDATION
   if (!file) throw new Error("No file selected");
 
@@ -55,7 +55,7 @@ window.presignedUpload = async function (file, presignEndpoint, completeEndpoint
             "Content-Type": "application/json",
             "X-CSRF-Token": csrf
           },
-          body: JSON.stringify({ key, filename: file.name })
+          body: JSON.stringify({ key, filename: file.name, ...meta })
         });
         if (!completeResp.ok) {
           const err = await completeResp.json();
