@@ -996,8 +996,8 @@
                                     </div>
                                     <div class="border-t border-white/5 pt-2 mt-2">
                                         <div class="flex justify-between text-[9px] text-slate-500">
-                                            <span>v${dbs.redis.version}</span>
-                                            <span class="uppercase tracking-tighter">${dbs.redis.os.split(' ')[0]} / PID: ${dbs.redis.process_id}</span>
+                                            <span>v${dbs.redis.version || 'unknown'}</span>
+                                            <span class="uppercase tracking-tighter">${(dbs.redis.os || 'N/A').split(' ')[0]} / PID: ${dbs.redis.process_id || 'N/A'}</span>
                                         </div>
                                     </div>
                                 </div>`
