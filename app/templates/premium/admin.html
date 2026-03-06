@@ -1242,7 +1242,8 @@
         // --- 3. Recruiter Pool Logic ---
         let recPage = 1;
         let recTotalPages = 1;
-        async function loadRecruiters(page = 1) {
+        // Expose globally so onclick in injected pagination HTML can reach it
+        window.loadRecruiters = async function loadRecruiters(page = 1) {
             recPage = page;
             const tableBody = document.getElementById('recruiters-table-body');
             const term = document.getElementById('recruiter-search').value;
@@ -1298,10 +1299,10 @@
             } catch (err) { }
         }
         document.getElementById('btn-sync-recruiters')?.addEventListener('click', async () => {
-            if (!confirm('Start recruiter sync? Since Vercel is serverless, this will run directly right now. It may take 10-30 seconds depending on data size. Do NOT close the tab until complete.')) return;
+            if (!confirm('Start incremental recruiter sync? This will pull up to 500 new records since the last sync. Should complete in ~5-10 seconds.')) return;
             const btn = document.getElementById('btn-sync-recruiters');
             const originalText = btn.innerText;
-            btn.innerText = 'SYNCING... (PLEASE WAIT)';
+            btn.innerText = 'SYNCING...';
             btn.disabled = true;
 
             try {
@@ -1319,8 +1320,9 @@
 
                 if (data.ok) {
                     const count = data.result?.count || 0;
-                    alert(`Sync completed successfully! Processed ${count} recruiters.`);
-                    loadRecruiters(1); // Reload table
+                    const since = data.result?.since || 'beginning';
+                    alert(`Sync complete! ${count} new recruiters added (since: ${since}).`);
+                    window.loadRecruiters(1);
                 } else {
                     alert('Failed to sync: ' + (data.message || 'Unknown error'));
                 }
