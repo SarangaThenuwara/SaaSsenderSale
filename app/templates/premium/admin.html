@@ -195,8 +195,8 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <button onclick="verifyUserDNS('{{ u.email }}', this)"
-                                        class="px-2 py-0.5 bg-white/5 border border-white/5 rounded text-[8px] font-black tracking-widest text-slate-500 hover:text-white transition-all uppercase">DNS
+                                    <button data-email="{{ u.email }}"
+                                        class="btn-verify-dns px-2 py-0.5 bg-white/5 border border-white/5 rounded text-[8px] font-black tracking-widest text-slate-500 hover:text-white transition-all uppercase">DNS
                                         CHECK</button>
                                 </td>
                                 <td class="px-6 py-4 text-center">
@@ -479,30 +479,27 @@
                     <div class="card-glass p-6 bg-slate-900 border border-white/5 rounded-2xl">
                         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Quick Actions</h3>
                         <div class="space-y-2">
-                            <form action="/admin/sync_pool" method="post"
-                                onsubmit="return confirm('Sync HR pool from main database? This may take a few seconds.')">
+                            <form action="/admin/sync_pool" method="post" id="form-sync-hr">
                                 <input type="hidden" name="csrf" value="{{ csrf_token }}">
                                 <button type="submit"
                                     class="w-full py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 text-[10px] font-bold rounded-lg border border-green-500/20 transition-all uppercase">
                                     SYNC HR POOL
                                 </button>
                             </form>
-                            <form action="/admin/assign" method="post"
-                                onsubmit="return confirm('Distribute pending recipients to active users?')">
+                            <form action="/admin/assign" method="post" id="form-assign-recipients">
                                 <input type="hidden" name="csrf" value="{{ csrf_token }}">
                                 <button type="submit"
                                     class="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded-lg border border-amber-500/20 transition-all uppercase">
                                     ASSIGN RECIPIENTS
                                 </button>
                             </form>
-                            <button onclick="if(confirm('Send a system-wide notification?')) broadcastMessage()"
+                            <button id="btn-broadcast-notification"
                                 class="w-full py-2 bg-primary-500/10 hover:bg-primary-500/20 text-primary-400 text-[10px] font-bold rounded-lg border border-primary-500/20 transition-all">BROADCAST
                                 NOTIFICATION</button>
-                            <button onclick="clearBroadcast()"
+                            <button id="btn-clear-broadcast"
                                 class="w-full py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-500 hover:text-slate-300 text-[10px] font-bold rounded-lg border border-white/5 transition-all">CLEAR
                                 BROADCAST</button>
-                            <button
-                                onclick="if(confirm('Optimize database indexes? This may briefly impact performance.')) optimizeIndexes()"
+                            <button id="btn-optimize-indexes"
                                 class="w-full py-2 bg-white/5 hover:bg-white/10 text-slate-400 text-[10px] font-bold rounded-lg border border-white/10 transition-all">OPTIMIZE
                                 MONGO INDEXES</button>
                         </div>
@@ -655,7 +652,7 @@
             </div>
         </div>
         <div class="flex gap-3 mt-8">
-            <button onclick="closeEditModal()"
+            <button id="btn-close-edit-modal"
                 class="flex-1 py-3 text-sm font-bold text-slate-400 hover:bg-white/5 rounded-xl transition-all">Cancel</button>
             <button id="btn-save-edit"
                 class="flex-1 py-3 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl shadow-lg shadow-primary-600/20 transition-all">Commit</button>
@@ -771,8 +768,8 @@
                                     <p class="text-xs text-slate-500 font-mono">${escapeHtml(u.email)}</p>
                                 </div>
                                 <div class="flex gap-2">
-                                     <button onclick="warnUser('${u.user_id}', '${escapeHtml(u.username)}')" class="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-500 text-[10px] font-black uppercase rounded-lg transition-all">Issue Warning</button>
-                                     <button onclick="banUser('${u.user_id}', '${escapeHtml(u.username)}')" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 text-[10px] font-black uppercase rounded-lg transition-all">Ban Sender</button>
+                                     <button data-id="${u.user_id}" data-username="${escapeHtml(u.username)}" class="btn-warn-user px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-500 text-[10px] font-black uppercase rounded-lg transition-all">Issue Warning</button>
+                                     <button data-id="${u.user_id}" data-username="${escapeHtml(u.username)}" class="btn-ban-user px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 text-[10px] font-black uppercase rounded-lg transition-all">Ban Sender</button>
                                 </div>
                             </div>
                             
@@ -798,7 +795,7 @@
                 .replace(/'/g, "&#039;");
         }
 
-        window.banUser = async (id, username) => {
+        const banUser = async (id, username) => {
             if (!confirm(`CRITICAL: Are you sure you want to BLOCK the user "${username}" for spam/abuse?`)) return;
             await fetch(`/api/admin/users/${id}`, {
                 method: 'PATCH',
@@ -812,9 +809,17 @@
             alert(`User ${username} has been blocked.`);
         };
 
-        window.warnUser = async (id, username) => {
+        const warnUser = async (id, username) => {
             alert(`For now, you can contact the user at ${username} or restrict their sending limits.`);
         };
+
+        // Moderation Event Delegation
+        document.getElementById('moderation-list')?.addEventListener('click', (e) => {
+            const warnBtn = e.target.closest('.btn-warn-user');
+            const banBtn = e.target.closest('.btn-ban-user');
+            if (warnBtn) warnUser(warnBtn.dataset.id, warnBtn.dataset.username);
+            if (banBtn) banUser(banBtn.dataset.id, banBtn.dataset.username);
+        });
 
         // --- Policy & BI Data Fetching ---
         async function loadPolicyData() {
@@ -1150,7 +1155,7 @@
         loadGlobalActivity();
         setInterval(loadGlobalActivity, 15000);
 
-        window.verifyUserDNS = async (email, btn) => {
+        const verifyUserDNS = async (email, btn) => {
             const domain = email.split('@').pop();
             const originalText = btn.innerText;
             btn.disabled = true;
@@ -1160,7 +1165,7 @@
                 const data = await res.json();
                 const healthy = data.mx === 'configured' && data.spf === 'configured';
 
-                btn.className = `px-2 py-0.5 border rounded text-[8px] font-black tracking-widest uppercase transition-all ${healthy ? 'bg-green-500/10 text-green-400 border-green-500/10' : 'bg-red-500/10 text-red-400 border-red-500/10'}`;
+                btn.className = `btn-verify-dns px-2 py-0.5 border rounded text-[8px] font-black tracking-widest uppercase transition-all ${healthy ? 'bg-green-500/10 text-green-400 border-green-500/10' : 'bg-red-500/10 text-red-400 border-red-500/10'}`;
                 btn.innerText = healthy ? 'HEALTHY' : 'ISSUES DETECTED';
                 btn.title = `MX: ${data.mx}, SPF: ${data.spf}, DMARC: ${data.dmarc}`;
             } catch (err) {
@@ -1168,6 +1173,14 @@
                 btn.disabled = false;
             }
         };
+
+        // User Table Event Delegation
+        document.getElementById('user-table-body')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-verify-dns');
+            if (btn) {
+                verifyUserDNS(btn.dataset.email, btn);
+            }
+        });
 
         // Limit update / Block / Toggle Paid logic
         document.querySelectorAll('.update-limit').forEach(input => {
@@ -1324,7 +1337,7 @@
                             </span>
                         </td>
                         <td class="py-4 text-right">
-                             <button onclick="openEditRecruiter('${r._id}', '${r.detectedCountry}', '${r.health}', ${r.manual_override || false})" class="px-3 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-primary-400 hover:bg-white/10 transition-all font-bold">Edit</button>
+                             <button data-id="${r._id}" data-country="${r.detectedCountry || ''}" data-health="${r.health}" data-override="${r.manual_override || false}" class="btn-edit-recruiter px-3 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-primary-400 hover:bg-white/10 transition-all font-bold">Edit</button>
                         </td>
                     </tr>
                 `).join('');
@@ -1543,7 +1556,7 @@
                                 </div>
                                 <p class="text-[9px] text-slate-600 mt-1 uppercase tracking-widest font-bold">${paused ? 'Halted' : 'Consuming: ' + qs.length + ' queues'}</p>
                             </div>
-                            <button onclick="controlWorker('${name}', '${paused ? 'resume' : 'pause'}')" class="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${paused ? 'bg-green-500 text-slate-950 hover:bg-green-400' : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10'}">
+                            <button data-worker="${name}" data-action="${paused ? 'resume' : 'pause'}" class="btn-control-worker px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${paused ? 'bg-green-500 text-slate-950 hover:bg-green-400' : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10'}">
                                 ${paused ? 'Resume' : 'Pause'}
                             </button>
                         </div>
@@ -1551,7 +1564,7 @@
                 }).join('');
             } catch (err) { }
         }
-        window.controlWorker = async (worker, action) => {
+        const controlWorker = async (worker, action) => {
             if (!confirm(`Are you sure you want to ${action.toUpperCase()} worker ${worker}?`)) return;
             await fetch(`/api/admin/workers/${action}`, {
                 method: 'POST',
@@ -1577,7 +1590,7 @@
 
         // --- 6. Modal Logic ---
         const modal = document.getElementById('modal-edit-recruiter');
-        window.openEditRecruiter = (id, country, health, override) => {
+        const openEditRecruiter = (id, country, health, override) => {
             document.getElementById('edit-recruiter-id').value = id;
             document.getElementById('edit-country').value = country !== 'null' ? country : '';
             document.getElementById('edit-health').value = health;
@@ -1586,11 +1599,21 @@
             setTimeout(() => modal.classList.remove('opacity-0'), 10);
             document.getElementById('edit-modal-content').classList.remove('scale-95');
         };
-        window.closeEditModal = () => {
+        const closeEditModal = () => {
             modal.classList.add('opacity-0');
             document.getElementById('edit-modal-content').classList.add('scale-95');
             setTimeout(() => modal.classList.add('hidden'), 300);
         };
+        document.getElementById('btn-close-edit-modal')?.addEventListener('click', closeEditModal);
+
+        // Recruiter Table Event Delegation
+        document.getElementById('recruiters-table-body')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-edit-recruiter');
+            if (btn) {
+                const ds = btn.dataset;
+                openEditRecruiter(ds.id, ds.country, ds.health, ds.override === 'true');
+            }
+        });
         document.getElementById('btn-save-edit')?.addEventListener('click', async () => {
             if (!confirm("Commit these metadata overrides to the recruiter pool? This will bypass automated scrapers.")) return;
             const id = document.getElementById('edit-recruiter-id').value;
@@ -1623,76 +1646,98 @@
                 form.submit();
             }
         });
+
+        // CSP COMPLIANT LISTENERS FOR QUICK ACTIONS
+        document.getElementById('form-sync-hr')?.addEventListener('submit', (e) => {
+            if (!confirm('Sync HR pool from main database? This may take a few seconds.')) e.preventDefault();
+        });
+        document.getElementById('form-assign-recipients')?.addEventListener('submit', (e) => {
+            if (!confirm('Distribute pending recipients to active users?')) e.preventDefault();
+        });
+        document.getElementById('btn-broadcast-notification')?.addEventListener('click', () => broadcastMessage());
+        document.getElementById('btn-clear-broadcast')?.addEventListener('click', () => clearBroadcast());
+        document.getElementById('btn-optimize-indexes')?.addEventListener('click', (e) => {
+            if (confirm('Optimize database indexes? This may briefly impact performance.')) optimizeIndexes(e.currentTarget);
+        });
+
+        // Worker Pool Event Delegation
+        document.getElementById('workers-list')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-control-worker');
+            if (btn) {
+                const worker = btn.dataset.worker;
+                const action = btn.dataset.action;
+                controlWorker(worker, action);
+            }
+        });
+
+        // --- Internal Helpers ---
+        const broadcastMessage = async () => {
+            const message = prompt('Enter the system-wide notification message to broadcast to all users:\n(max 500 characters)', '');
+            if (!message || !message.trim()) return;
+            if (message.trim().length > 500) {
+                alert('Message is too long. Please keep it under 500 characters.');
+                return;
+            }
+            try {
+                const res = await fetch('/api/admin/broadcast', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': CSRF_TOKEN
+                    },
+                    body: JSON.stringify({ message: message.trim() })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    alert(`✅ Broadcast sent successfully!\n\nMessage: "${data.message}"\n\nThis will be shown to all users on their next page load.`);
+                } else {
+                    alert(`❌ Broadcast failed: ${data.detail || 'Unknown error'}`);
+                }
+            } catch (err) {
+                alert(`❌ Request failed: ${err.message}`);
+            }
+        };
+
+        const optimizeIndexes = async (btn) => {
+            const originalText = btn ? btn.innerText : '';
+            try {
+                if (btn) { btn.innerText = 'OPTIMIZING...'; btn.disabled = true; }
+                const res = await fetch('/api/admin/optimize_indexes', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': CSRF_TOKEN }
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    const results = Object.entries(data.results)
+                        .map(([col, status]) => `  • ${col}: ${status}`)
+                        .join('\n');
+                    alert(`✅ Index optimization complete!\n\n${results}`);
+                } else {
+                    alert(`❌ Optimization failed: ${data.detail || 'Unknown error'}`);
+                }
+            } catch (err) {
+                alert(`❌ Request failed: ${err.message}`);
+            } finally {
+                if (btn) { btn.innerText = originalText; btn.disabled = false; }
+            }
+        };
+
+        const clearBroadcast = async () => {
+            try {
+                const res = await fetch('/api/admin/broadcast', {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-Token': CSRF_TOKEN }
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    alert('✅ Broadcast notification cleared. Users will no longer see the banner.');
+                } else {
+                    alert(`❌ Could not clear broadcast: ${data.detail || 'Unknown error'}`);
+                }
+            } catch (err) {
+                alert(`❌ Request failed: ${err.message}`);
+            }
+        };
     });
-
-    // --- Global Quick Action Helpers (defined outside DOMContentLoaded for inline onclick usage) ---
-    window.broadcastMessage = async () => {
-        const message = prompt('Enter the system-wide notification message to broadcast to all users:\n(max 500 characters)', '');
-        if (!message || !message.trim()) return;
-        if (message.trim().length > 500) {
-            alert('Message is too long. Please keep it under 500 characters.');
-            return;
-        }
-        try {
-            const res = await fetch('/api/admin/broadcast', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': CSRF_TOKEN
-                },
-                body: JSON.stringify({ message: message.trim() })
-            });
-            const data = await res.json();
-            if (data.ok) {
-                alert(`✅ Broadcast sent successfully!\n\nMessage: "${data.message}"\n\nThis will be shown to all users on their next page load.`);
-            } else {
-                alert(`❌ Broadcast failed: ${data.detail || 'Unknown error'}`);
-            }
-        } catch (err) {
-            alert(`❌ Request failed: ${err.message}`);
-        }
-    };
-
-    window.optimizeIndexes = async () => {
-        const btn = event?.currentTarget;
-        const originalText = btn ? btn.innerText : '';
-        try {
-            if (btn) { btn.innerText = 'OPTIMIZING...'; btn.disabled = true; }
-            const res = await fetch('/api/admin/optimize_indexes', {
-                method: 'POST',
-                headers: { 'X-CSRF-Token': CSRF_TOKEN }
-            });
-            const data = await res.json();
-            if (data.ok) {
-                const results = Object.entries(data.results)
-                    .map(([col, status]) => `  • ${col}: ${status}`)
-                    .join('\n');
-                alert(`✅ Index optimization complete!\n\n${results}`);
-            } else {
-                alert(`❌ Optimization failed: ${data.detail || 'Unknown error'}`);
-            }
-        } catch (err) {
-            alert(`❌ Request failed: ${err.message}`);
-        } finally {
-            if (btn) { btn.innerText = originalText; btn.disabled = false; }
-        }
-    };
-
-    window.clearBroadcast = async () => {
-        try {
-            const res = await fetch('/api/admin/broadcast', {
-                method: 'DELETE',
-                headers: { 'X-CSRF-Token': CSRF_TOKEN }
-            });
-            const data = await res.json();
-            if (data.ok) {
-                alert('✅ Broadcast notification cleared. Users will no longer see the banner.');
-            } else {
-                alert(`❌ Could not clear broadcast: ${data.detail || 'Unknown error'}`);
-            }
-        } catch (err) {
-            alert(`❌ Request failed: ${err.message}`);
-        }
-    };
 </script>
 {% endblock %}

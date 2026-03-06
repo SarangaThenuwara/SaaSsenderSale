@@ -101,26 +101,25 @@ def get_cv_bytes_for_user(user_id, key: Optional[str] = None, filename: Optional
 
 def get_user_daily_limit(user: dict) -> int:
     """
-    Determines the daily sending limit based on email warmup and enrollment date.
-    All users: Up to 240 emails/day, starting with a warmup phase.
-    
-    Warmup Schedule (Linear):
-    Day 1: 20 emails
-    Day 2: 40 emails
-    ...
-    Day 12: 240 emails (Full capacity)
+    Determines the daily sending limit based on tier and warmup.
+    - Free Tier: Max 40 emails/day (Warms up Day 1: 20 -> Day 2: 40)
+    - Paid Tier: Max 240 emails/day (Linear warmup over 12 days)
     """
     if not user:
         return 20
     
-    # 1. Base potential limit from user record
-    max_limit = user.get("daily_limit", 240)
+    is_paid = bool(user.get("is_paid"))
+    # 1. Determine Tier Maximum
+    if is_paid:
+        tier_max = user.get("daily_limit", 240)
+    else:
+        tier_max = 40  # Hard cap for Free Tier
     
     # 2. Calculate Warmup Limit based on first campaign start
     warmup_start = user.get("warmup_started_at")
     if not warmup_start:
         # User hasn't run their first campaign yet, keep them at base 20
-        return min(20, max_limit)
+        return min(20, tier_max)
         
     now = datetime.datetime.utcnow()
     # Days since first campaign start (0-indexed, so day of start is day 0)
@@ -129,5 +128,5 @@ def get_user_daily_limit(user: dict) -> int:
     # Warmup formula: 20 base + (20 * days_since_start)
     warmup_limit = 20 + (days_since_start * 20)
     
-    # 3. Return the lesser of the warmup limit or the user's max daily limit
-    return min(warmup_limit, max_limit)
+    # 3. Return the lesser of the warmup or the tier limit
+    return min(warmup_limit, tier_max)
