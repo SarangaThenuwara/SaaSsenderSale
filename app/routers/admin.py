@@ -401,6 +401,12 @@ def list_recruiters(
     cursor = db.recruiters.find(query).skip(skip).limit(limit)
     total = db.recruiters.count_documents(query)
     
+    # Get last sync time
+    latest_recruiter = db.recruiters.find_one({}, sort=[("last_seen", -1)], projection={"last_seen": 1})
+    last_sync_time = "Never"
+    if latest_recruiter and "last_seen" in latest_recruiter:
+        last_sync_time = latest_recruiter["last_seen"].strftime("%b %d, %Y %H:%M:%S UTC")
+
     items = []
     for r in cursor:
         r["_id"] = str(r["_id"])
@@ -409,7 +415,7 @@ def list_recruiters(
         if "last_seen" in r: r["last_seen"] = r["last_seen"].isoformat()
         items.append(r)
         
-    return {"items": items, "total": total, "page": page, "limit": limit}
+    return {"items": items, "total": total, "page": page, "limit": limit, "last_sync_time": last_sync_time}
 
 @router.patch("/recruiters/{recruiter_id}")
 def update_recruiter(recruiter_id: str, payload: dict = Body(...), _admin=Depends(get_admin_user)):

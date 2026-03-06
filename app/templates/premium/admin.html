@@ -312,7 +312,9 @@
                     <div class="relative z-10 flex flex-col md:flex-row gap-4 items-center justify-between mb-8">
                         <div>
                             <h3 class="text-xl font-bold">Global Recruiter Pool</h3>
-                            <p class="text-xs text-slate-500 mt-1">Manage and verify cross-border entries.</p>
+                            <p class="text-xs text-slate-500 mt-1">Manage and verify cross-border entries. Last Sync:
+                                <span id="last-sync-time" class="text-emerald-400 font-mono">Loading...</span>
+                            </p>
                         </div>
                         <div class="flex items-center gap-2">
                             <button id="btn-sync-recruiters" title="Sync from hremail.email"
@@ -347,6 +349,10 @@
                                 <!-- JS Populated -->
                             </tbody>
                         </table>
+                    </div>
+
+                    <div id="recruiters-pagination" class="flex items-center justify-between mt-6 px-2 text-xs">
+                        <!-- JS Populated Pagination -->
                     </div>
                 </div>
             </div>
@@ -1235,11 +1241,13 @@
 
         // --- 3. Recruiter Pool Logic ---
         let recPage = 1;
+        let recTotalPages = 1;
         async function loadRecruiters(page = 1) {
             recPage = page;
             const tableBody = document.getElementById('recruiters-table-body');
             const term = document.getElementById('recruiter-search').value;
-            const params = new URLSearchParams({ page, limit: 20 });
+            const limit = 50;
+            const params = new URLSearchParams({ page, limit: limit });
             if (term) params.append('search', term);
 
             try {
@@ -1264,6 +1272,29 @@
                         </td>
                     </tr>
                 `).join('');
+
+                // Update pagination controls
+                recTotalPages = Math.ceil((data.total || 0) / limit) || 1;
+                const paginationDiv = document.getElementById('recruiters-pagination');
+                if (paginationDiv) {
+                    paginationDiv.innerHTML = `
+                        <div class="text-slate-500">
+                            Showing page <span class="text-white font-bold">${page}</span> of <span class="text-white font-bold">${recTotalPages}</span> 
+                            <span class="ml-2 font-mono">(${data.total} total items)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="loadRecruiters(${page - 1})" ${page <= 1 ? 'disabled' : ''} class="px-3 py-1.5 bg-white/5 rounded-lg hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold">Previous</button>
+                            <button onclick="loadRecruiters(${page + 1})" ${page >= recTotalPages ? 'disabled' : ''} class="px-3 py-1.5 bg-primary-600/20 text-primary-500 rounded-lg hover:bg-primary-600/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold">Next Page</button>
+                        </div>
+                    `;
+                }
+
+                // Update last sync time
+                if (data.last_sync_time) {
+                    const syncSpan = document.getElementById('last-sync-time');
+                    if (syncSpan) syncSpan.innerText = data.last_sync_time;
+                }
+
             } catch (err) { }
         }
         document.getElementById('btn-sync-recruiters')?.addEventListener('click', async () => {
