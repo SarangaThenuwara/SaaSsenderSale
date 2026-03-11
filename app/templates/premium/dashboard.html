@@ -274,12 +274,12 @@
             </div>
 
             <div id="upload-progress" class="hidden space-y-2">
-                <div class="flex justify-between text-[10px] text-slate-500">
+                <div class="flex justify-between text-[10px] text-slate-500 font-bold uppercase tracking-widest">
                     <span>Uploading...</span>
                     <span id="progress-percent">0%</span>
                 </div>
-                <div class="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
-                    <div id="progress-bar" class="bg-primary-500 h-full w-0 transition-all duration-300"></div>
+                <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden shadow-inner">
+                    <div id="progress-bar" class="bg-gradient-to-r from-primary-600 to-primary-400 h-full w-0 transition-all duration-300 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
                 </div>
             </div>
 
@@ -353,11 +353,11 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <div class="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1 bg-slate-900 rounded-full h-2.5 overflow-hidden shadow-inner">
                             {% set daily_sent = user.daily_sent|default(0) %}
                             {% set pct = (daily_sent / daily_limit * 100)|round if daily_limit > 0 else 0 %}
-                            <div class="bg-primary-500 h-full rounded-full transition-all duration-1000"
+                            <div class="bg-gradient-to-r from-primary-600 to-primary-400 h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                                 style="width:{{ pct }}%;"></div>
                         </div>
                         {% if plan.warmup_active %}
@@ -393,15 +393,15 @@
 
         <div class="overflow-x-auto">
             <table class="w-full text-left">
-                <thead class="text-[10px] text-slate-500 uppercase tracking-wider border-b border-white/5">
+                <thead class="text-[10px] text-slate-400 uppercase tracking-widest border-b border-white/10 bg-white/[0.02]">
                     <tr>
-                        <th class="pb-4 font-semibold">Recipient</th>
-                        <th class="pb-4 font-semibold">Status</th>
-                        <th class="pb-4 font-semibold">Processed At</th>
-                        <th class="pb-4 font-semibold text-right">Details</th>
+                        <th class="pb-4 pt-4 px-4 font-bold rounded-tl-lg">Recipient</th>
+                        <th class="pb-4 pt-4 px-4 font-bold">Status</th>
+                        <th class="pb-4 pt-4 px-4 font-bold">Processed At</th>
+                        <th class="pb-4 pt-4 px-4 font-bold text-right rounded-tr-lg">Details</th>
                     </tr>
                 </thead>
-                <tbody id="report-body" class="divide-y divide-white/5">
+                <tbody id="report-body" class="divide-y divide-white/5 bg-white/[0.01]">
                     <tr>
                         <td colspan="4" class="py-12 text-center text-slate-500 italic text-sm">
                             Loading outreach status...

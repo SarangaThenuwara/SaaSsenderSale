@@ -109,40 +109,60 @@
     }
 
     .card-glass {
-      background: var(--bg-surface);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border: 1px solid var(--glass-border);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(32px) saturate(200%);
+      -webkit-backdrop-filter: blur(32px) saturate(200%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      border-radius: 1.5rem;
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .card-glass:hover {
-      border-color: rgba(255, 255, 255, 0.15);
-      transform: translateY(-4px) scale(1.005);
-      box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
     }
 
     .input-glass {
       background: rgba(255, 255, 255, 0.03) !important;
-      border: 1px solid rgba(255, 255, 255, 0.05) !important;
+      backdrop-filter: blur(12px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
       transition: all 0.3s ease !important;
     }
 
     .input-glass:focus {
       background: rgba(255, 255, 255, 0.06) !important;
       border-color: var(--brand-primary) !important;
-      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
     }
 
     .btn-primary {
       background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)) !important;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      box-shadow: 0 6px 20px -4px rgba(59, 130, 246, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    .btn-primary:before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%; width: 50%; height: 100%;
+      background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transform: skewX(-20deg);
+      transition: left 0.7s ease;
+    }
+
+    .btn-primary:hover:before {
+      left: 150%;
     }
 
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4) !important;
+      box-shadow: 0 12px 28px -6px rgba(59, 130, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
     }
 
     @keyframes float {
@@ -225,10 +245,10 @@
   <!-- Hero Gradient Mesh -->
   <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
     <div
-      class="absolute top-[-20%] left-[-10%] w-[80vw] h-[80vw] bg-blue-600/10 rounded-full blur-[160px] animate-float"
+      class="absolute top-[-20%] left-[-10%] w-[80vw] h-[80vw] bg-primary-500/15 rounded-full blur-[160px] animate-float"
       style="animation-duration: 25s;"></div>
     <div
-      class="absolute bottom-[-20%] right-[-10%] w-[70vw] h-[70vw] bg-violet-600/10 rounded-full blur-[160px] animate-float"
+      class="absolute bottom-[-20%] right-[-10%] w-[70vw] h-[70vw] bg-accent-500/15 rounded-full blur-[160px] animate-float"
       style="animation-duration: 18s; animation-delay: -5s;"></div>
     <div
       class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay">
