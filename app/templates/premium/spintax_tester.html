@@ -20,7 +20,7 @@
         <div class="card-glass p-8 space-y-6">
             <div class="flex justify-between items-center">
                 <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Input Template</label>
-                <button onclick="insertSample()"
+                <button id="btn-insert-sample"
                     class="text-[10px] text-primary-400 hover:text-white transition-colors font-bold uppercase">Insert
                     Sample</button>
             </div>
@@ -29,7 +29,7 @@
                 class="w-full h-64 bg-slate-950/50 border border-white/5 rounded-2xl p-6 text-slate-300 font-mono text-sm focus:ring-2 focus:ring-primary-500/50 outline-none transition-all resize-none"
                 placeholder="Type your {Hello|Hi|Greetings} spintax here..."></textarea>
 
-            <button onclick="spinText()"
+            <button id="btn-spin-text"
                 class="btn-primary w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 group">
                 Spin Template
                 <svg class="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" fill="none"
@@ -76,7 +76,7 @@
                     <a href="/signup"
                         class="btn-primary px-8 py-3 rounded-xl text-xs font-bold shadow-xl shadow-primary-500/30">Get
                         Started Free</a>
-                    <button onclick="copyToolLink()"
+                    <button id="btn-copy-link"
                         class="px-6 py-3 rounded-xl border border-white/10 text-xs font-bold text-slate-300 hover:bg-white/5 transition-all flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -99,6 +99,12 @@
 </section>
 
 <script nonce="{{ csp_nonce }}">
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('btn-insert-sample')?.addEventListener('click', insertSample);
+        document.getElementById('btn-spin-text')?.addEventListener('click', spinText);
+        document.getElementById('btn-copy-link')?.addEventListener('click', copyToolLink);
+    });
+
     function insertSample() {
         const sample = "{Dear|Hello|Hi} {HR Team|Recruitment Manager|Team Leader},\n\nI am {reaching out|contacting you|writing to you} regarding {potential|open} {opportunities|roles} in {Dubai|Abu Dhabi|the UAE}.\n\nWith {over 5 years of|a proven|my specialized} experience in {Marketing|Sales|Engineering}, I {am confident|believe|strongly feel} I can {contribute to|add value to|support} your {upcoming projects|growth|team goals}.\n\n{Best regards|Sincerely|Many thanks},\n[Your Name]";
         document.getElementById('spintax-input').value = sample;
@@ -137,7 +143,7 @@
     function copyToolLink() {
         const url = window.location.href;
         navigator.clipboard.writeText(url).then(() => {
-            const btn = document.querySelector('button[onclick="copyToolLink()"]');
+            const btn = document.getElementById('btn-copy-link');
             const originalHTML = btn.innerHTML;
             btn.innerHTML = 'Link Copied!';
             btn.classList.add('border-emerald-500', 'text-emerald-400');
