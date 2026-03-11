@@ -102,18 +102,26 @@
         <div class="flex flex-wrap items-center gap-4 md:gap-6">
             <div class="text-left md:text-right flex-grow md:flex-grow-0">
                 <p class="text-[10px] text-slate-500 uppercase tracking-wider">Campaign Status</p>
-                <div class="mt-1 flex items-center gap-2 md:justify-end">
+                <div class="mt-2 flex items-center md:justify-end gap-3">
                     {% if user.campaign_active %}
-                    <span class="text-green-400 font-bold flex items-center gap-2">
+                    <span class="text-green-400 font-bold flex items-center gap-2 text-sm bg-green-500/10 px-3 py-1.5 rounded-lg border border-green-500/20">
                         <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
                         Running
                     </span>
                     <button id="toggle-campaign" data-active="true"
-                        class="text-xs text-red-400 hover:text-red-300 transition-colors">Stop</button>
+                        class="px-4 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:text-white text-xs font-bold shadow-lg shadow-red-500/10 transition-all hover:scale-105">
+                        Stop Engine
+                    </button>
                     {% else %}
-                    <span class="text-slate-500 font-bold">Paused</span>
+                    <span class="text-slate-500 font-bold text-sm bg-slate-800/50 px-3 py-1.5 rounded-lg border border-white/5">Paused</span>
                     <button id="toggle-campaign" data-active="false"
-                        class="text-xs text-primary-400 hover:text-primary-300 transition-colors">Start</button>
+                        class="btn-primary px-4 py-1.5 rounded-lg text-white text-xs font-bold shadow-lg shadow-primary-500/20 transition-all hover:scale-105 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Start Engine
+                    </button>
                     {% endif %}
                 </div>
             </div>
@@ -143,7 +151,7 @@
             <!-- Step 1: CV -->
             <div
                 class="border {{ 'border-emerald-500/30 bg-emerald-500/5' if has_cv else 'border-white/10 bg-white/5' }} rounded-2xl p-6 transition-colors">
-                <div class="flex justify-between items-start mb-4">
+                <div class="flex justify-between items-center mb-4">
                     <div
                         class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm {{ 'bg-emerald-500 text-white' if has_cv else 'bg-slate-800 text-slate-400' }}">
                         1</div>
@@ -175,7 +183,7 @@
             <!-- Step 2: Gmail -->
             <div
                 class="border {{ 'border-emerald-500/30 bg-emerald-500/5' if has_gmail else 'border-white/10 bg-white/5' }} rounded-2xl p-6 transition-colors">
-                <div class="flex justify-between items-start mb-4">
+                <div class="flex justify-between items-center mb-4">
                     <div
                         class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm {{ 'bg-emerald-500 text-white' if has_gmail else 'bg-slate-800 text-slate-400' }}">
                         2</div>

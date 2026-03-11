@@ -274,14 +274,11 @@
           <!-- Desktop Nav -->
           <nav class="hidden md:flex items-center gap-8">
             {% if session_user %}
-            <div class="flex items-center gap-6">
-              <span class="text-sm text-slate-400">Hello, <span class="text-white">{{ session_user.username
-                  }}</span></span>
+            <div class="flex items-center gap-8">
+              <span class="text-sm text-slate-400">Hello, <span class="text-white">{{ session_user.username }}</span></span>
               <a href="/user/{{ session_user._id_str }}/dashboard" class="btn-secondary text-sm px-4 py-2">Dashboard</a>
-              <a href="/resources"
-                class="text-sm font-medium text-slate-400 hover:text-white transition-colors">Resources</a>
-              <a href="/settings"
-                class="text-sm font-medium text-white hover:text-primary-400 transition-colors">Settings</a>
+              <a href="/resources" class="text-sm font-medium text-slate-400 hover:text-white transition-colors">Resources</a>
+              <a href="/settings" class="text-sm font-medium text-white hover:text-primary-400 transition-colors">Settings</a>
               <a href="/logout" class="text-sm font-medium link-hover">Logout</a>
             </div>
             {% else %}
@@ -314,7 +311,7 @@
         <a href="/user/{{ session_user._id_str }}/dashboard"
           class="block px-3 py-3 rounded-xl bg-primary-500/10 text-primary-400 font-bold">Dashboard</a>
         <a href="/resources"
-          class="block px-3 py-3 rounded-xl hover:bg-white/5 text-slate-200 transition-colors">Knowledge Hub</a>
+          class="block px-3 py-3 rounded-xl hover:bg-white/5 text-slate-200 transition-colors">Resources</a>
         <a href="/settings"
           class="block px-3 py-3 rounded-xl hover:bg-white/5 text-white transition-colors">Settings</a>
         <a href="/logout" class="block px-3 py-3 rounded-xl hover:bg-white/5 text-red-400 transition-colors">Logout</a>
@@ -461,7 +458,8 @@
     let deferredPrompt;
     const installBtn = document.createElement('button');
     installBtn.id = 'pwa-install-btn';
-    installBtn.className = 'fixed bottom-8 right-8 z-[100] hidden items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-full shadow-2xl shadow-primary-500/40 hover:bg-primary-500 transition-all hover:scale-105 active:scale-95 font-bold text-sm';
+    // Positioned higher on mobile to avoid overlapping content, bottom-8 on desktop
+    installBtn.className = 'fixed bottom-[5.5rem] md:bottom-8 right-4 md:right-8 z-40 hidden items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-full shadow-2xl shadow-primary-500/40 hover:bg-primary-500 transition-all hover:scale-105 active:scale-95 font-bold text-sm';
     installBtn.innerHTML = `
       <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12h.01M16 8l-4 4m0 0l-4-4m4 4V4" />

@@ -116,6 +116,7 @@ async def knowledge_index(request: Request):
         "guides": GUIDES,
         "title": "Knowledge Hub | SaaS Email Sender Resources",
         "csp_nonce": getattr(request.state, "csp_nonce", ""),
+        "session_user": getattr(request.state, "session_user", None)
     })
 
 @router.get("/{slug}", response_class=HTMLResponse)
@@ -129,6 +130,7 @@ async def knowledge_detail(request: Request, slug: str):
         "guide": guide,
         "title": f"{guide['title']} | Resources",
         "csp_nonce": getattr(request.state, "csp_nonce", ""),
+        "session_user": getattr(request.state, "session_user", None)
     })
 
 @router.get("/tools/spintax-tester", response_class=HTMLResponse)
@@ -138,4 +140,5 @@ async def spintax_tester(request: Request):
         "title": "Free Spintax Tester | SaaS Email Sender Tools",
         "meta_desc": "Test your email randomization with our free interactive Spintax tool. Perfect for optimizing cold outreach deliverability.",
         "csp_nonce": getattr(request.state, "csp_nonce", ""),
+        "session_user": getattr(request.state, "session_user", None)
     })
