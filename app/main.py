@@ -542,11 +542,13 @@ async def sitemap(request: Request):
 @app.get("/health")
 @app.get("/api/health")
 async def health_check():
-    return JSONResponse({"status": "healthy", "timestamp": datetime.utcnow().isoformat()})
+    # Minimal response — don't expose exact timestamps to avoid timing enumeration
+    return JSONResponse({"status": "ok"})
 
 @app.get("/api")
 async def api_info():
-    return JSONResponse({"message": "SaaS Email Sender API", "version": "1.0.0"})
+    # No version or implementation details exposed
+    return JSONResponse({"service": "SaaS Email Sender API"})
 
 @app.get("/api/user/{user_id}/dashboard")
 async def api_dashboard_alias(user_id: str, request: Request):
@@ -869,24 +871,17 @@ def signup_submit(request: Request, email: str = Form(...), password: str = Form
     return RedirectResponse(url=f"/user/{local['_id']}/dashboard", status_code=302)
 
 @app.get("/logout")
+@limiter.limit("10/minute")
 def logout(request: Request):
     """
     Properly invalidate the session and clear cookies.
     """
-    LOG.info("User logging out.")
+    LOG.info("Session logout initiated.")
     request.session.clear()
-    
-    # We redirect with 303 to ensure the browser doesn't try to cache the redirect itself
     response = RedirectResponse(url="/", status_code=303)
-    
-    # Explicitly clear the session cookie just in case
-    response.delete_cookie(
-        "saas_sender_session",
-        path="/",
-        domain=None,
-        httponly=True,
-        samesite="lax"
-    )
+    # Explicitly clear cookies by name (lax and Host-prefixed variants)
+    for cookie_name in ("saas_sender_session", "__Host-saas_sender_session"):
+        response.delete_cookie(cookie_name, path="/", httponly=True, samesite="lax")
     return response
 
 # Presign endpoints
@@ -916,28 +911,41 @@ async def api_presign_upload(request: Request):
 @app.post("/api/presign_complete")
 @limiter.limit("10/minute")
 async def api_presign_complete(request: Request):
+    user = current_session_user(request)
+    if not user:
+        return JSONResponse({"error": "auth required"}, status_code=401)
+
     body = await request.json()
     key = body.get("key")
     filename = body.get("filename")
     filesize = body.get("filesize")
+
     if not key:
         return JSONResponse({"error": "key required"}, status_code=400)
-    user = current_session_user(request)
-    if not user:
-        return JSONResponse({"error": "auth required"}, status_code=401)
-    
+
+    # SECURITY: Verify the uploaded key belongs to this user.
+    # The presign_upload generates keys scoped to the user's ID.
+    expected_prefix = f"cvs/{str(user['_id'])}/"
+    if not key.startswith(expected_prefix):
+        LOG.warning("SECURITY: User %s attempted to register foreign B2 key: %s", user['_id'], key[:60])
+        raise HTTPException(status_code=403, detail="Key ownership verification failed.")
+
+    # Sanitize filename
+    import re as _re
+    filename = _re.sub(r"[^\w\s.\-]", "", str(filename or ""))[:200]
+
     # Store old key to delete it after successful update
     old_key = user.get("cv_b2_key")
-    
+
     db.users.update_one({"_id": user["_id"]}, {"$set": {
-        "cv_b2_key": key, 
-        "cv_filename": filename, 
+        "cv_b2_key": key,
+        "cv_filename": filename,
         "cv_filesize": filesize,
         "cv_uploaded_at": datetime.utcnow(),
-        "campaign_active": False # Stop campaign on CV update
+        "campaign_active": False  # Stop campaign on CV update
     }})
 
-    # Delete the old file from B2 storage if it exists and is different from the new one
+    # Delete the old file from B2 storage if it exists and is different
     if old_key and old_key != key:
         delete_cv(old_key)
 
@@ -1049,34 +1057,35 @@ def user_dashboard(request: Request, user_id: str):
         return templates.TemplateResponse("onboard.html", ctx)
 
 @app.get("/api/user/me")
+@limiter.limit("30/minute")  # Prevent enumeration via polling
 async def api_user_me(request: Request):
     user = current_session_user(request)
     if not user:
         return JSONResponse({"error": "auth required"}, status_code=401)
-    
+
     # Refresh from DB
     me = db.users.find_one({"_id": user["_id"]})
     if not me:
         return JSONResponse({"error": "user not found"}, status_code=404)
-    
-    # Scrub sensitive data
-    me["_id"] = str(me["_id"])
-    if "credentials_base64" in me: del me["credentials_base64"]
-    if "token_base64" in me: del me["token_base64"]
-    if "credentials_valid" in me: del me["credentials_valid"]
-    if "supabase_id" in me: del me["supabase_id"]
 
-    # Convert dates
-    for k, v in me.items():
+    # Scrub ALL sensitive fields
+    me["_id"] = str(me["_id"])
+    for sensitive_field in (
+        "credentials_base64", "token_base64", "refresh_token_enc",
+        "credentials_valid", "supabase_id", "password_hash",
+    ):
+        me.pop(sensitive_field, None)
+
+    # Convert dates to ISO strings
+    for k, v in list(me.items()):
         if isinstance(v, datetime):
             me[k] = v.isoformat()
-            
-    # Add warmup/limit info
+
     me["current_daily_limit"] = get_user_daily_limit(me)
-    
     return JSONResponse(me)
 
 @app.get("/api/user/report")
+@limiter.limit("20/minute")  # Prevent bulk report scraping
 async def api_user_report(request: Request):
     user = current_session_user(request)
     if not user:
@@ -1392,7 +1401,7 @@ async def api_validate_credentials(request: Request):
         return JSONResponse({"ok": False, "error": "Validation failed. Please check your credentials."}, status_code=400)
 
 @app.post("/api/campaign/toggle")
-@limiter.limit("20/minute")
+@limiter.limit("5/minute")  # Tightened — state mutation, abuse prevention
 async def api_campaign_toggle(request: Request):
 
     user = current_session_user(request)

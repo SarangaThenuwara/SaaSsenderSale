@@ -1,10 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Body
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.db import db
 from app.security import csrf_protect, parse_oid
 from bson.objectid import ObjectId
 from datetime import datetime
+import re
 
 router = APIRouter(prefix="/api/campaigns", tags=["campaigns"], dependencies=[Depends(csrf_protect)])
+limiter = Limiter(key_func=get_remote_address)
 
 def get_current_user(request: Request):
     user = getattr(request.state, "session_user", None)
@@ -66,16 +70,25 @@ def list_campaigns(user=Depends(get_current_user)):
     return campaigns
 
 @router.post("/")
-def create_campaign(payload: dict = Body(...), user=Depends(get_current_user)):
+@limiter.limit("10/minute")  # Prevent campaign spam creation
+def create_campaign(request: Request, payload: dict = Body(...), user=Depends(get_current_user)):
     """
     Create a new campaign and move matching pending leads into it.
     Payload: { "name": "UK Corporate", "filters": { "country": "United Kingdom", "provider": "corporate" } }
     """
-    name = payload.get("name")
+    name = str(payload.get("name") or "").strip()
     filters = payload.get("filters", {})
-    
+
     if not name:
         raise HTTPException(400, "Campaign name required")
+    # SECURITY: Sanitize and limit campaign name
+    name = re.sub(r"[^\w\s\-,.'()]", "", name)[:100]
+    if not name:
+        raise HTTPException(400, "Campaign name contains invalid characters")
+
+    # SECURITY: Cap filter values to prevent injection via filter fields
+    allowed_filter_keys = {"country", "provider", "confidence_min"}
+    filters = {k: str(v)[:100] for k, v in filters.items() if k in allowed_filter_keys}
 
     # Create Campaign Doc
     campaign_doc = {
@@ -153,6 +166,12 @@ def start_campaign(campaign_id: str, user=Depends(get_current_user)):
 
 @router.post("/{campaign_id}/pause")
 def pause_campaign(campaign_id: str, user=Depends(get_current_user)):
+    # SECURITY: Verify ownership before pausing
+    if campaign_id != "default":
+        target_id = parse_oid(campaign_id)
+        camp = db.campaigns.find_one({"_id": target_id, "userId": ObjectId(user["_id"])})
+        if not camp:
+            raise HTTPException(404, "Campaign not found")
     db.users.update_one(
         {"_id": ObjectId(user["_id"])},
         {"$set": {"campaign_active": False}}
