@@ -52,17 +52,19 @@ def decrypt_bytes(b: bytes) -> bytes:
     if isinstance(b, str):
         b = b.encode()
         
+    aesgcm: AESGCM = _aesgcm       # type: ignore[assignment]  # narrowed by guard above
+    fernet: Fernet = _f             # type: ignore[assignment]
     try:
         # Check if legacy Fernet (which uses urlsafe base64, starts with 'gAAAA' usually)
         if b.startswith(b"gAAAAA"):
-            return _f.decrypt(b)
+            return fernet.decrypt(b)
         else:
             nonce = b[:12]
             ciphertext = b[12:]
-            return _aesgcm.decrypt(nonce, ciphertext, None)
-    except Exception as e:
+            return aesgcm.decrypt(nonce, ciphertext, None)
+    except Exception:
         # Fallback in case the non-v2 bytes were just pure Fernet bytes.
-        return _f.decrypt(b)
+        return fernet.decrypt(b)
 
 def encrypt_bytes_to_b64(b: bytes) -> str:
     """
@@ -84,15 +86,17 @@ def decrypt_b64_to_bytes(s: str) -> bytes:
     if not _aesgcm or not _f:
         raise RuntimeError("DECRYPTION_FAILURE: Encryption key not configured.")
         
+    aesgcm: AESGCM = _aesgcm       # type: ignore[assignment]
+    fernet: Fernet = _f             # type: ignore[assignment]
     if s.startswith("v2:"):
         actual_b64 = s[3:]
         raw_bytes = base64.urlsafe_b64decode(actual_b64)
         nonce = raw_bytes[:12]
         ciphertext = raw_bytes[12:]
-        return _aesgcm.decrypt(nonce, ciphertext, None)
+        return aesgcm.decrypt(nonce, ciphertext, None)
     else:
         # Legacy Fernet format
-        return _f.decrypt(s.encode())
+        return fernet.decrypt(s.encode())
 
 # CSRF helpers using itsdangerous, tied to SECRET_KEY
 _serializer = URLSafeTimedSerializer(SECRET_KEY)

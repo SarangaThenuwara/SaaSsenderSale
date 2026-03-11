@@ -27,7 +27,7 @@ if APP_ENV == "production":
     if SECRET_KEY == "change-me" or len(SECRET_KEY) < 32:
         weak_secrets.append("SECRET_KEY must be at least 32 characters")
     
-    if len(FERNET_KEY) < 32:
+    if not FERNET_KEY or len(FERNET_KEY) < 32:
         weak_secrets.append("FERNET_KEY must be a valid 32-byte Fernet key (use the generator above)")
     
     if ADMIN_PASSWORD == "admin" or not ADMIN_PASSWORD or len(ADMIN_PASSWORD) < 12:
