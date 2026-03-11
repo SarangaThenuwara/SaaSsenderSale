@@ -114,7 +114,8 @@ async def knowledge_index(request: Request):
     return templates.TemplateResponse("premium/knowledge_index.html", {
         "request": request,
         "guides": GUIDES,
-        "title": "Knowledge Hub | SaaS Email Sender Resources"
+        "title": "Knowledge Hub | SaaS Email Sender Resources",
+        "csp_nonce": getattr(request.state, "csp_nonce", ""),
     })
 
 @router.get("/{slug}", response_class=HTMLResponse)
@@ -126,7 +127,8 @@ async def knowledge_detail(request: Request, slug: str):
     return templates.TemplateResponse("premium/knowledge_detail.html", {
         "request": request,
         "guide": guide,
-        "title": f"{guide['title']} | Resources"
+        "title": f"{guide['title']} | Resources",
+        "csp_nonce": getattr(request.state, "csp_nonce", ""),
     })
 
 @router.get("/tools/spintax-tester", response_class=HTMLResponse)
@@ -134,5 +136,6 @@ async def spintax_tester(request: Request):
     return templates.TemplateResponse("premium/spintax_tester.html", {
         "request": request,
         "title": "Free Spintax Tester | SaaS Email Sender Tools",
-        "meta_desc": "Test your email randomization with our free interactive Spintax tool. Perfect for optimizing cold outreach deliverability."
+        "meta_desc": "Test your email randomization with our free interactive Spintax tool. Perfect for optimizing cold outreach deliverability.",
+        "csp_nonce": getattr(request.state, "csp_nonce", ""),
     })
