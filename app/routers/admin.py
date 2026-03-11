@@ -5,6 +5,12 @@ import logging
 from app.db import db
 from app.config import ADMIN_API_KEY
 from app.security import csrf_protect, parse_oid
+from app.api_security import (
+    verify_admin_api_key,
+    check_admin_rate_limit,
+    enforce_request_integrity,
+    encrypt_admin_response,
+)
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 import stripe
@@ -14,34 +20,44 @@ LOG = logging.getLogger(__name__)
 
 def get_admin_user(request: Request):
     """
-    Dependency to ensure the user is an admin.
+    Dependency: verify admin identity AND enforce security checks:
+    1. Rate limiting (per-IP sliding window + burst)
+    2. Request integrity / anomaly detection 
+    3. Role check (session) or HMAC-verified API key (header)
     """
+    # Security checks first — applies to ALL admin endpoints
+    check_admin_rate_limit(request)
+    enforce_request_integrity(request)
+
+    # Session-based admin (browser)
     user = getattr(request.state, "session_user", None)
     if user and user.get("role") == "admin":
         return user
-    
-    # Check API Key Header as fallback (for external tools/scripts)
+
+    # API Key fallback (for external tools/scripts) — constant-time compare
     api_key = request.headers.get("X-Admin-API-Key")
-    if api_key and api_key == ADMIN_API_KEY:
+    if api_key and verify_admin_api_key(api_key, ADMIN_API_KEY):
+        ip = request.client.host if request.client else "unknown"
+        LOG.info("SECURITY: Admin API key used from IP %s for %s %s", ip, request.method, request.url.path)
         return {"_id": "api_key", "role": "admin", "username": "system_admin"}
-        
+
     raise HTTPException(status_code=403, detail="Not authorized")
 
 @router.get("/users")
-def get_users(_admin=Depends(get_admin_user)):
+def get_users(request: Request, _admin=Depends(get_admin_user)):
     users = list(db.users.find({"is_deleted": {"$ne": True}}, {
-        "credentials_base64": 0, 
-        "token_base64": 0, 
-        "refresh_token_enc": 0
+        "credentials_base64": 0,
+        "token_base64": 0,
+        "refresh_token_enc": 0,
+        "password_hash": 0,
     }).sort("created_at", -1).limit(100))
-    
+
     for u in users:
         u["_id"] = str(u["_id"])
-        # Add quick stats
         u["assigned_recruiters"] = db.user_recruiter_ledger.count_documents({"userId": ObjectId(u["_id"])})
         u["sent_today"] = u.get("daily_sent", 0)
-        
-    return users
+
+    return encrypt_admin_response({"users": users, "count": len(users)})
 
 @router.post("/users/{user_id}/block")
 def block_user(user_id: str, _admin=Depends(get_admin_user)):
@@ -275,20 +291,50 @@ def update_global_settings(payload: dict = Body(...), _admin=Depends(get_admin_u
     return {"ok": True}
 
 @router.get("/audit_logs")
-def get_audit_logs(_admin=Depends(get_admin_user)):
-    logs = list(db.admin_audit_logs.find().sort("timestamp", -1).limit(100))
-    for l in logs:
-        l["_id"] = str(l["_id"])
-        l["timestamp"] = l["timestamp"].isoformat() if l.get("timestamp") else None
-    return logs
+def get_audit_logs(request: Request, limit: int = 100, _admin=Depends(get_admin_user)):
+    if limit > 500:
+        limit = 500  # Cap to prevent abuse
+    logs = list(db.admin_audit_logs.find().sort("timestamp", -1).limit(limit))
+    for entry in logs:
+        entry["_id"] = str(entry["_id"])
+        entry["timestamp"] = entry["timestamp"].isoformat() if entry.get("timestamp") else None
+    return encrypt_admin_response({"logs": logs, "count": len(logs)})
 
-def log_admin_action(username, action, details):
-    db.admin_audit_logs.insert_one({
+def log_admin_action(username: str, action: str, details: str, request: Request = None) -> None:
+    """
+    Structured admin audit log entry.
+    Captures username, action, details, timestamp, and optionally the request IP.
+    """
+    entry = {
         "username": username,
         "action": action,
         "details": details,
-        "timestamp": datetime.utcnow()
-    })
+        "timestamp": datetime.utcnow(),
+    }
+    if request is not None:
+        xff = request.headers.get("X-Forwarded-For")
+        entry["ip"] = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+        entry["user_agent"] = request.headers.get("User-Agent", "")[:200]
+        entry["path"] = str(request.url.path)
+    try:
+        db.admin_audit_logs.insert_one(entry)
+    except Exception as e:
+        LOG.error("Failed to write admin audit log: %s", e)
+
+
+@router.post("/decrypt")
+def decrypt_response_endpoint(
+    request: Request,
+    payload: dict = Body(...),
+    _admin=Depends(get_admin_user)
+):
+    """
+    Allows the admin browser client to decrypt an encrypted API envelope
+    that was returned by another admin endpoint.
+    POST body: { "enc": true, "payload": "<v2:base64>", "ts": 1234 }
+    """
+    from app.api_security import decrypt_admin_response
+    return decrypt_admin_response(payload)
 
 @router.get("/revenue")
 def get_revenue_stats(_admin=Depends(get_admin_user)):
