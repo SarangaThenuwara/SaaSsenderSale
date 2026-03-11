@@ -73,7 +73,8 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         "request": request,
         "csp_nonce": csp_nonce,
         "detail": str(exc.detail) if exc.detail else None,
-        "title": f"{exc.status_code} Error | SaaS Sender"
+        "title": f"{exc.status_code} Error | SaaS Sender",
+        "session_user": getattr(request.state, "session_user", None)
     }
     if exc.status_code == 404:
         return templates.TemplateResponse("premium/404.html", ctx, status_code=404)
@@ -90,7 +91,8 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         "request": request,
         "csp_nonce": csp_nonce,
         "detail": str(exc.detail) if hasattr(exc, "detail") else "Rate limit exceeded. Please slow down.",
-        "title": "429 Too Many Requests | SaaS Sender"
+        "title": "429 Too Many Requests | SaaS Sender",
+        "session_user": getattr(request.state, "session_user", None)
     }, status_code=429)
 
 @app.exception_handler(Exception)
@@ -102,7 +104,8 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         "request": request,
         "csp_nonce": csp_nonce,
         "detail": None,  # Never expose raw exception details to end users
-        "title": "500 Server Error | SaaS Sender"
+        "title": "500 Server Error | SaaS Sender",
+        "session_user": getattr(request.state, "session_user", None)
     }, status_code=500)
 
 
