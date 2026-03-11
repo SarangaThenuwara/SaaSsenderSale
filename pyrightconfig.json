@@ -1,0 +1,25 @@
+{
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Windows",
+  "pythonPath": "C:/Python312/python.exe",
+  "venvPath": ".",
+  "include": [
+    "app",
+    "sender_worker.py",
+    "user_sender_worker.py",
+    "simple_signup.py",
+    "repro_signup.py"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/.git",
+    "**/node_modules",
+    "app/static"
+  ],
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "reportOptionalMemberAccess": "warning",
+  "reportAttributeAccessIssue": "warning",
+  "useLibraryCodeForTypes": true
+}
