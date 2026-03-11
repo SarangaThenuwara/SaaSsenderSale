@@ -1,5 +1,5 @@
 import threading
-import random
+import secrets
 import time
 
 # send loop for one user
@@ -60,7 +60,7 @@ def send_for_user(user_id):
             db.get_collection("recipients").update_one({"_id": recipient["_id"]}, {"$set": {"status": "Failed", "last_error": str(e)}})
             add_log(f"Failed sending for {user_id} to {recipient_email}: {e}")
 
-        time.sleep(random.randint(60, 300))  # keep delays simple
+        time.sleep(secrets.randbelow(241) + 60)  # keep delays simple
 
 # To trigger from UI:
 def start_user_send_thread(user_id):

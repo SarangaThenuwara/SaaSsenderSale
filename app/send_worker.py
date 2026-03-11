@@ -1,5 +1,5 @@
 import datetime
-import random
+import secrets
 import time
 import logging
 from bson.objectid import ObjectId
@@ -27,8 +27,8 @@ def send_batch_for_user(self, user_id, batch_size=10):
     if isinstance(user_id, str):
         try:
             user_id = ObjectId(user_id)
-        except Exception:
-            pass
+        except Exception as e:
+            LOG.debug("Could not parse user_id %s as ObjectId: %s", user_id, e)
 
     user = USERS.find_one({"_id": user_id})
     if not user:
@@ -115,7 +115,7 @@ def send_batch_for_user(self, user_id, batch_size=10):
             # Randomly select from snapshot email templates
             snap_templates = snapshot.get("email_templates", [])
             if snap_templates:
-                chosen = random.choice(snap_templates)
+                chosen = secrets.choice(snap_templates)
                 subject = chosen.get("subject", "[Job Title] - {first_name}")
                 body = chosen.get("body", "<p>{Dear|Hi} [Recruiter Name],</p><p>I am writing to express my interest in the [Job Title] role.</p>")
             else:
@@ -128,7 +128,7 @@ def send_batch_for_user(self, user_id, batch_size=10):
             # Randomly select from user email templates
             user_templates = user.get("email_templates", [])
             if user_templates:
-                chosen = random.choice(user_templates)
+                chosen = secrets.choice(user_templates)
                 subject = chosen.get("subject", "[Job Title] - {first_name}")
                 body = chosen.get("body", "<p>{Dear|Hi} [Recruiter Name],</p><p>I am writing to express my interest in the [Job Title] role.</p>")
             else:
@@ -170,7 +170,7 @@ def send_batch_for_user(self, user_id, batch_size=10):
             db.user_recruiter_ledger.update_one({"_id": job["_id"]}, {"$set": {"status": "failed", "error": str(e)}})
 
         # 6. Throttling
-        time_sleep = random.randint(10, 30)
+        time_sleep = secrets.randbelow(21) + 10 # 10 to 30
         time.sleep(time_sleep)
 
     return {"sent": sent_count}
@@ -210,8 +210,8 @@ def send_single_message_for_user(user_id, to_email, subject_override=None, body_
     if isinstance(user_id, str):
         try:
             user_id = ObjectId(user_id)
-        except Exception:
-            pass
+        except Exception as e:
+            LOG.debug("Could not parse user_id %s as ObjectId: %s", user_id, e)
 
     user = USERS.find_one({"_id": user_id})
     if not user:

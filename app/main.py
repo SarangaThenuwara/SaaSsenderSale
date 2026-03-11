@@ -152,8 +152,8 @@ def current_session_user(request: Request):
                     imp_user["_id_str"] = str(imp_user["_id"])
                     imp_user["is_impersonated"] = True
                     return imp_user
-            except Exception:
-                pass
+            except Exception as e:
+                LOG.debug("Impersonation fetch failed: %s", e)
                 
         admin_user = db.users.find_one({"role": "admin"})
         if admin_user:
@@ -228,8 +228,8 @@ def get_csrf_session_id(request: Request):
             if session.get("access_token"):
                 # Use a prefix/suffix to avoid potential overlap with session_ids
                 return f"token:{session.get('access_token')[:32]}"
-    except Exception:
-        pass
+    except Exception as e:
+        LOG.debug("CSRF session fetch failed: %s", e)
     
     return "anon-stable"
 
@@ -353,16 +353,16 @@ def get_server_ips():
     except Exception:
         try:
             private_ip = socket.gethostbyname(socket.gethostname())
-        except Exception:
-            pass
+        except Exception as e:
+            LOG.debug("Private IP fetch failed: %s", e)
 
     try:
         # Public IP
         response = requests.get('https://api.ipify.org', timeout=3)
         if response.status_code == 200:
             public_ip = response.text
-    except Exception:
-        pass
+    except Exception as e:
+        LOG.debug("Public IP fetch failed: %s", e)
         
     return {"private": private_ip, "public": public_ip}
 

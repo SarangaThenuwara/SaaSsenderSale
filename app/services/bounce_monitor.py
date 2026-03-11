@@ -150,5 +150,5 @@ def mark_as_read(service, msg_id):
             id=msg_id,
             body={"removeLabelIds": ["UNREAD"]}
         ).execute()
-    except Exception:
-        pass
+    except Exception as e:
+        LOG.debug("Failed to mark message as read: %s", e)

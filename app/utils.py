@@ -12,8 +12,8 @@ if FERNET_KEY:
         key = FERNET_KEY.encode() if isinstance(FERNET_KEY, str) else FERNET_KEY
         _f = Fernet(key)
     except Exception as e:
-        # In production this will be caught by config.py validation, but we handle it here too
-        pass
+        import logging
+        logging.warning("Failed to initialize Fernet: %s", e)
 
 def encrypt_bytes(b: bytes) -> bytes:
     """
@@ -89,15 +89,16 @@ async def get_csrf_token_from_request(request):
     try:
         form = await request.form()
         return form.get("csrf")
-    except Exception:
-        pass
-        
+    except Exception as e:
+        import logging
+        logging.debug("Could not parse form for csrf: %s", e)
     # 3. Check JSON Body (Fallback)
     try:
         body = await request.json()
         return body.get("csrf")
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.debug("Could not parse json for csrf: %s", e)
         
     return None
 
@@ -108,7 +109,7 @@ def parse_spintax(text: str) -> str:
     Only triggers if at least one '|' is present to avoid breaking {placeholders}.
     """
     import re
-    import random
+    import secrets
     if not text:
         return ""
         
@@ -119,5 +120,5 @@ def parse_spintax(text: str) -> str:
         if not match:
             break
         options = match.group(1).split('|')
-        text = text[:match.start()] + random.choice(options) + text[match.end():]
+        text = text[:match.start()] + secrets.choice(options) + text[match.end():]
     return text

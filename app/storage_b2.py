@@ -25,7 +25,8 @@ def upload_cv_bytes(file_bytes: bytes, filename: str, content_type: str = "appli
         resp = requests.post(
             url, 
             data=file_bytes,
-            headers={"Origin": "https://saa-ssender-sale.vercel.app"}
+            headers={"Origin": "https://saa-ssender-sale.vercel.app"},
+            timeout=10
         )
         resp.raise_for_status()
     except Exception as e:
@@ -36,7 +37,7 @@ def upload_cv_bytes(file_bytes: bytes, filename: str, content_type: str = "appli
 def download_cv_bytes(key: str) -> Tuple[bytes, str]:
     url = _get_worker_url(f"/download?filename={key}")
     try:
-        resp = requests.get(url, headers={"Origin": "https://saa-ssender-sale.vercel.app"})
+        resp = requests.get(url, headers={"Origin": "https://saa-ssender-sale.vercel.app"}, timeout=10)
         resp.raise_for_status()
         content_type = resp.headers.get("Content-Type", "application/octet-stream")
         return resp.content, content_type
@@ -57,7 +58,7 @@ def get_b2_status() -> dict:
     # Use the /list endpoint to get stats (worker expects GET)
     url = _get_worker_url("/list")
     try:
-        resp = requests.get(url, headers={"Origin": "https://saa-ssender-sale.vercel.app"})
+        resp = requests.get(url, headers={"Origin": "https://saa-ssender-sale.vercel.app"}, timeout=10)
         
         if not resp.ok:
             return {"ok": False, "error": f"Worker returned status {resp.status_code}"}
@@ -92,7 +93,7 @@ def delete_cv(key: str):
     try:
         # First, find fileId (worker expects GET for /list)
         list_url = _get_worker_url("/list")
-        list_resp = requests.get(list_url, headers={"Origin": "https://saa-ssender-sale.vercel.app"})
+        list_resp = requests.get(list_url, headers={"Origin": "https://saa-ssender-sale.vercel.app"}, timeout=10)
         if not list_resp.ok:
             return
         files = list_resp.json().get("files", [])
@@ -103,7 +104,7 @@ def delete_cv(key: str):
                 break
                 
         if file_id:
-            del_resp = requests.post(url, json={"fileName": key, "fileId": file_id}, headers={"Origin": "https://saa-ssender-sale.vercel.app"})
+            del_resp = requests.post(url, json={"fileName": key, "fileId": file_id}, headers={"Origin": "https://saa-ssender-sale.vercel.app"}, timeout=10)
             del_resp.raise_for_status()
             LOG.info("Successfully deleted old CV via worker: %s", key)
         else:

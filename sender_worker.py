@@ -5,7 +5,7 @@ This is a small, synchronous worker suitable for <=10 users; for larger scale re
 """
 import threading
 import time
-import random
+import secrets
 import datetime
 import traceback
 from app import db, add_log, SCOPES  # adjust imports for your app structure
@@ -92,7 +92,7 @@ def send_for_user(user_id):
             add_log(f"Error sending to {recipient_email} for user {user_id}: {e}\n{traceback.format_exc()}")
 
         # polite randomized delay to avoid being too bursty
-        time.sleep(random.randint(60, 300))
+        time.sleep(secrets.randbelow(241) + 60)
 
 def start_user_send_thread(user_id):
     t = threading.Thread(target=send_for_user, args=(user_id,))

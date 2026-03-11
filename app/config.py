@@ -11,7 +11,7 @@ APP_ENV = os.getenv("APP_ENV", "development")  # "development" or "production"
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me")  # change in production
 FERNET_KEY = os.getenv("FERNET_KEY")  # optional, required if you want token encryption
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "admin-secret-key")
 
 # SECURITY: Key Enforcement
@@ -30,7 +30,7 @@ if APP_ENV == "production":
     if len(FERNET_KEY) < 32:
         weak_secrets.append("FERNET_KEY must be a valid 32-byte Fernet key (use the generator above)")
     
-    if ADMIN_PASSWORD == "admin" or len(ADMIN_PASSWORD) < 12:
+    if ADMIN_PASSWORD == "admin" or not ADMIN_PASSWORD or len(ADMIN_PASSWORD) < 12:
         weak_secrets.append("ADMIN_PASSWORD must be at least 12 characters and not 'admin'")
     
     if ADMIN_API_KEY == "admin-secret-key" or len(ADMIN_API_KEY) < 32:

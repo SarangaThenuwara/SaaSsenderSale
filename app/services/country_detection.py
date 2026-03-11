@@ -99,9 +99,8 @@ def scrape_for_country_signals(domain: str):
         # if response.status_code == 200:
         #     data = response.json()
         #     return data.get("country"), 0.6  # Medium confidence
-    except Exception:
-        pass
-    
+    except Exception as e:
+        LOG.error("Failed to scrape country signals for %s: %s", domain, e)
     return "unknown", 0.0
 
 def detect_country(domain: str):

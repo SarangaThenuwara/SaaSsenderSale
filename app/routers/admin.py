@@ -138,7 +138,7 @@ def get_infra_stats():
         public_ip = "N/A"
         try:
             public_ip = requests.get('https://api.ipify.org', timeout=2).text
-        except: pass
+        except Exception as e: LOG.debug('Error: %s', e)
 
         # Server time & uptime
         now_utc = dt.datetime.utcnow()
@@ -192,7 +192,7 @@ def get_db_stats():
                 "storage": round(cstats.get("storageSize", 0) / (1024**2), 2),
                 "indexes": round(cstats.get("totalIndexSize", 0) / (1024**2), 2)
             }
-        except: pass
+        except Exception as e: LOG.debug('Error: %s', e)
 
         # Source stats (HREmail) - might be restricted
         source_stats = {}
@@ -204,7 +204,7 @@ def get_db_stats():
                 "storage": round(cstats.get("storageSize", 0) / (1024**2), 2),
                 "indexes": round(cstats.get("totalIndexSize", 0) / (1024**2), 2)
             }
-        except: pass
+        except Exception as e: LOG.debug('Error: %s', e)
 
         db_stats["mongo"] = {
             "ok": True,
@@ -400,7 +400,7 @@ def dns_check(domain: str, _admin=Depends(get_admin_user)):
         # Check MX
         mx_records = dns.resolver.resolve(domain, 'MX')
         if mx_records: results["mx"] = "configured"
-    except: pass
+    except Exception as e: LOG.debug('Error: %s', e)
     
     try:
         # Check SPF
@@ -409,13 +409,13 @@ def dns_check(domain: str, _admin=Depends(get_admin_user)):
             if "v=spf1" in str(r):
                 results["spf"] = "configured"
                 break
-    except: pass
+    except Exception as e: LOG.debug('Error: %s', e)
 
     try:
         # Check DMARC
         dmarc_records = dns.resolver.resolve(f"_dmarc.{domain}", 'TXT')
         if dmarc_records: results["dmarc"] = "configured"
-    except: pass
+    except Exception as e: LOG.debug('Error: %s', e)
     
     return results
 
