@@ -1,58 +1,98 @@
 import base64
+import secrets
 from typing import Optional
 from itsdangerous import URLSafeTimedSerializer
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import logging
 
 from .config import FERNET_KEY, SECRET_KEY
 
-# Initialize Fernet - Enterprise Requirement: KEY MUST BE PRESENT
+# Initialize Encryption Keys - Enterprise Requirement: KEY MUST BE PRESENT
 _f: Optional[Fernet] = None
+_aesgcm: Optional[AESGCM] = None
+
 if FERNET_KEY:
     try:
         key = FERNET_KEY.encode() if isinstance(FERNET_KEY, str) else FERNET_KEY
         _f = Fernet(key)
+        
+        try:
+            raw_key = base64.urlsafe_b64decode(key)
+            if len(raw_key) == 32:
+                _aesgcm = AESGCM(raw_key)
+            else:
+                import hashlib
+                _aesgcm = AESGCM(hashlib.sha256(key).digest())
+        except Exception:
+            import hashlib
+            _aesgcm = AESGCM(hashlib.sha256(key).digest())
+            
     except Exception as e:
-        import logging
-        logging.warning("Failed to initialize Fernet: %s", e)
+        logging.warning("Failed to initialize Encryption keys: %s", e)
 
 def encrypt_bytes(b: bytes) -> bytes:
     """
-    Encrypt bytes with Fernet. 
+    Encrypt bytes with AES-256-GCM. 
     Enterprise Policy: Fails if encryption is not configured.
     """
-    if not _f:
-        raise RuntimeError("ENCRYPTION_FAILURE: Fernet key not configured.")
-    return _f.encrypt(b)
+    if not _aesgcm:
+        raise RuntimeError("ENCRYPTION_FAILURE: AES-256-GCM key not configured.")
+    nonce = secrets.token_bytes(12)
+    ciphertext = _aesgcm.encrypt(nonce, b, None)
+    return nonce + ciphertext
 
 def decrypt_bytes(b: bytes) -> bytes:
     """
-    Decrypt bytes with Fernet.
+    Decrypt bytes with AES-256-GCM or fallback to Fernet.
     Enterprise Policy: Fails if encryption is not configured.
     """
-    if not _f:
-        raise RuntimeError("DECRYPTION_FAILURE: Fernet key not configured.")
+    if not _aesgcm or not _f:
+        raise RuntimeError("DECRYPTION_FAILURE: Encryption key not configured.")
     if isinstance(b, str):
         b = b.encode()
-    return _f.decrypt(b)
+        
+    try:
+        # Check if legacy Fernet (which uses urlsafe base64, starts with 'gAAAA' usually)
+        if b.startswith(b"gAAAAA"):
+            return _f.decrypt(b)
+        else:
+            nonce = b[:12]
+            ciphertext = b[12:]
+            return _aesgcm.decrypt(nonce, ciphertext, None)
+    except Exception as e:
+        # Fallback in case the non-v2 bytes were just pure Fernet bytes.
+        return _f.decrypt(b)
 
 def encrypt_bytes_to_b64(b: bytes) -> str:
     """
-    Return encrypted bytes as a base64-encoded string.
+    Return encrypted bytes as a base64-encoded string, using AES-256-GCM.
+    Prefix with 'v2:' to distinguish new AES-256-GCM encryptions.
     Enterprise Policy: Fails if encryption is not configured.
     """
-    if not _f:
-        raise RuntimeError("ENCRYPTION_FAILURE: Fernet key not configured. Sensitive data cannot be stored.")
-    token = _f.encrypt(b)
-    return token.decode()
+    if not _aesgcm:
+        raise RuntimeError("ENCRYPTION_FAILURE: AES-256-GCM key not configured. Sensitive data cannot be stored.")
+    enc_bytes = encrypt_bytes(b)
+    return "v2:" + base64.urlsafe_b64encode(enc_bytes).decode('ascii')
 
 def decrypt_b64_to_bytes(s: str) -> bytes:
     """
-    Inverse of encrypt_bytes_to_b64.
+    Inverse of encrypt_bytes_to_b64. Uses AES-256-GCM if prefixed with 'v2:',
+    otherwise falls back to legacy Fernet AES-128.
     Enterprise Policy: Fails if encryption is not configured.
     """
-    if not _f:
-        raise RuntimeError("DECRYPTION_FAILURE: Fernet key not configured.")
-    return _f.decrypt(s.encode())
+    if not _aesgcm or not _f:
+        raise RuntimeError("DECRYPTION_FAILURE: Encryption key not configured.")
+        
+    if s.startswith("v2:"):
+        actual_b64 = s[3:]
+        raw_bytes = base64.urlsafe_b64decode(actual_b64)
+        nonce = raw_bytes[:12]
+        ciphertext = raw_bytes[12:]
+        return _aesgcm.decrypt(nonce, ciphertext, None)
+    else:
+        # Legacy Fernet format
+        return _f.decrypt(s.encode())
 
 # CSRF helpers using itsdangerous, tied to SECRET_KEY
 _serializer = URLSafeTimedSerializer(SECRET_KEY)
