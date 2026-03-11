@@ -357,8 +357,13 @@
                         <div class="flex-1 bg-slate-900 rounded-full h-2.5 overflow-hidden shadow-inner">
                             {% set daily_sent = user.daily_sent|default(0) %}
                             {% set pct = (daily_sent / daily_limit * 100)|round if daily_limit > 0 else 0 %}
-                            <div class="bg-gradient-to-r from-primary-600 to-primary-400 h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-                                style="width:{{ pct }}%;"></div>
+                            <div id="daily-progress-bar" class="bg-gradient-to-r from-primary-600 to-primary-400 h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                            <script nonce="{{ csp_nonce }}">
+                                document.addEventListener('DOMContentLoaded', () => {
+                                    const bar = document.getElementById('daily-progress-bar');
+                                    if(bar) bar.style.width = '{{ pct }}%';
+                                });
+                            </script>
                         </div>
                         {% if plan.warmup_active %}
                         <span
