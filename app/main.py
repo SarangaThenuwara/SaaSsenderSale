@@ -1,4 +1,5 @@
 import logging
+import os
 import uuid
 import secrets
 from datetime import datetime, timedelta
@@ -427,13 +428,16 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed)
 if APP_ENV == "production":
     app.add_middleware(HTTPSRedirectMiddleware)
 
+# Determine if we are in production
+_is_prod = (APP_ENV == "production" or os.getenv("VERCEL_ENV") == "production")
+
 # Register SessionMiddleware LAST so it is the OUTERMOST layer
 app.add_middleware(
     SessionMiddleware, 
     secret_key=SECRET_KEY, 
-    https_only=(APP_ENV == "production"), 
+    https_only=_is_prod,  # Controls 'Secure' attribute
     same_site="lax",
-    session_cookie="__Host-saas_sender_session" if APP_ENV == "production" else "saas_sender_session",
+    session_cookie="__Host-saas_sender_session" if _is_prod else "saas_sender_session",
     max_age=SESSION_ABSOLUTE_TIMEOUT
 )
 
@@ -1228,203 +1232,194 @@ async def settings_post(
     body_template_3: str = Form(None),
     csrf: str = Form(None)
 ):
-
-    sid = get_csrf_session_id(request)
-    if not validate_csrf_token(csrf, sid):
-        ua = request.headers.get("user-agent", "unknown")
-        LOG.warning("CSRF check failed on settings update. SID: %s | UA: %s", sid, ua)
-        return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "Security validation (CSRF) failed. Please refresh and try again.", "user": current_session_user(request)})
-    
-    user = current_session_user(request)
-    if not user:
-        return RedirectResponse(url="/login")
-
-    # --- SECURITY: Verify Current Password for Sensitive Changes ---
-    # We require the password if any connection-related fields are provided
-    is_sensitive_change = (
-        (sender_email and sender_email != user.get("sender_email")) or 
-        (credentials_base64 and credentials_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]") or
-        (token_base64 and token_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]")
-    )
-
-    if is_sensitive_change:
-        if not current_password:
-             return templates.TemplateResponse("premium/settings.html", {
-                 **template_ctx(request), 
-                 "error": "Password required to update sensitive connection settings.", 
-                 "user": user
-             })
+    try:
+        sid = get_csrf_session_id(request)
+        if not validate_csrf_token(csrf, sid):
+            ua = request.headers.get("user-agent", "unknown")
+            LOG.warning("CSRF check failed on settings update. SID: %s | UA: %s", sid, ua)
+            return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "Security validation (CSRF) failed. Please refresh and try again.", "user": current_session_user(request)})
         
-        try:
-            # Verify password via Supabase signin (doesn't impact current session if we don't save the new token)
-            supabase_signin(email=user["email"], password=current_password)
-        except Exception as e:
-            LOG.warning("Security verification failed for user %s during settings update", user["email"])
+        user = current_session_user(request)
+        if not user:
+            return RedirectResponse(url="/login")
+
+        # --- SECURITY: Verify Current Password for Sensitive Changes ---
+        # We require the password if any connection-related fields are provided
+        is_sensitive_change = (
+            (sender_email and sender_email != user.get("sender_email")) or 
+            (credentials_base64 and credentials_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]") or
+            (token_base64 and token_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]")
+        )
+
+        if is_sensitive_change:
+            if not current_password:
+                 return templates.TemplateResponse("premium/settings.html", {
+                     **template_ctx(request), 
+                     "error": "Password required to update sensitive connection settings.", 
+                     "user": user
+                 })
+            
+            try:
+                # Verify password via Supabase signin (doesn't impact current session if we don't save the new token)
+                supabase_signin(email=user["email"], password=current_password)
+            except Exception:
+                LOG.warning("Security verification failed for user %s during settings update", user["email"])
+                return templates.TemplateResponse("premium/settings.html", {
+                    **template_ctx(request), 
+                    "error": "Verification Failed: Current password is incorrect.", 
+                    "user": user
+                })
+
+        # --- Validation ---
+        errors = []
+        import re
+        import base64
+        import json
+        import bleach  # For sanitization
+
+        # 1) Sender Email
+        if sender_email and not re.match(r"[^@]+@[^@]+\.[^@]+", sender_email):
+            errors.append("Invalid Sender Email format.")
+
+        # 2) Credentials
+        if credentials_base64 and credentials_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
+            # Strictly enforce Base64 (remove all whitespace/newlines)
+            clean_cred = "".join(credentials_base64.split())
+            # Fix padding if missing
+            missing_padding = len(clean_cred) % 4
+            if missing_padding:
+                clean_cred += '=' * (4 - missing_padding)
+                
+            try:
+                # Try standard base64 first
+                try:
+                    base64.b64decode(clean_cred)
+                except Exception:
+                    # Fallback to urlsafe base64
+                    base64.urlsafe_b64decode(clean_cred)
+                
+                credentials_base64 = clean_cred
+            except Exception:
+                errors.append("Credentials: Not a valid Base64 string. Please copy the full string.")
+
+        # 3) Token
+        if token_base64 and token_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
+            # Strictly enforce Base64 (remove all whitespace/newlines)
+            clean_tok = "".join(token_base64.split())
+            # Fix padding if missing
+            missing_padding = len(clean_tok) % 4
+            if missing_padding:
+                clean_tok += '=' * (4 - missing_padding)
+                
+            try:
+                try:
+                    base64.b64decode(clean_tok)
+                except Exception:
+                    base64.urlsafe_b64decode(clean_tok)
+                    
+                token_base64 = clean_tok
+            except Exception:
+                 errors.append("Token: Not a valid Base64 string. Ensure you are copying correctly.")
+
+        # 4) Templates
+        email_templates = []
+        
+        # Process up to 3 templates (A, B, C)
+        items = [
+            (subject_template_1, body_template_1),
+            (subject_template_2, body_template_2),
+            (subject_template_3, body_template_3)
+        ]
+        
+        for i, (subj, body) in enumerate(items):
+            s = (subj or "").strip()
+            b = (body or "").strip()
+            
+            # Default values for Template A (Slot 1) if omitted
+            if i == 0:
+                if not s: s = "Regarding the job opening"
+                if not b: b = "<p>Hi,</p><p>I am interested in the position.</p>"
+            
+            # Only process if not empty
+            if s or b:
+                if s:
+                    s = bleach.clean(s, tags=[], strip=True)
+                if b:
+                    if not any(tag in b.lower() for tag in ['<p', '<div', '<br', '<li']):
+                        b = b.replace('\n', '<br>')
+                    
+                    allowed_tags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'a', 'div', 'span', 'ul', 'li', 'ol']
+                    allowed_attrs = {'a': ['href', 'title', 'target']}
+                    b = bleach.clean(b, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+                
+                email_templates.append({
+                    "subject": s,
+                    "body": b
+                })
+
+        if errors:
+            display_email = sender_email if sender_email else user.get("sender_email")
+            merged_user = {**user, "sender_email": display_email, "credentials_base64": credentials_base64, 
+                           "token_base64": token_base64, "email_templates": email_templates}
             return templates.TemplateResponse("premium/settings.html", {
                 **template_ctx(request), 
-                "error": "Verification Failed: Current password is incorrect.", 
-                "user": user
+                "error": " | ".join(errors), 
+                "user": merged_user
             })
 
-    # --- Validation ---
-    errors = []
-    import re
-    import base64
-    import json
-    import bleach  # For sanitization
-
-    # 1) Sender Email
-    if sender_email and not re.match(r"[^@]+@[^@]+\.[^@]+", sender_email):
-        errors.append("Invalid Sender Email format.")
-
-    # 2) Credentials
-    if credentials_base64 and credentials_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
-        # Strictly enforce Base64 (remove all whitespace/newlines)
-        clean_cred = "".join(credentials_base64.split())
-        # Fix padding if missing
-        missing_padding = len(clean_cred) % 4
-        if missing_padding:
-            clean_cred += '=' * (4 - missing_padding)
-            
-        try:
-            # Try standard base64 first
+        # Encryption
+        encrypted_credentials = None
+        if credentials_base64 and credentials_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
             try:
-                base64.b64decode(clean_cred)
+                 encrypted_credentials = encrypt_bytes_to_b64(credentials_base64.encode())
             except Exception:
-                # Fallback to urlsafe base64
-                base64.urlsafe_b64decode(clean_cred)
-            
-            credentials_base64 = clean_cred
-        except Exception as e:
-            LOG.error("Admin credentials validation failed: %s", e)
-            errors.append("Credentials: Not a valid Base64 string. Please copy the full string.")
-
-
-
-    # 3) Token
-    if token_base64 and token_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
-        # Strictly enforce Base64 (remove all whitespace/newlines)
-        clean_tok = "".join(token_base64.split())
-        # Fix padding if missing
-        missing_padding = len(clean_tok) % 4
-        if missing_padding:
-            clean_tok += '=' * (4 - missing_padding)
-            
-        try:
-            try:
-                base64.b64decode(clean_tok)
-            except Exception:
-                base64.urlsafe_b64decode(clean_tok)
-                
-            token_base64 = clean_tok
-        except Exception as e:
-             LOG.error("Admin token validation failed: %s", e)
-             errors.append("Token: Not a valid Base64 string. Ensure you are copying correctly.")
-
-
-
-
-
-    # 4) Templates
-    email_templates = []
-    
-    # Process up to 3 templates (A, B, C)
-    items = [
-        (subject_template_1, body_template_1),
-        (subject_template_2, body_template_2),
-        (subject_template_3, body_template_3)
-    ]
-    
-    for i, (subj, body) in enumerate(items):
-        s = (subj or "").strip()
-        b = (body or "").strip()
+                 LOG.exception("Failed to encrypt credentials")
+                 return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "Internal error: Encryption failed", "user": user})
         
-        # Default values for Template A (Slot 1) if omitted
-        if i == 0:
-            if not s: s = "Regarding the job opening"
-            if not b: b = "<p>Hi,</p><p>I am interested in the position.</p>"
-        
-        # Only process if not empty
-        if s or b:
-            # Only sanitize if not empty, otherwise keep empty
-            if s:
-                s = bleach.clean(s, tags=[], strip=True)
-            if b:
-                # Smart Conversion for Body
-                if not any(tag in b.lower() for tag in ['<p', '<div', '<br', '<li']):
-                    b = b.replace('\n', '<br>')
-                
-                # Sanitize Body
-                allowed_tags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'a', 'div', 'span', 'ul', 'li', 'ol']
-                allowed_attrs = {'a': ['href', 'title', 'target']}
-                b = bleach.clean(b, tags=allowed_tags, attributes=allowed_attrs, strip=True)
-            
-            email_templates.append({
-                "subject": s,
-                "body": b
-            })
+        encrypted_token = None
+        if token_base64 and token_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
+             try:
+                 encrypted_token = encrypt_bytes_to_b64(token_base64.encode())
+             except Exception:
+                 LOG.exception("Failed to encrypt token")
+                 return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "Internal error: Encryption failed", "user": user})
 
-    if errors:
-        # Return to settings with current user but merge form data so they don't lose input
-        # Fix: Keep original sender_email if the new one is invalid or missing
-        display_email = sender_email if sender_email else user.get("sender_email")
-        merged_user = {**user, "sender_email": display_email, "credentials_base64": credentials_base64, 
-                       "token_base64": token_base64, "email_templates": email_templates}
+        update_data = {
+            "email_templates": email_templates,
+            "updated_at": datetime.utcnow(),
+            "campaign_active": False 
+        }
+
+        if sender_email:
+            update_data["sender_email"] = sender_email
+
+        if email_templates:
+            update_data["subject_template"] = email_templates[0]["subject"]
+            update_data["body_template"] = email_templates[0]["body"]
+        else:
+            update_data["subject_template"] = "Regarding the job opening"
+            update_data["body_template"] = "<p>Hi,</p><p>I am interested in the position.</p>"
+        
+        if encrypted_credentials:
+            update_data["credentials_base64"] = encrypted_credentials
+            update_data["credentials_valid"] = False 
+        if encrypted_token:
+            update_data["token_base64"] = encrypted_token
+            update_data["credentials_valid"] = False 
+        
+        db.users.update_one({"_id": user["_id"]}, {"$set": update_data})
+
+        # Refresh user for response
+        user = db.users.find_one({"_id": user["_id"]})
+        return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "user": user, "success": "Settings updated! Please click 'Test Connection' below to verify your Gmail API access."})
+
+    except Exception:
+        LOG.exception("Critical error in settings_post")
         return templates.TemplateResponse("premium/settings.html", {
             **template_ctx(request), 
-            "error": " | ".join(errors), 
-            "user": merged_user
+            "error": "A system error occurred while saving. Your progress might not have been fully saved.", 
+            "user": current_session_user(request)
         })
-
-    # Encryption of sensitive data before storage
-    encrypted_credentials = None
-    if credentials_base64:
-        # It's already base64 (either from user or we encoded it above)
-        # We want to encrypt this STRING.
-        try:
-             encrypted_credentials = encrypt_bytes_to_b64(credentials_base64.encode())
-        except Exception:
-             LOG.exception("Failed to encrypt credentials")
-             return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "Internal error: Encryption failed", "user": user})
-    
-    encrypted_token = None
-    if token_base64:
-         try:
-             encrypted_token = encrypt_bytes_to_b64(token_base64.encode())
-         except Exception:
-             LOG.exception("Failed to encrypt token")
-             return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "Internal error: Encryption failed", "user": user})
-
-    update_data = {
-        "email_templates": email_templates,
-        "updated_at": datetime.utcnow(),
-        "campaign_active": False # Automatically stop campaign on settings change
-    }
-
-    if sender_email:
-        update_data["sender_email"] = sender_email
-
-    # Backward compatibility: Save the first template to the original fields as well
-    if email_templates:
-        update_data["subject_template"] = email_templates[0]["subject"]
-        update_data["body_template"] = email_templates[0]["body"]
-    else:
-        update_data["subject_template"] = "Regarding the job opening"
-        update_data["body_template"] = "<p>Hi,</p><p>I am interested in the position.</p>"
-    
-    if encrypted_credentials and credentials_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
-        update_data["credentials_base64"] = encrypted_credentials
-        update_data["credentials_valid"] = False # Must re-validate
-    if encrypted_token and token_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]":
-        update_data["token_base64"] = encrypted_token
-        update_data["credentials_valid"] = False # Must re-validate
-    
-    db.users.update_one({"_id": user["_id"]}, {"$set": update_data})
-
-    
-    # Refresh user for response
-    user = db.users.find_one({"_id": user["_id"]})
-    return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "user": user, "success": "Settings updated! Please click 'Test Connection' below to verify your Gmail API access."})
 
 @app.post("/api/validate_credentials")
 @limiter.limit("10/minute")
