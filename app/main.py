@@ -413,11 +413,14 @@ async def add_security_headers(request: Request, call_next):
 
 # 2. Trusted Host (Prevents Host Header attacks)
 _allowed = ["*"]
-if APP_ENV == "production" and APP_URL:
-    from urllib.parse import urlparse
-    domain = urlparse(APP_URL).netloc
-    if domain:
-        _allowed = [domain, f"www.{domain}" if not domain.startswith("www.") else domain]
+if APP_ENV == "production":
+    # Explicitly allow Vercel domains and site domain
+    _allowed = ["saa-ssender-sale.vercel.app", "*.vercel.app"]
+    if APP_URL:
+        from urllib.parse import urlparse
+        domain = urlparse(APP_URL).netloc
+        if domain and domain not in _allowed:
+            _allowed.append(domain)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed)
 
 # 3. Enforce HTTPS Redirection
@@ -430,7 +433,6 @@ app.add_middleware(
     secret_key=SECRET_KEY, 
     https_only=(APP_ENV == "production"), 
     same_site="lax",
-    httponly=True,  # Explicitly enforce HttpOnly
     session_cookie="__Host-saas_sender_session" if APP_ENV == "production" else "saas_sender_session",
     max_age=SESSION_ABSOLUTE_TIMEOUT
 )
