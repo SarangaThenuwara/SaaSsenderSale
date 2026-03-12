@@ -1575,9 +1575,9 @@ async def admin_sync_pool(request: Request, csrf: str = Form(None)):
     try:
         res = sync_from_main_database()
         LOG.info("Sync job run: %s", res)
-    except Exception as e:
+    except Exception:
         LOG.exception("Sync job failed")
-        return JSONResponse({"error": f"Sync failed: {str(e)}"}, status_code=500)
+        return JSONResponse({"error": "Sync failed due to an internal system error."}, status_code=500)
 
     return RedirectResponse(url="/admin", status_code=303)
 
@@ -1597,9 +1597,9 @@ async def admin_assign(request: Request, csrf: str = Form(None)):
     try:
         res = assign_pending_recipients()
         LOG.info("Assignment job run: %s", res)
-    except Exception as e:
+    except Exception:
         LOG.exception("Assignment job failed")
-        return JSONResponse({"error": f"Assignment failed: {str(e)}"}, status_code=500)
+        return JSONResponse({"error": "Auto-assignment failed due to an internal system error."}, status_code=500)
 
     return RedirectResponse(url="/admin", status_code=303)
 
