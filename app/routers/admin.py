@@ -855,3 +855,48 @@ def cancel_user_subscription(user_id: str, _admin=Depends(get_admin_user)):
     else:
         raise HTTPException(500, "Failed to cancel subscription in Stripe")
 
+@router.get("/failure_report")
+def get_failure_report(_admin=Depends(get_admin_user)):
+    """
+    Identifies users whose campaigns are stopped or credentials have failed validation.
+    """
+    failed_users = list(db.users.find({
+        "$or": [
+            {"credentials_valid": False},
+            {"needs_reauth": True},
+            {"is_blocked": True}
+        ]
+    }, {
+        "email": 1, "username": 1, "credentials_valid": 1, "needs_reauth": 1, "is_blocked": 1, "last_validated": 1
+    }))
+    for u in failed_users:
+        u["_id"] = str(u["_id"])
+    return {"failures": failed_users, "count": len(failed_users)}
+
+@router.get("/security_check")
+def security_check(_admin=Depends(get_admin_user)):
+    """
+    Performs a live audit of the system security configurations.
+    """
+    import os
+    from app.config import APP_ENV, SECRET_KEY, ADMIN_PASSWORD, ADMIN_API_KEY
+    
+    issues = []
+    _is_prod = (APP_ENV == "production" or os.getenv("VERCEL_ENV") == "production")
+    
+    if _is_prod:
+        if SECRET_KEY == "change-me" or len(SECRET_KEY) < 32:
+            issues.append("Weak SECRET_KEY detected in production.")
+        if ADMIN_PASSWORD in ["admin", "password", ""] or len(ADMIN_PASSWORD) < 12:
+            issues.append("Weak or default ADMIN_PASSWORD.")
+        if ADMIN_API_KEY == "admin-secret-key":
+            issues.append("Default ADMIN_API_KEY in use.")
+
+    return {
+        "status": "Healthy" if not issues else "Needs Attention",
+        "environment": APP_ENV,
+        "is_prod_mode": _is_prod,
+        "issues": issues,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
