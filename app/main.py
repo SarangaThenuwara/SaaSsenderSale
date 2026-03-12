@@ -399,18 +399,26 @@ async def add_security_headers(request: Request, call_next):
         f"form-action 'self' https://checkout.stripe.com;"
     )
     if APP_ENV == "production":
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = csp_policy
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+        response.headers["Content-Security-Policy"] = csp_policy + " upgrade-insecure-requests;"
     else:
-        # Report-only in dev or simpler policy? 
-        # For now, apply same policy to test it, but maybe laxer on https
         response.headers["Content-Security-Policy"] = csp_policy
 
+    # Advanced Security Headers
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    
     return response
 
 # 2. Trusted Host (Prevents Host Header attacks)
-# Allow all for now, but restrict in production if domain is known
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+_allowed = ["*"]
+if APP_ENV == "production" and APP_URL:
+    from urllib.parse import urlparse
+    domain = urlparse(APP_URL).netloc
+    if domain:
+        _allowed = [domain, f"www.{domain}" if not domain.startswith("www.") else domain]
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed)
 
 # 3. Enforce HTTPS Redirection
 if APP_ENV == "production":
@@ -422,6 +430,7 @@ app.add_middleware(
     secret_key=SECRET_KEY, 
     https_only=(APP_ENV == "production"), 
     same_site="lax",
+    httponly=True,  # Explicitly enforce HttpOnly
     session_cookie="__Host-saas_sender_session" if APP_ENV == "production" else "saas_sender_session",
     max_age=SESSION_ABSOLUTE_TIMEOUT
 )
