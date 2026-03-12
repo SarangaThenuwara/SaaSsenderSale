@@ -954,12 +954,22 @@ async def api_presign_complete(request: Request):
 
     return JSONResponse({"ok": True, "key": key})
 
+@app.get("/api/cv/preview/me")
+async def api_cv_preview_me(request: Request):
+    user = current_session_user(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    return await api_cv_preview(str(user["_id"]), request)
+
 @app.get("/api/cv/preview/{user_id}")
 async def api_cv_preview(user_id: str, request: Request):
     user = current_session_user(request)
     if not user:
         return RedirectResponse(url="/login")
+    
+    # SECURITY: Robust IDOR protection
     if str(user["_id"]) != user_id and user.get("role") != "admin":
+        LOG.warning("SECURITY: User %s attempted to access CV of %s", user.get('_id'), user_id)
         raise HTTPException(status_code=403, detail="Forbidden")
     
     try:
@@ -1196,6 +1206,7 @@ def payment_page(request: Request):
 async def settings_post(
     request: Request,
     sender_email: str = Form(None),
+    current_password: str = Form(None),
     credentials_base64: str = Form(None),
     token_base64: str = Form(None),
     subject_template_1: str = Form(None),
@@ -1209,11 +1220,40 @@ async def settings_post(
 
     sid = get_csrf_session_id(request)
     if not validate_csrf_token(csrf, sid):
-        return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "CSRF validation failed", "user": current_session_user(request)})
+        ua = request.headers.get("user-agent", "unknown")
+        LOG.warning("CSRF check failed on settings update. SID: %s | UA: %s", sid, ua)
+        return templates.TemplateResponse("premium/settings.html", {**template_ctx(request), "error": "Security validation (CSRF) failed. Please refresh and try again.", "user": current_session_user(request)})
     
     user = current_session_user(request)
     if not user:
         return RedirectResponse(url="/login")
+
+    # --- SECURITY: Verify Current Password for Sensitive Changes ---
+    # We require the password if any connection-related fields are provided
+    is_sensitive_change = (
+        (sender_email and sender_email != user.get("sender_email")) or 
+        (credentials_base64 and credentials_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]") or
+        (token_base64 and token_base64 != "[ENCRYPTED_DATA_HIDDEN_FOR_SECURITY]")
+    )
+
+    if is_sensitive_change:
+        if not current_password:
+             return templates.TemplateResponse("premium/settings.html", {
+                 **template_ctx(request), 
+                 "error": "Password required to update sensitive connection settings.", 
+                 "user": user
+             })
+        
+        try:
+            # Verify password via Supabase signin (doesn't impact current session if we don't save the new token)
+            supabase_signin(email=user["email"], password=current_password)
+        except Exception as e:
+            LOG.warning("Security verification failed for user %s during settings update", user["email"])
+            return templates.TemplateResponse("premium/settings.html", {
+                **template_ctx(request), 
+                "error": "Verification Failed: Current password is incorrect.", 
+                "user": user
+            })
 
     # --- Validation ---
     errors = []

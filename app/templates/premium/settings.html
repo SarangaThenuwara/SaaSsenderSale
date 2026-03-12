@@ -48,7 +48,11 @@
         </div>
         <ul class="list-disc list-inside space-y-1 ml-8">
             {% for err in error.split(' | ') %}
-            <li>{{ err }}</li>
+                {% if 'Traceback' in err or 'File "' in err or 'line ' in err %}
+                <li class="font-mono text-[10px] opacity-70">A system error occurred. Please try again or contact support.</li>
+                {% else %}
+                <li>{{ err | truncate(200) }}</li>
+                {% endif %}
             {% endfor %}
         </ul>
     </div>
@@ -198,6 +202,21 @@
                 </svg>
                 Email Connection Settings
             </h2>
+
+            <div class="p-4 rounded-xl bg-primary-500/5 border border-primary-500/10 mb-4">
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-4 h-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span class="text-xs font-bold text-primary-400 uppercase tracking-widest">Security Verification</span>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-slate-300">Your Account Password</label>
+                    <input name="current_password" type="password" required
+                        class="input-glass px-4 py-3 w-full" placeholder="Required for updating sensitive credentials" />
+                    <p class="text-[10px] text-slate-500 italic">To protect your account, your current password is required to save connection keys or change the sender email.</p>
+                </div>
+            </div>
 
             <div class="grid grid-cols-1 gap-6">
                 <div class="space-y-2">

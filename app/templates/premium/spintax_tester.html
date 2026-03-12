@@ -98,9 +98,15 @@
 
 <script nonce="{{ csp_nonce }}">
     document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('btn-insert-sample')?.addEventListener('click', insertSample);
+        const input = document.getElementById('spintax-input');
+        document.getElementById('btn-insert-sample')?.addEventListener('click', () => {
+            insertSample();
+            spinText();
+        });
         document.getElementById('btn-spin-text')?.addEventListener('click', spinText);
         document.getElementById('btn-copy-link')?.addEventListener('click', copyToolLink);
+        
+        input?.addEventListener('input', spinText);
     });
 
     function insertSample() {

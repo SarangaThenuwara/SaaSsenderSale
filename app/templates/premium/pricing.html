@@ -31,9 +31,10 @@
                 <span class="text-slate-400 font-medium pb-2">/ month</span>
             </div>
 
-            <a href="/signup"
-                class="btn-primary w-full py-4 rounded-xl font-bold text-lg text-center shadow-lg shadow-primary-500/20 hover:-translate-y-1 transition-all">Start
-                Sending Today</a>
+            <a href="{% if session_user %}/user/{{ session_user._id_str }}/dashboard{% else %}/signup{% endif %}"
+                class="btn-primary w-full py-4 rounded-xl font-bold text-lg text-center shadow-lg shadow-primary-500/20 hover:-translate-y-1 transition-all">
+                {% if session_user %}Go to Dashboard{% else %}Start Sending Today{% endif %}
+            </a>
             <p class="text-center text-xs text-slate-500 mt-4">Cancel anytime. <a href="/terms"
                     class="hover:text-primary-400 transition-colors">Non-refundable.</a></p>
         </div>
