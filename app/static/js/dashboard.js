@@ -1,5 +1,15 @@
 
 document.addEventListener("DOMContentLoaded", () => {
+    const escapeHtml = (str) => {
+        if (str === null || str === undefined) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    };
+
     const uploadArea = document.getElementById("upload-area");
     const cvFileInp = document.getElementById("cv_file");
     const progressBar = document.getElementById("progress-bar");
@@ -204,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <tr class="hover:bg-white/2 transition-colors">
                     <td class="py-4">
                         <div class="flex flex-col">
-                            <span class="text-sm font-medium text-white">${r.email}</span>
+                            <span class="text-sm font-medium text-white">${escapeHtml(r.email)}</span>
                             <span class="text-[10px] text-slate-500">${r.role || 'Recruiter'}</span>
                         </div>
                     </td>
@@ -218,7 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </td>
                     <td class="py-4 text-right">
                         <span title="${guidance}" class="text-[10px] text-slate-500 italic max-w-xs truncate block ml-auto cursor-help">
-                            ${guidance}
+                            ${escapeHtml(guidance)}
                         </span>
                     </td>
                 </tr>

@@ -2,6 +2,7 @@ import logging
 import uuid
 import requests
 import json
+import re
 from typing import Tuple
 from .config import B2_ENDPOINT
 
@@ -19,7 +20,8 @@ def upload_cv_bytes(file_bytes: bytes, filename: str, content_type: str = "appli
     if content_type != "application/pdf":
         raise ValueError("Only PDF files are allowed")
     
-    key = f"cvs/{user_id}/{uuid.uuid4().hex}_{filename}"
+    safe_name = re.sub(r"[^\w\s.\-]", "", str(filename or ""))[:200] or "document.pdf"
+    key = f"cvs/{user_id}/{uuid.uuid4().hex}_{safe_name}"
     url = _get_worker_url(f"/upload?filename={key}")
     try:
         resp = requests.post(

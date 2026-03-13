@@ -5,7 +5,7 @@ import secrets
 from datetime import datetime, timedelta
 from bson.objectid import ObjectId
 
-from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import RedirectResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -23,6 +23,7 @@ from .config import (
 )
 from .utils import generate_csrf_token, validate_csrf_token, encrypt_bytes_to_b64
 from .storage_b2 import presign_upload, get_b2_status, delete_cv
+from .security import csrf_protect
 import csv
 import io
 from .supabase_auth import signup as supabase_signup, signin as supabase_signin, get_user_from_token, get_google_auth_url
@@ -903,7 +904,7 @@ def logout(request: Request):
     return response
 
 # Presign endpoints
-@app.post("/api/presign_upload")
+@app.post("/api/presign_upload", dependencies=[Depends(csrf_protect)])
 @limiter.limit("10/minute")
 async def api_presign_upload(request: Request):
     user = current_session_user(request)
@@ -926,7 +927,7 @@ async def api_presign_upload(request: Request):
         return JSONResponse({"error": "presign failed"}, status_code=500)
     return JSONResponse(res)
 
-@app.post("/api/presign_complete")
+@app.post("/api/presign_complete", dependencies=[Depends(csrf_protect)])
 @limiter.limit("10/minute")
 async def api_presign_complete(request: Request):
     user = current_session_user(request)
@@ -1004,7 +1005,7 @@ async def api_cv_preview(user_id: str, request: Request):
         LOG.exception("Failed to fetch CV for preview")
         raise HTTPException(status_code=500, detail="Failed to fetch CV from storage")
 
-@app.post("/api/test_send")
+@app.post("/api/test_send", dependencies=[Depends(csrf_protect)])
 @limiter.limit("10/minute")
 async def api_test_send(request: Request):
 
@@ -1449,7 +1450,7 @@ async def api_validate_credentials(request: Request):
         # SECURITY: Do not leak internal exception details
         return JSONResponse({"ok": False, "error": "Validation failed. Please check your credentials."}, status_code=400)
 
-@app.post("/api/campaign/toggle")
+@app.post("/api/campaign/toggle", dependencies=[Depends(csrf_protect)])
 @limiter.limit("5/minute")  # Tightened — state mutation, abuse prevention
 async def api_campaign_toggle(request: Request):
 
