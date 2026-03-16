@@ -684,7 +684,15 @@ const AdminDashboard = {
                                 <span class="text-slate-600">Hostname</span>
                                 <span class="text-white font-mono">${data.system.hostname}</span>
                              </div>
-                             <div class="flex justify-between items-center text-xs">
+                             <div class="flex justify-between items-center text-[10px]">
+                                <span class="text-slate-600">System Time</span>
+                                <span class="text-slate-400 font-mono">${data.system.server_time}</span>
+                             </div>
+                             <div class="flex justify-between items-center text-[10px]">
+                                <span class="text-slate-600">Last Reboot</span>
+                                <span class="text-slate-400 font-mono">${data.system.boot_time}</span>
+                             </div>
+                             <div class="flex justify-between items-center text-xs mt-2 pt-2 border-t border-white/5">
                                 <span class="text-slate-600">Uptime</span>
                                 <span class="text-emerald-500 font-mono uppercase">${data.system.uptime}</span>
                              </div>
