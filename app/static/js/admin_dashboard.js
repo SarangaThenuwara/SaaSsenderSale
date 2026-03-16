@@ -325,24 +325,57 @@ const AdminDashboard = {
         }
 
         const pages = [];
-        for (let i = 1; i <= state.totalPages; i++) {
+        
+        // Prev button
+        pages.push(`
+            <button class="h-8 px-2 rounded flex items-center justify-center font-bold text-[10px] uppercase tracking-widest ${state.page > 1 ? 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer' : 'text-slate-600 opacity-50 cursor-not-allowed'}"
+                data-page="${Math.max(1, state.page - 1)}" ${state.page === 1 ? 'disabled' : ''}>Prev</button>
+        `);
+
+        // Sliding window logic
+        let startPage = Math.max(1, state.page - 2);
+        let endPage = Math.min(state.totalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+
+        if (startPage > 1) {
+            pages.push(`<button class="h-8 w-8 rounded flex items-center justify-center font-mono bg-white/5 text-slate-500 hover:text-white transition-colors cursor-pointer" data-page="1">1</button>`);
+            if (startPage > 2) pages.push(`<span class="text-slate-600 font-bold px-1">...</span>`);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
             pages.push(`
-                <button class="h-8 w-8 rounded flex items-center justify-center font-mono ${state.page === i ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20' : 'bg-white/5 text-slate-500 hover:text-white transition-colors'}" 
-                    data-page="${i}">${i}</button>
+                <button class="h-8 w-8 rounded flex items-center justify-center font-mono ${state.page === i ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20 cursor-default' : 'bg-white/5 text-slate-500 hover:text-white transition-colors cursor-pointer'}" 
+                    ${state.page !== i ? `data-page="${i}"` : ''}>${i}</button>
             `);
         }
 
+        if (endPage < state.totalPages) {
+            if (endPage < state.totalPages - 1) pages.push(`<span class="text-slate-600 font-bold px-1">...</span>`);
+            pages.push(`<button class="h-8 w-8 rounded flex items-center justify-center font-mono bg-white/5 text-slate-500 hover:text-white transition-colors cursor-pointer" data-page="${state.totalPages}">${state.totalPages}</button>`);
+        }
+
+        // Next button
+        pages.push(`
+            <button class="h-8 px-2 rounded flex items-center justify-center font-bold text-[10px] uppercase tracking-widest ${state.page < state.totalPages ? 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer' : 'text-slate-600 opacity-50 cursor-not-allowed'}"
+                data-page="${Math.min(state.totalPages, state.page + 1)}" ${state.page === state.totalPages ? 'disabled' : ''}>Next</button>
+        `);
+
         el.innerHTML = `
             <div class="flex items-center gap-2">
-                <span class="text-slate-500">Page <span class="text-white font-bold">${state.page}</span> of ${state.totalPages}</span>
-                <span class="mx-2 h-4 w-px bg-white/10"></span>
+                <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold hidden sm:inline-block">Page <span class="text-white">${state.page}</span> of ${state.totalPages}</span>
+                <span class="mx-2 h-4 w-px bg-white/10 hidden sm:inline-block"></span>
                 <div class="flex items-center gap-1">${pages.join('')}</div>
             </div>
-            <div class="text-slate-500">Total Entries: <span class="text-white font-bold">${state.total}</span></div>
+            <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-2 sm:mt-0">Total: <span class="text-white">${state.total.toLocaleString()}</span></div>
         `;
 
         el.querySelectorAll('button[data-page]').forEach(b => {
-            b.addEventListener('click', () => callback(parseInt(b.dataset.page)));
+            b.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!b.disabled) callback(parseInt(b.dataset.page));
+            });
         });
     },
 

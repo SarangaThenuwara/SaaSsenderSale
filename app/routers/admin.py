@@ -153,19 +153,43 @@ def get_infra_stats():
     """Gathers system-level resource utilization."""
     try:
         import datetime as dt
+        import psutil
+        
         # CPU & Memory
-        cpu_usage = psutil.cpu_percent(interval=None)
-        memory = psutil.virtual_memory()
-        
+        try:
+            cpu_usage = psutil.cpu_percent(interval=None)
+            memory = psutil.virtual_memory()
+            memory_pct = memory.percent
+            memory_used = round(memory.used / (1024**3), 2)
+            memory_total = round(memory.total / (1024**3), 2)
+        except Exception:
+            cpu_usage, memory_pct, memory_used, memory_total = 0, 0, 0, 0
+            
         # Disk/Storage
-        disk = psutil.disk_usage('/')
-        
+        try:
+            disk = psutil.disk_usage('/')
+            storage_pct = disk.percent
+            storage_used = round(disk.used / (1024**3), 2)
+            storage_total = round(disk.total / (1024**3), 2)
+        except Exception:
+            storage_pct, storage_used, storage_total = 0, 0, 0
+            
         # Network (Estimate bandwidth usage)
-        net = psutil.net_io_counters()
-        
+        try:
+            net = psutil.net_io_counters()
+            net_sent = round(net.bytes_sent / (1024**2), 2)
+            net_recv = round(net.bytes_recv / (1024**2), 2)
+        except Exception:
+            net_sent, net_recv = 0, 0
+            
         # IP Addresses
-        hostname = socket.gethostname()
-        local_ip = socket.gethostbyname(hostname)
+        try:
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+        except Exception:
+            hostname = "serverless-node"
+            local_ip = "127.0.0.1"
+            
         public_ip = "N/A"
         try:
             public_ip = requests.get('https://api.ipify.org', timeout=2).text
@@ -173,36 +197,52 @@ def get_infra_stats():
 
         # Server time & uptime
         now_utc = dt.datetime.utcnow()
-        boot_ts = psutil.boot_time()
-        boot_dt = dt.datetime.utcfromtimestamp(boot_ts)
-        uptime_secs = int((now_utc - boot_dt).total_seconds())
-        uptime_str = ""
-        days, rem = divmod(uptime_secs, 86400)
-        hours, rem = divmod(rem, 3600)
-        minutes = rem // 60
-        if days: uptime_str += f"{days}d "
-        if hours or days: uptime_str += f"{hours}h "
-        uptime_str += f"{minutes}m"
+        uptime_str = "Serverless (Ephemeral)"
+        boot_str = now_utc.strftime("%Y-%m-%d %H:%M:%S UTC")
+        
+        try:
+            boot_ts = psutil.boot_time()
+            boot_dt = dt.datetime.utcfromtimestamp(boot_ts)
+            boot_str = boot_dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+            uptime_secs = int((now_utc - boot_dt).total_seconds())
+            
+            days, rem = divmod(uptime_secs, 86400)
+            hours, rem = divmod(rem, 3600)
+            minutes = rem // 60
+            u_parts = []
+            if days: u_parts.append(f"{days}d")
+            if hours or days: u_parts.append(f"{hours}h")
+            u_parts.append(f"{minutes}m")
+            uptime_str = " ".join(u_parts).strip()
+        except Exception as e:
+            LOG.debug("boot_time failed (likely Vercel environment): %s", e)
         
         return {
             "cpu": cpu_usage,
-            "memory_pct": memory.percent,
-            "memory_used": round(memory.used / (1024**3), 2), # GB
-            "memory_total": round(memory.total / (1024**3), 2),
-            "storage_pct": disk.percent,
-            "storage_used": round(disk.used / (1024**3), 2),
-            "storage_total": round(disk.total / (1024**3), 2),
-            "net_sent": round(net.bytes_sent / (1024**2), 2), # MB
-            "net_recv": round(net.bytes_recv / (1024**2), 2),
+            "memory_pct": memory_pct,
+            "memory_used": memory_used,
+            "memory_total": memory_total,
+            "storage_pct": storage_pct,
+            "storage_used": storage_used,
+            "storage_total": storage_total,
+            "net_sent": net_sent,
+            "net_recv": net_recv,
             "local_ip": local_ip,
             "public_ip": public_ip,
             "hostname": hostname,
             "server_time": now_utc.strftime("%Y-%m-%d %H:%M:%S UTC"),
-            "boot_time": boot_dt.strftime("%Y-%m-%d %H:%M:%S UTC"),
-            "uptime": uptime_str.strip()
+            "boot_time": boot_str,
+            "uptime": uptime_str
         }
-    except Exception:
-        return {}
+    except Exception as e:
+        LOG.error("Infra stats overall failure: %s", e)
+        return {
+            "cpu": 0, "memory_pct": 0, "memory_used": 0, "memory_total": 0,
+            "storage_pct": 0, "storage_used": 0, "storage_total": 0,
+            "net_sent": 0, "net_recv": 0, "local_ip": "127.0.0.1",
+            "public_ip": "Error", "hostname": "Vercel",
+            "server_time": "N/A", "boot_time": "N/A", "uptime": "Serverless"
+        }
 
 def get_db_stats():
     """Gathers MongoDB and Redis utilization stats."""
