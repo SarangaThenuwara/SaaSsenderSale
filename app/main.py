@@ -1136,11 +1136,17 @@ async def api_user_report(request: Request):
             email = recruiter.get("email", "unknown@unknown.com") if recruiter else "unknown@unknown.com"
 
             sent_at = entry.get("lastAttempt") or entry.get("created_at")
+            raw_error = entry.get("error") or ""
+            if isinstance(raw_error, str):
+                cleaned_error = " ".join(raw_error.split())
+                cleaned_error = cleaned_error[:300]
+            else:
+                cleaned_error = None
             results.append({
                 "email": email,
                 "status": "Sent" if entry["status"] == "sent" else "Failed",
                 "sent_at": sent_at.isoformat() if sent_at else None,
-                "last_error": entry.get("error"),
+                "last_error": cleaned_error,
                 "role": "Recruiter"
             })
 
@@ -1511,23 +1517,28 @@ def admin_dashboard(request: Request):
     if not user: return RedirectResponse(url="/login")
     if user.get("role") != "admin": raise HTTPException(403, "Admin only")
     
-    # 1. User Management Data
-    users = list(db.users.find({"is_deleted": {"$ne": True}}))
-    deleted_users = list(db.users.find({"is_deleted": True}))
-    for u in users + deleted_users:
-        u["_id_str"] = str(u["_id"])
-        if not u.get("is_deleted"):
-            u["assigned_count"] = db.recipients.count_documents({"assigned_to": u["_id"]})
-            u["pending_capacity"] = max(0, u.get("daily_limit", 240) - u.get("daily_sent", 0))
-
+    # Summary counts only for initial load (JS will fetch details)
+    user_count = db.users.count_documents({"is_deleted": {"$ne": True}})
+    deleted_count = db.users.count_documents({"is_deleted": True})
+    
     # 2. System Wide Stats
     pending_pool = db.recipients.count_documents({"status": "Pending"})
     day_ago = datetime.utcnow() - timedelta(days=1)
     sent_24h = db.recipients.count_documents({"status": "Sent", "sent_at": {"$gte": day_ago}})
     failed_24h = db.recipients.count_documents({"status": "Failed", "sent_at": {"$gte": day_ago}})
     
-    active_users = [u for u in users if u.get("campaign_active") and u.get("credentials_valid")]
-    total_capacity = sum(u.get("daily_limit", 240) for u in active_users)
+    # Estimate active users (those who logged in recently or have active campaigns)
+    active_users_count = db.users.count_documents({"campaign_active": True, "is_deleted": {"$ne": True}})
+    
+    # Calculate capacity (roughly - for more accurate we'd need a more complex query but 240 is default)
+    # total_capacity = active_users_count * 240 
+    # Better: sum daily_limit for active users
+    pipeline = [
+        {"$match": {"campaign_active": True, "is_deleted": {"$ne": True}}},
+        {"$group": {"_id": None, "total_limit": {"$sum": "$daily_limit"}}}
+    ]
+    cap_res = list(db.users.aggregate(pipeline))
+    total_capacity = cap_res[0]["total_limit"] if cap_res else 0
 
     # 3. Recruiter & Deliverability Quick Stats
     total_recruiters = db.recruiters.count_documents({})
@@ -1540,13 +1551,13 @@ def admin_dashboard(request: Request):
     ctx = {
         **template_ctx(request),
         "title": "Admin Dashboard",
-        "users": users,
-        "deleted_users": deleted_users,
+        "user_count": user_count,
+        "deleted_count": deleted_count,
         "pending_pool": pending_pool,
         "sent_24h": sent_24h,
         "failed_24h": failed_24h,
         "total_capacity": total_capacity,
-        "active_users_count": len(active_users),
+        "active_users_count": active_users_count,
         "total_recruiters": total_recruiters,
         "dead_recruiters": dead_recruiters,
         "suppressed_count": suppressed_count,

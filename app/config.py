@@ -20,8 +20,9 @@ if not FERNET_KEY:
     print("💡 Generate one with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'")
     sys.exit(1)
 
-# SECURITY: Enforce strong secrets in production
-if APP_ENV == "production":
+# SECURITY: Enforce strong secrets in production-like environments
+_is_prod_env = (APP_ENV == "production" or os.getenv("VERCEL_ENV") == "production")
+if _is_prod_env:
     weak_secrets = []
     
     if SECRET_KEY == "change-me" or len(SECRET_KEY) < 32:

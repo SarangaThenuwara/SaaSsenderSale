@@ -44,20 +44,35 @@ def get_admin_user(request: Request):
     raise HTTPException(status_code=403, detail="Not authorized")
 
 @router.get("/users")
-def get_users(request: Request, _admin=Depends(get_admin_user)):
-    users = list(db.users.find({"is_deleted": {"$ne": True}}, {
+def get_users(request: Request, page: int = 1, limit: int = 10, q: str = "", _admin=Depends(get_admin_user)):
+    skip = (page - 1) * limit
+    
+    query = {"is_deleted": {"$ne": True}}
+    if q:
+        query["$or"] = [
+            {"email": {"$regex": q, "$options": "i"}},
+            {"username": {"$regex": q, "$options": "i"}}
+        ]
+        
+    total = db.users.count_documents(query)
+    users = list(db.users.find(query, {
         "credentials_base64": 0,
         "token_base64": 0,
         "refresh_token_enc": 0,
         "password_hash": 0,
-    }).sort("created_at", -1).limit(100))
+    }).sort("created_at", -1).skip(skip).limit(limit))
 
     for u in users:
         u["_id"] = str(u["_id"])
         u["assigned_recruiters"] = db.user_recruiter_ledger.count_documents({"userId": ObjectId(u["_id"])})
         u["sent_today"] = u.get("daily_sent", 0)
 
-    return encrypt_admin_response({"users": users, "count": len(users)})
+    return encrypt_admin_response({
+        "users": users,
+        "total": total,
+        "page": page,
+        "total_pages": (total + limit - 1) // limit
+    })
 
 @router.post("/users/{user_id}/block")
 def block_user(user_id: str, _admin=Depends(get_admin_user)):
@@ -260,11 +275,13 @@ def get_db_stats():
     return db_stats
 
 @router.get("/infra")
-def infra_metrics(_admin=Depends(get_admin_user)):
-    return {
+def infra_metrics(request: Request, _admin=Depends(get_admin_user)):
+    result = {
         "system": get_infra_stats(),
         "databases": get_db_stats()
     }
+    log_admin_action(_admin.get("username", "admin"), "view_infra", "Viewed infra and database metrics", request)
+    return result
 
 @router.get("/settings")
 def get_global_settings(_admin=Depends(get_admin_user)):
@@ -533,7 +550,7 @@ import redis
 from app.config import CELERY_BROKER_URL
 
 @router.get("/queues")
-def get_queues(_admin=Depends(get_admin_user)):
+def get_queues(request: Request, _admin=Depends(get_admin_user)):
     try:
         r = redis.from_url(CELERY_BROKER_URL)
         # Standard Celery queues + our named queues
@@ -544,8 +561,10 @@ def get_queues(_admin=Depends(get_admin_user)):
             length = r.llen(q)
             stats[q] = length
             total_queued += length
-            
-        return {"queues": stats, "total_queued": total_queued, "ok": True}
+        
+        result = {"queues": stats, "total_queued": total_queued, "ok": True}
+        log_admin_action(_admin.get("username", "admin"), "view_queues", "Viewed Celery/Redis queue metrics", request)
+        return result
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
@@ -898,5 +917,47 @@ def security_check(_admin=Depends(get_admin_user)):
         "is_prod_mode": _is_prod,
         "issues": issues,
         "timestamp": datetime.utcnow().isoformat()
+    }
+
+@router.get("/volume_data")
+def get_volume_data(_admin=Depends(get_admin_user)):
+    """Returns email volume stats for the last 24 hours."""
+    now = datetime.utcnow()
+    day_ago = now - timedelta(hours=24)
+    
+    pipeline = [
+        {"$match": {"sent_at": {"$gte": day_ago}}},
+        {"$project": {
+            "hour": {"$hour": "$sent_at"},
+            "status": 1
+        }},
+        {"$group": {
+            "_id": "$hour",
+            "count": {"$sum": 1},
+            "success": {"$sum": {"$cond": [{"$eq": ["$status", "sent"]}, 1, 0]}}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+    
+    stats = list(db.recipients.aggregate(pipeline))
+    
+    current_hour = now.hour
+    labels = []
+    volume = []
+    success_rates = []
+    
+    for i in range(24):
+        target_hour = (current_hour - (23 - i)) % 24
+        match = next((s for s in stats if s["_id"] == target_hour), None)
+        labels.append(f"{target_hour}:00")
+        vol = match["count"] if match else 0
+        volume.append(vol)
+        rate = (match["success"] / match["count"] * 100) if match and match["count"] > 0 else 0
+        success_rates.append(round(rate, 1))
+        
+    return {
+        "labels": labels,
+        "volume": volume,
+        "success_rate": success_rates
     }
 

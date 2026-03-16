@@ -1,3 +1,12 @@
+"""
+Security Utilities (Examples Only)
+==================================
+
+This file contains example patterns for rate limiting, CSRF handling, and
+input sanitization. It is not imported by the main application and should be
+treated as reference code to adapt, not as production-ready utilities.
+"""
+
 # Security Utilities
 
 This module provides enhanced security features for web applications.
