@@ -543,23 +543,89 @@ const AdminDashboard = {
                 `;
             }
 
-            const dbContainer = document.getElementById('db-utilization-stats');
+           const dbContainer = document.getElementById('db-utilization-stats');
             if (dbContainer && data.databases.mongo) {
+                const local = data.databases.mongo.local || {};
+                const source = data.databases.mongo.source || {};
+
                 dbContainer.innerHTML = `
-                    <div class="p-4 bg-white/5 rounded-xl border border-white/5">
-                        <p class="text-xs text-slate-500 mb-2 font-bold uppercase tracking-widest">MongoDB Activity</p>
-                        <div class="flex justify-between items-end">
-                            <span class="text-2xl font-black text-white">${data.databases.mongo.local.count.toLocaleString()}</span>
-                            <span class="text-[10px] text-slate-600 font-mono">Storage: ${data.databases.mongo.local.storage}MB</span>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-white/5 rounded-xl border border-white/5">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></div>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">SaaS Sender (Local)</p>
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <span class="text-2xl font-black text-white">${(local.count || 0).toLocaleString()} <span class="text-[10px] text-slate-500 font-normal">Docs</span></span>
+                                <span class="text-[10px] text-slate-600 font-mono">Storage: ${local.storage || 0}MB</span>
+                            </div>
+                            <div class="mt-3 pt-3 border-t border-white/5 flex justify-between text-[9px] text-slate-600 font-mono uppercase">
+                                <span>Index Size: ${local.indexes || 0}MB</span>
+                                <span>Collection: recruiters</span>
+                            </div>
                         </div>
-                        <div class="mt-4 pt-4 border-t border-white/5">
-                             <div class="flex justify-between text-[10px] mb-2 uppercase tracking-tighter">
-                                <span class="text-slate-500">Source Cluster</span>
-                                <span class="text-slate-400">${data.databases.mongo.source.count?.toLocaleString() || '0'} entries</span>
+
+                        <div class="p-4 bg-white/5 rounded-xl border border-white/5">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Recruiter (Source)</p>
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <span class="text-2xl font-black text-white">${(source.count || 0).toLocaleString()} <span class="text-[10px] text-slate-500 font-normal">Docs</span></span>
+                                <span class="text-[10px] text-slate-600 font-mono">Storage: ${source.storage || 0}MB</span>
+                            </div>
+                            <div class="mt-3 pt-3 border-t border-white/5 flex justify-between text-[9px] text-slate-600 font-mono uppercase">
+                                <span>Index Size: ${source.indexes || 0}MB</span>
+                                <span>Collection: hremail.email</span>
                             </div>
                         </div>
                     </div>
                 `;
+            }
+
+            // REDIS Display (New Request)
+            const redisContainer = document.getElementById('redis-infra-stats');
+            if (redisContainer && data.databases.redis) {
+                const r = data.databases.redis;
+                if (r.ok) {
+                    redisContainer.innerHTML = `
+                        <div class="p-4 bg-white/5 rounded-xl border border-white/5">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+                                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Redis Instance</p>
+                                </div>
+                                <span class="text-[9px] font-mono text-slate-600">v${r.version}</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <p class="text-[9px] text-slate-600 uppercase mb-1">Used Memory</p>
+                                    <p class="text-lg font-black text-white">${r.used_memory}</p>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] text-slate-600 uppercase mb-1">Peak</p>
+                                    <p class="text-lg font-black text-white">${r.peak_memory}</p>
+                                </div>
+                            </div>
+                            <div class="space-y-2 pt-4 border-t border-white/5">
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-slate-500">Hit Rate</span>
+                                    <span class="text-white font-bold">${r.hit_rate}%</span>
+                                </div>
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-slate-500">Connected Clients</span>
+                                    <span class="text-white font-bold">${r.clients}</span>
+                                </div>
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-slate-500">Total Keys</span>
+                                    <span class="text-white font-bold">${r.keys.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    redisContainer.innerHTML = `<div class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-center text-red-400 text-[10px] uppercase font-bold">Redis Connection Failure: ${r.error}</div>`;
+                }
             }
 
             const netContainer = document.getElementById('network-infra-stats');
