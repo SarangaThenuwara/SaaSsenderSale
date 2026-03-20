@@ -1062,6 +1062,15 @@ def user_dashboard(request: Request, user_id: str):
         "campaignId": active_campaign_id
     })
     
+    if assigned == 0:
+        from .assigner import assign_pending_recipients
+        assign_pending_recipients(user_id=me["_id"])
+        assigned = db.user_recruiter_ledger.count_documents({
+            "userId": me["_id"], 
+            "status": "pending",
+            "campaignId": active_campaign_id
+        })
+    
     # "Pending" originally meant the global system queue waitlist. 
     # For now, let's just make it the total global recruiter pool so they see how many are available.
     pending = db.recruiters.count_documents({"health": "good"})

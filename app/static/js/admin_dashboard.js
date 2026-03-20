@@ -826,7 +826,7 @@ const AdminDashboard = {
             if (impersonateBtn) {
                 if (confirm('Impersonate this user?')) {
                     const res = await this.fetchSecure(`/api/admin/impersonate/${impersonateBtn.dataset.id}`, { method: 'POST' });
-                    if (res) window.location.href = '/dashboard';
+                    if (res) window.location.href = `/user/${impersonateBtn.dataset.id}/dashboard`;
                 }
             }
 

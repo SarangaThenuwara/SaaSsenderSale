@@ -4,7 +4,7 @@ from .db import db
 
 LOG = logging.getLogger(__name__)
 
-def assign_pending_recipients(max_assign=1000):
+def assign_pending_recipients(max_assign=1000, user_id=None):
     """
     Populates the user_recruiter_ledger for active users.
     Randomly assigns recruiters from the global pool that haven't been assigned yet,
@@ -12,13 +12,17 @@ def assign_pending_recipients(max_assign=1000):
     """
     now = datetime.datetime.utcnow()
     
-    # Active users who aren't blocked or deleted
-    users = list(db.users.find({
+    query = {
         # Populate their queue regardless of them having connected Gmail yet
         # so they can see TARGET RECIPIENTS mapped out when they land on the dashboard.
         "is_blocked": {"$ne": True},
         "is_deleted": {"$ne": True}
-    }))
+    }
+    if user_id:
+        query["_id"] = user_id
+
+    # Active users who aren't blocked or deleted
+    users = list(db.users.find(query))
     
     assigned_total = 0
     
