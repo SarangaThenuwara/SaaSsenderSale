@@ -814,7 +814,9 @@ def signup_submit(request: Request, email: str = Form(...), password: str = Form
         LOG.warning("CSRF validation failed. SID: %s | UA: %s", sid, ua)
         return templates.TemplateResponse("premium/signup.html", {**template_ctx(request), "error": "CSRF validation failed. Please refresh and try again."})
     try:
-        signup_resp = supabase_signup(email=email, password=password)
+        base_url = str(request.base_url).rstrip("/")
+        callback_url = f"{base_url}/auth/callback"
+        signup_resp = supabase_signup(email=email, password=password, redirect_to=callback_url)
         # Check if we got a token immediately (auto-confirm enabled?)
         access_token = signup_resp.get("access_token")
         refresh_token = signup_resp.get("refresh_token")

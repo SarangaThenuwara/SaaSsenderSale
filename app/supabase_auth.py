@@ -33,13 +33,15 @@ def _url(path: str) -> str:
     return SUPABASE_URL.rstrip("/") + path
 
 
-def signup(email: str, password: str) -> dict:
+def signup(email: str, password: str, redirect_to: Optional[str] = None) -> dict:
     """
     Sign up user via Supabase.
     Returns the JSON response (may include access_token, refresh_token on auto-confirm).
     Raises requests.HTTPError on failure.
     """
     url = _url("/auth/v1/signup")
+    if redirect_to:
+        url += f"?redirect_to={redirect_to}"
     payload = {"email": email, "password": password}
     resp = requests.post(url, json=payload, headers=HEADERS, timeout=10)
     resp.raise_for_status()
